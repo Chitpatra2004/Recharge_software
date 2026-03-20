@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Tester</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+  h2 { background: #2d3748; color: white; padding: 12px 16px; border-radius: 6px; }
+  .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  input { width: 100%; padding: 8px 10px; margin: 6px 0 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+  button { background: #3182ce; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #2b6cb0; }
+  pre { background: #1a202c; color: #68d391; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; }
+  label { font-size: 13px; font-weight: bold; color: #4a5568; }
+  .token-box { background: #ebf8ff; border: 1px solid #90cdf4; padding: 10px; border-radius: 4px; font-size: 12px; word-break: break-all; margin-top: 10px; display:none; }
+</style>
+</head>
+<body>
+
+<h2>Recharge Platform — API Tester</h2>
+
+<!-- REGISTER -->
+<div class="card">
+  <h3>Register (Sign Up)</h3>
+  <label>Name</label>
+  <input id="reg_name" value="Test User" />
+  <label>Email</label>
+  <input id="reg_email" value="test@example.com" />
+  <label>Mobile (10 digits)</label>
+  <input id="reg_mobile" value="9123456780" />
+  <label>Password</label>
+  <input id="reg_password" type="password" value="Test@1234" />
+  <label>Confirm Password</label>
+  <input id="reg_confirm" type="password" value="Test@1234" />
+  <button onclick="register()">Register</button>
+  <pre id="reg_result">Result will appear here...</pre>
+</div>
+
+<!-- LOGIN -->
+<div class="card">
+  <h3>User Login</h3>
+  <label>Email</label>
+  <input id="login_email" value="retailer@recharge.com" />
+  <label>Password</label>
+  <input id="login_password" type="password" value="Retailer@1234" />
+  <button onclick="userLogin()">Login</button>
+  <pre id="login_result">Result will appear here...</pre>
+  <div class="token-box" id="user_token_box">Token saved: <span id="user_token_display"></span></div>
+</div>
+
+<!-- EMPLOYEE LOGIN -->
+<div class="card">
+  <h3>Employee Login</h3>
+  <label>Email</label>
+  <input id="emp_email" value="admin@recharge.com" />
+  <label>Password</label>
+  <input id="emp_password" type="password" value="Admin@1234" />
+  <button onclick="employeeLogin()">Employee Login</button>
+  <pre id="emp_result">Result will appear here...</pre>
+  <div class="token-box" id="emp_token_box">Token saved: <span id="emp_token_display"></span></div>
+</div>
+
+<!-- WALLET BALANCE (uses saved token) -->
+<div class="card">
+  <h3>Wallet Balance <small style="font-weight:normal;color:#888">(login first)</small></h3>
+  <button onclick="walletBalance()">Get Balance</button>
+  <pre id="balance_result">Result will appear here...</pre>
+</div>
+
+<!-- OPERATORS -->
+<div class="card">
+  <h3>Operators List <small style="font-weight:normal;color:#888">(login first)</small></h3>
+  <button onclick="getOperators()">Get Operators</button>
+  <pre id="operators_result">Result will appear here...</pre>
+</div>
+
+<script>
+const BASE = '/api/v1';
+let userToken = '';
+let empToken  = '';
+
+function show(id, data) {
+  document.getElementById(id).textContent = JSON.stringify(data, null, 2);
+}
+
+async function post(url, body) {
+  const res = await fetch(BASE + url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function get(url, token) {
+  const res = await fetch(BASE + url, {
+    headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+  });
+  return res.json();
+}
+
+async function register() {
+  const data = await post('/auth/register', {
+    name: document.getElementById('reg_name').value,
+    email: document.getElementById('reg_email').value,
+    mobile: document.getElementById('reg_mobile').value,
+    password: document.getElementById('reg_password').value,
+    password_confirmation: document.getElementById('reg_confirm').value,
+  });
+  show('reg_result', data);
+  if (data.token) { userToken = data.token; saveToken('user', data.token); }
+}
+
+async function userLogin() {
+  const data = await post('/auth/login', {
+    email: document.getElementById('login_email').value,
+    password: document.getElementById('login_password').value,
+  });
+  show('login_result', data);
+  if (data.token) { userToken = data.token; saveToken('user', data.token); }
+}
+
+async function employeeLogin() {
+  const data = await post('/employee/auth/login', {
+    email: document.getElementById('emp_email').value,
+    password: document.getElementById('emp_password').value,
+  });
+  show('emp_result', data);
+  if (data.token) { empToken = data.token; saveToken('emp', data.token); }
+}
+
+async function walletBalance() {
+  if (!userToken) { document.getElementById('balance_result').textContent = 'Login as user first.'; return; }
+  const data = await get('/wallet/balance', userToken);
+  show('balance_result', data);
+}
+
+async function getOperators() {
+  const token = userToken || empToken;
+  if (!token) { document.getElementById('operators_result').textContent = 'Login first.'; return; }
+  const data = await get('/operators', token);
+  show('operators_result', data);
+}
+
+function saveToken(type, token) {
+  if (type === 'user') {
+    document.getElementById('user_token_display').textContent = token;
+    document.getElementById('user_token_box').style.display = 'block';
+  } else {
+    document.getElementById('emp_token_display').textContent = token;
+    document.getElementById('emp_token_box').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
