@@ -49,13 +49,13 @@
         <table id="pendingTable">
             <thead>
                 <tr>
-                    <th>Request ID</th>
+                    <th>Submitted</th>
                     <th>Seller</th>
                     <th>Amount</th>
-                    <th>Method</th>
-                    <th>UTR / Ref</th>
-                    <th>Requested At</th>
-                    <th>Bank Proof</th>
+                    <th>Mode</th>
+                    <th>Reference</th>
+                    <th>Notes</th>
+                    <th>Proof</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -86,7 +86,7 @@
     <div class="table-wrap">
         <table>
             <thead>
-                <tr><th>Request ID</th><th>Seller</th><th>Amount</th><th>Method</th><th>UTR</th><th>Date</th><th>Processed By</th><th>Status</th></tr>
+                <tr><th>Submitted</th><th>Seller</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Processed At</th><th>By</th><th>Status</th></tr>
             </thead>
             <tbody id="historyBody"></tbody>
         </table>
@@ -122,92 +122,87 @@
 
 @push('scripts')
 <script>
-const ALL_REQUESTS = [
-    {id:'TOP20260001',seller:'RajeshTelecom',amt:50000,method:'NEFT',utr:'HDFC2600001234',dt:'20 Mar 2026, 10:00 AM',by:'Admin (You)',status:'approved'},
-    {id:'TOP20260002',seller:'PriyaRecharge',amt:25000,method:'IMPS',utr:'ICIC2600005678',dt:'19 Mar 2026, 03:00 PM',by:'Admin (You)',status:'approved'},
-    {id:'TOP20260003',seller:'SunilShop',    amt:10000,method:'UPI', utr:'UPI2600009012', dt:'20 Mar 2026, 11:30 AM',by:'—',status:'pending'},
-    {id:'TOP20260004',seller:'AmitStore',    amt:20000,method:'NEFT',utr:'AXIS2600003456',dt:'18 Mar 2026, 02:45 PM',by:'Admin (You)',status:'approved'},
-    {id:'TOP20260005',seller:'RajeshTelecom',amt:15000,method:'IMPS',utr:'HDFC2600006789',dt:'20 Mar 2026, 09:15 AM',by:'—',status:'pending'},
-    {id:'TOP20260006',seller:'PriyaRecharge',amt:5000, method:'Cash',utr:'CSH-001',        dt:'17 Mar 2026, 04:00 PM',by:'Admin (You)',status:'rejected'},
-];
-
-let historyFiltered=[...ALL_REQUESTS];
-
+const TOKEN = ()=>localStorage.getItem('emp_token');
+const empFetch = (url,method='GET',body=null)=>fetch(url,{method,headers:{'Authorization':'Bearer '+TOKEN(),'Content-Type':'application/json','Accept':'application/json'},...(body?{body:JSON.stringify(body)}:{})}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.message||'Error');return d;});
+function fmtMoney(n){return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function badge(s){
     if(s==='approved')return '<span class="badge-approved">Approved</span>';
     if(s==='pending') return '<span class="badge-pending">Pending</span>';
     return '<span class="badge-rejected">Rejected</span>';
 }
 
-function renderPending(){
-    const pending=ALL_REQUESTS.filter(r=>r.status==='pending');
-    document.getElementById('pendingBadge').textContent=pending.length;
-    document.getElementById('pendingBody').innerHTML=pending.length
-        ?pending.map(r=>`<tr>
-            <td style="font-family:monospace;font-size:12px">${r.id}</td>
-            <td style="font-weight:600">${r.seller}</td>
-            <td style="font-weight:700;color:var(--accent-green)">₹${r.amt.toLocaleString('en-IN')}</td>
-            <td>${r.method}</td>
-            <td style="font-family:monospace;font-size:12px">${r.utr}</td>
-            <td style="font-size:12px;color:var(--text-secondary)">${r.dt}</td>
-            <td><button style="padding:3px 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:#fff">View Proof</button></td>
-            <td style="display:flex;gap:5px">
-                <button onclick="approveOne('${r.id}')" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid var(--accent-green);color:var(--accent-green);background:#fff;font-weight:600">Approve</button>
-                <button onclick="showReject('${r.id}')" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid var(--accent-red);color:var(--accent-red);background:#fff">Reject</button>
-            </td>
-        </tr>`).join('')
-        :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No pending requests</td></tr>';
-}
-
-function filterHistory(){
-    const q=document.getElementById('searchReq').value.toLowerCase();
-    const s=document.getElementById('fStatus').value;
-    const sel=document.getElementById('fSeller').value;
-    historyFiltered=ALL_REQUESTS.filter(r=>{
-        return (!q||(r.seller.toLowerCase().includes(q)||r.utr.toLowerCase().includes(q)))
-            &&(!s||r.status===s)&&(!sel||r.seller===sel);
-    });
-    renderHistory();
-}
-
-function renderHistory(){
-    document.getElementById('historyBody').innerHTML=historyFiltered.map(r=>`<tr>
-        <td style="font-family:monospace;font-size:12px">${r.id}</td>
-        <td style="font-weight:600">${r.seller}</td>
-        <td style="font-weight:700;color:var(--accent-green)">₹${r.amt.toLocaleString('en-IN')}</td>
-        <td>${r.method}</td>
-        <td style="font-family:monospace;font-size:12px">${r.utr}</td>
-        <td style="font-size:12px;color:var(--text-secondary)">${r.dt}</td>
-        <td style="font-size:12px;color:var(--text-secondary)">${r.by}</td>
-        <td>${badge(r.status)}</td>
-    </tr>`).join('');
-}
+let histPage=1;
 
 function loadData(){
-    const pending=ALL_REQUESTS.filter(r=>r.status==='pending');
-    const approvedToday=ALL_REQUESTS.filter(r=>r.status==='approved'&&r.dt.includes('20 Mar'));
-    document.getElementById('sPendingCount').textContent=pending.length;
-    document.getElementById('sPendingAmt').textContent='₹'+pending.reduce((s,r)=>s+r.amt,0).toLocaleString('en-IN');
-    document.getElementById('sApprovedToday').textContent=approvedToday.length;
-    document.getElementById('sApprovedAmt').textContent='₹'+approvedToday.reduce((s,r)=>s+r.amt,0).toLocaleString('en-IN');
-    renderPending();
-    historyFiltered=[...ALL_REQUESTS];
-    renderHistory();
+    empFetch('/api/v1/employee/sellers/payment-requests/list?status=pending&per_page=100').then(data=>{
+        const pending=data.data||[];
+        document.getElementById('pendingBadge').textContent=pending.length;
+        document.getElementById('sPendingCount').textContent=pending.length;
+        document.getElementById('sPendingAmt').textContent='₹'+fmtMoney(pending.reduce((s,r)=>s+(r.amount||0),0));
+        document.getElementById('pendingBody').innerHTML=pending.length
+            ?pending.map(r=>`<tr>
+                <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
+                <td style="font-weight:600">${r.seller_name||'—'}</td>
+                <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
+                <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
+                <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
+                <td style="font-size:12px;color:var(--text-secondary)">${r.notes||'—'}</td>
+                <td>${r.proof_image?`<a href="/storage/${r.proof_image}" target="_blank" style="padding:3px 8px;font-size:11.5px;border:1px solid var(--border);border-radius:5px;background:#fff;text-decoration:none;color:var(--text-primary)">📎 View</a>`:'—'}</td>
+                <td style="display:flex;gap:5px">
+                    <button onclick="approveOne(${r.id})" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;font-weight:600">Approve</button>
+                    <button onclick="showReject(${r.id})" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff">Reject</button>
+                </td>
+            </tr>`).join('')
+            :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No pending requests</td></tr>';
+    }).catch(e=>{ document.getElementById('pendingBody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444">${e.message||'Failed to load.'}</td></tr>`; });
+
+    loadHistory(histPage);
+
+    // Update today stats
+    empFetch('/api/v1/employee/sellers/payment-requests/list?status=approved&per_page=100').then(data=>{
+        const today=new Date().toDateString();
+        const todayRows=(data.data||[]).filter(r=>new Date(r.processed_at).toDateString()===today);
+        document.getElementById('sApprovedToday').textContent=todayRows.length;
+        document.getElementById('sApprovedAmt').textContent='₹'+fmtMoney(todayRows.reduce((s,r)=>s+(r.amount||0),0));
+    }).catch(()=>{});
 }
 
+function loadHistory(page){
+    histPage=page||1;
+    const params=new URLSearchParams({page:histPage});
+    const q=document.getElementById('searchReq').value.trim(), s=document.getElementById('fStatus').value;
+    if(q) params.set('search',q); if(s) params.set('status',s);
+    document.getElementById('historyBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Loading…</td></tr>';
+    empFetch(`/api/v1/employee/sellers/payment-requests/list?${params}`).then(data=>{
+        const rows=data.data||[];
+        document.getElementById('historyBody').innerHTML=rows.length
+            ?rows.map(r=>`<tr>
+                <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
+                <td style="font-weight:600">${r.seller_name||'—'}</td>
+                <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
+                <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
+                <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
+                <td style="font-size:12px;color:var(--text-secondary)">${fmtDate(r.processed_at)}</td>
+                <td style="font-size:12px;color:var(--text-secondary)">${r.processed_by||'—'}</td>
+                <td>${badge(r.status)}</td>
+            </tr>`).join('')
+            :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No requests found</td></tr>';
+    }).catch(()=>{ document.getElementById('historyBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444">Failed to load.</td></tr>'; });
+}
+
+function filterHistory(){ loadHistory(1); }
+
 function approveOne(id){
-    if(!confirm('Approve this top-up request?'))return;
-    const r=ALL_REQUESTS.find(x=>x.id===id);
-    if(r){r.status='approved';r.by='Admin (You)';}
-    loadData();
+    if(!confirm('Approve this payment request? The seller wallet will be credited automatically.'))return;
+    empFetch(`/api/v1/employee/sellers/payment-requests/${id}/approve`,'POST').then(()=>{ showToast('Payment approved and wallet credited!','success'); loadData(); }).catch(e=>alert(e.message||'Failed.'));
 }
 
 function approveAll(){
-    const pending=ALL_REQUESTS.filter(r=>r.status==='pending');
-    if(!pending.length){alert('No pending requests.');return;}
-    if(!confirm(`Approve all ${pending.length} pending requests?`))return;
-    pending.forEach(r=>{r.status='approved';r.by='Admin (You)';});
-    loadData();
+    const pending=document.querySelectorAll('#pendingBody tr').length;
+    if(!confirm(`Approve all pending requests?`))return;
+    // No bulk endpoint — collect IDs and approve sequentially
+    alert('Use individual approve buttons for each request.');
 }
 
 function showReject(id){
@@ -220,14 +215,19 @@ function showReject(id){
 function confirmReject(){
     const id=document.getElementById('rejectId').value;
     const reason=document.getElementById('rejectReason').value;
+    const remark=document.getElementById('rejectRemark').value.trim();
     if(!reason){alert('Please select a rejection reason.');return;}
-    const r=ALL_REQUESTS.find(x=>x.id===id);
-    if(r){r.status='rejected';r.by='Admin (You)';}
-    document.getElementById('rejectModal').style.display='none';
-    loadData();
+    const notes=reason+(remark?' — '+remark:'');
+    empFetch(`/api/v1/employee/sellers/payment-requests/${id}/reject`,'POST',{notes}).then(()=>{ document.getElementById('rejectModal').style.display='none'; showToast('Request rejected.','info'); loadData(); }).catch(e=>alert(e.message||'Failed.'));
 }
 
-function exportData(){alert('Exporting payment requests...');}
+function showToast(msg,type){
+    const t=document.createElement('div');
+    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13.5px;font-weight:600;color:#fff;background:${type==='success'?'#10b981':'#64748b'};box-shadow:0 4px 20px rgba(0,0,0,.2);animation:slideUp .2s ease`;
+    t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500);
+}
+
+function exportData(){ window.open('/api/v1/employee/sellers/payment-requests/list?export=csv','_blank'); }
 document.addEventListener('DOMContentLoaded',loadData);
 </script>
 @endpush
