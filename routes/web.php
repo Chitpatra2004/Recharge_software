@@ -9,16 +9,26 @@ Route::get('/', function () {
 // ── User Auth & Portal Web Routes ────────────────────────────────────────
 Route::prefix('user')->name('user.')->group(function () {
 
-    Route::get('/login',      fn () => view('user.auth.login'))->name('login');
-    Route::get('/register',   fn () => view('user.auth.register'))->name('register');
+    Route::get('/login',           fn () => view('user.auth.login'))->name('login');
+    Route::get('/register',        fn () => view('user.auth.register'))->name('register');
+    Route::get('/otp',             fn () => view('user.auth.otp'))->name('otp');
+    Route::get('/forgot-password', fn () => view('user.auth.forgot-password'))->name('forgot-password');
+    Route::get('/reset-password',  fn () => view('user.auth.reset-password'))->name('reset-password');
+    Route::get('/setup-2fa',       fn () => view('user.auth.setup-2fa'))->name('setup-2fa');
+
     Route::get('/',           fn () => redirect()->route('user.dashboard'));
     Route::get('/dashboard',  fn () => view('user.dashboard'))->name('dashboard');
     Route::get('/recharges',  fn () => view('user.recharges'))->name('recharges');
     Route::get('/wallet',     fn () => view('user.wallet'))->name('wallet');
     Route::get('/complaints', fn () => view('user.complaints'))->name('complaints');
     Route::get('/profile',    fn () => view('user.profile'))->name('profile');
-    Route::get('/reports',    fn () => view('user.reports'))->name('reports');
-    Route::get('/api-docs',   fn () => view('user.api-docs'))->name('api-docs');
+    Route::get('/reports',      fn () => view('user.reports'))->name('reports');
+    Route::get('/api-docs',     fn () => view('user.api-docs'))->name('api-docs');
+    Route::get('/bbps',         fn () => view('user.bbps'))->name('bbps');
+    Route::get('/transactions', fn () => view('user.transactions'))->name('transactions');
+    Route::get('/add-money',    fn () => view('user.add-money'))->name('add-money');
+    Route::get('/terms',        fn () => view('user.terms'))->name('terms');
+    Route::get('/support',      fn () => view('user.support'))->name('support');
 
 });
 

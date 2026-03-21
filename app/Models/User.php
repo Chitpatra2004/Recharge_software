@@ -18,9 +18,10 @@ class User extends Authenticatable
         'name', 'email', 'mobile', 'password',
         'role', 'status', 'api_key', 'ip_whitelist',
         'commission_rate', 'email_verified_at',
+        'document_path', 'totp_secret', 'totp_enabled', 'two_factor_method',
     ];
 
-    protected $hidden = ['password', 'remember_token', 'api_key'];
+    protected $hidden = ['password', 'remember_token', 'api_key', 'totp_secret'];
 
     protected function casts(): array
     {

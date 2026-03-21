@@ -10,12 +10,17 @@ use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\BuyerRechargeController;
 use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\OperatorController;
 use App\Http\Controllers\Api\RechargeController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\BBPSController;
+use App\Http\Controllers\Api\UserDashboardController;
+use App\Http\Controllers\Api\UserPaymentRequestController;
 use App\Http\Controllers\Seller\AuthController as SellerAuthController;
 use App\Http\Controllers\Seller\ApiConfigController as SellerApiConfigController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
@@ -102,6 +107,20 @@ Route::prefix('v1')->middleware('log.api')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])
          ->middleware('brute.force:10,15');
 
+    // 2FA verification (no auth token required — uses pending_token instead)
+    Route::post('/auth/2fa/verify-otp',  [TwoFactorController::class, 'verifyOtp'])
+         ->middleware('throttle:10,1');
+    Route::post('/auth/2fa/verify-totp', [TwoFactorController::class, 'verifyTotp'])
+         ->middleware('throttle:10,1');
+
+    // Forgot / Reset password
+    Route::post('/auth/forgot-password',            [ForgotPasswordController::class, 'sendOtp'])
+         ->middleware('throttle:5,1');
+    Route::post('/auth/forgot-password/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+         ->middleware('throttle:10,1');
+    Route::post('/auth/forgot-password/reset',      [ForgotPasswordController::class, 'resetPassword'])
+         ->middleware('throttle:5,1');
+
     // Operator callback webhook — secured by HMAC in controller
     Route::post('/recharge/callback', [RechargeController::class, 'callback']);
 
@@ -115,6 +134,12 @@ Route::prefix('v1')
     // Auth
     Route::post('/auth/logout',      [AuthController::class, 'logout']);
     Route::post('/auth/api-key',     [AuthController::class, 'generateApiKey']);
+
+    // 2FA management (requires login)
+    Route::post('/auth/2fa/setup-totp',  [TwoFactorController::class, 'setupTotp']);
+    Route::post('/auth/2fa/enable-totp', [TwoFactorController::class, 'enableTotp']);
+    Route::post('/auth/2fa/enable-otp',  [TwoFactorController::class, 'enableOtp']);
+    Route::post('/auth/2fa/disable',     [TwoFactorController::class, 'disable']);
 
     // Recharge
     Route::post('/recharge',         [RechargeController::class, 'store'])
@@ -138,6 +163,19 @@ Route::prefix('v1')
     Route::get('/complaints',      [ComplaintController::class, 'index']);
     Route::post('/complaints',     [ComplaintController::class, 'store']);
     Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
+
+    // ── User Dashboard (enhanced stats + chart) ────────────────────────────
+    Route::get('/dashboard', [UserDashboardController::class, 'index']);
+
+    // ── BBPS (Bill Payment) ────────────────────────────────────────────────
+    Route::get('/bbps/billers',          [BBPSController::class, 'billers']);
+    Route::post('/bbps/fetch-bill',      [BBPSController::class, 'fetchBill']);
+    Route::post('/bbps/pay',             [BBPSController::class, 'pay'])->middleware('throttle:recharge');
+    Route::get('/bbps/history',          [BBPSController::class, 'history']);
+
+    // ── User Payment Requests (add money with proof) ───────────────────────
+    Route::get('/payment-requests',      [UserPaymentRequestController::class, 'index']);
+    Route::post('/payment-requests',     [UserPaymentRequestController::class, 'store']);
 
     // ── Admin-only ─────────────────────────────────────────────────────────
     Route::middleware('can:admin')->group(function () {
