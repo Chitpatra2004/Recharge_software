@@ -125,6 +125,34 @@
     </div>
 </div>
 
+{{-- Wallet Adjust Modal --}}
+<div id="walletModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
+    <div class="card" style="width:440px;max-width:95vw;padding:26px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <h3 id="walletModalTitle" style="font-size:16px;font-weight:700">Add Balance</h3>
+            <button onclick="closeWalletModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px">
+            <div style="color:var(--text-secondary);margin-bottom:3px">Seller</div>
+            <div id="walletSellerName" style="font-weight:700;font-size:15px"></div>
+            <div style="margin-top:8px;color:var(--text-secondary)">Current Balance</div>
+            <div id="walletCurrentBal" style="font-weight:700;font-size:18px;color:#10b981"></div>
+        </div>
+        <div style="margin-bottom:14px">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px">Amount (₹) *</label>
+            <input id="walletAmount" type="number" min="1" step="0.01" placeholder="Enter amount" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div style="margin-bottom:20px">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px">Reason / Description *</label>
+            <input id="walletDesc" type="text" placeholder="e.g. Manual topup by admin" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div style="display:flex;gap:10px">
+            <button id="walletSubmitBtn" onclick="submitWalletAdjust()" style="flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;color:#fff">Confirm</button>
+            <button onclick="closeWalletModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Cancel</button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 const TOKEN = ()=>localStorage.getItem('emp_token');
@@ -162,7 +190,7 @@ function renderTable(sellers){
             <td>${r.mobile||'—'}</td>
             <td>${r.api_key_hint?`<code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:11px">${r.api_key_hint}</code>`:'<span style="font-size:12px;color:#94a3b8">No key</span>'}</td>
             <td style="font-weight:600;color:#10b981">₹${fmtMoney(r.wallet_balance||0)}</td>
-            <td>${r.total_recharges||0}</td>
+            <td>${r.recharge_transactions_count||0}</td>
             <td>${intgBadge(r.integration_status)}</td>
             <td>${statusBadge(r.status)}</td>
             <td style="display:flex;gap:5px;flex-wrap:wrap">
@@ -170,6 +198,8 @@ function renderTable(sellers){
                 ${r.status==='active'?`<button onclick="suspendSeller(${r.id},'${r.name}')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #f59e0b;color:#f59e0b;background:#fff">Suspend</button>`:''}
                 ${r.status==='suspended'?`<button onclick="approveSeller(${r.id},'${r.name}')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff">Activate</button>`:''}
                 ${r.integration_status==='pending'?`<button onclick="openIntgDecision(${r.id},'${r.name}')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #7c3aed;color:#7c3aed;background:#fff">API Request</button>`:''}
+                <button onclick="openWalletModal(${r.id},'${r.name}',${r.wallet_balance||0},'credit')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;font-weight:600">+ Add Balance</button>
+                <button onclick="openWalletModal(${r.id},'${r.name}',${r.wallet_balance||0},'debit')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff">↩ Reverse</button>
                 <button onclick="loginAsSeller(${r.id},'${r.name}')" style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-primary)">Login As</button>
             </td>
         </tr>`;
@@ -183,13 +213,15 @@ function loadData(page){
     if(q) params.set('search',q); if(s) params.set('status',s);
     document.getElementById('sellerBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">Loading…</td></tr>';
     empFetch(`/api/v1/employee/sellers?${params}`).then(data=>{
-        allSellers=data.data||[];
-        document.getElementById('sTotal').textContent=data.meta?.total||allSellers.length;
-        document.getElementById('sActive').textContent=allSellers.filter(r=>r.status==='active').length;
-        document.getElementById('sSuspended').textContent=allSellers.filter(r=>r.status==='suspended').length;
+        const pagination = data.data || {};
+        allSellers = pagination.data || [];
+        const stats = data.stats || {};
+        document.getElementById('sTotal').textContent = stats.total || 0;
+        document.getElementById('sActive').textContent = stats.active || 0;
+        document.getElementById('sSuspended').textContent = stats.suspended || 0;
         document.getElementById('sWalletTotal').textContent='₹'+fmtMoney(allSellers.reduce((s,r)=>s+(r.wallet_balance||0),0));
         renderTable(allSellers);
-        renderPagination(data.meta||{});
+        renderPagination(pagination);
     }).catch(err=>{ document.getElementById('sellerBody').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:30px;color:#ef4444">${err.message||'Failed to load sellers.'}</td></tr>`; });
 }
 
@@ -236,6 +268,48 @@ function loginAsSeller(id,name){
 function showAddModal(){document.getElementById('addModal').style.display='flex';}
 function submitAdd(){document.getElementById('addModal').style.display='none';}
 function exportSellers(){ window.open('/api/v1/employee/sellers?export=csv&'+new URLSearchParams({search:document.getElementById('searchSeller').value,status:document.getElementById('fStatus').value}),'_blank'); }
+
+// ── Wallet Adjust ──────────────────────────────────────────────────────────
+let walletSellerId=null, walletType=null;
+
+function openWalletModal(id, name, balance, type){
+    walletSellerId=id; walletType=type;
+    document.getElementById('walletSellerName').textContent=name;
+    document.getElementById('walletCurrentBal').textContent='₹'+fmtMoney(balance);
+    document.getElementById('walletAmount').value='';
+    document.getElementById('walletDesc').value='';
+    const isCredit = type==='credit';
+    document.getElementById('walletModalTitle').textContent = isCredit ? '➕ Add Balance' : '↩ Reverse Balance';
+    const btn = document.getElementById('walletSubmitBtn');
+    btn.textContent = isCredit ? 'Add Balance' : 'Reverse';
+    btn.style.background = isCredit ? '#10b981' : '#ef4444';
+    document.getElementById('walletModal').style.display='flex';
+}
+
+function closeWalletModal(){
+    document.getElementById('walletModal').style.display='none';
+}
+
+function submitWalletAdjust(){
+    const amount = parseFloat(document.getElementById('walletAmount').value);
+    const description = document.getElementById('walletDesc').value.trim();
+    if(!amount || amount<=0){ alert('Enter a valid amount.'); return; }
+    if(!description){ alert('Please enter a reason/description.'); return; }
+    const btn = document.getElementById('walletSubmitBtn');
+    btn.disabled=true; btn.textContent='Processing…';
+    empFetch(`/api/v1/employee/sellers/${walletSellerId}/wallet/adjust`,'POST',{
+        type: walletType, amount, description
+    }).then(data=>{
+        closeWalletModal();
+        alert(data.message + '\nNew Balance: ₹' + fmtMoney(data.new_balance));
+        loadData(currentPage);
+    }).catch(e=>{
+        alert(e.message||'Failed.');
+    }).finally(()=>{
+        btn.disabled=false;
+        btn.textContent = walletType==='credit' ? 'Add Balance' : 'Reverse';
+    });
+}
 
 document.addEventListener('DOMContentLoaded',()=>loadData(1));
 </script>

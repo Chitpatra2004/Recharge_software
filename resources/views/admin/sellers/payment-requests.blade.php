@@ -136,14 +136,14 @@ let histPage=1;
 
 function loadData(){
     empFetch('/api/v1/employee/sellers/payment-requests/list?status=pending&per_page=100').then(data=>{
-        const pending=data.data||[];
+        const pending=(data.data&&data.data.data)||[];
         document.getElementById('pendingBadge').textContent=pending.length;
         document.getElementById('sPendingCount').textContent=pending.length;
         document.getElementById('sPendingAmt').textContent='₹'+fmtMoney(pending.reduce((s,r)=>s+(r.amount||0),0));
         document.getElementById('pendingBody').innerHTML=pending.length
             ?pending.map(r=>`<tr>
                 <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
-                <td style="font-weight:600">${r.seller_name||'—'}</td>
+                <td style="font-weight:600">${(r.user&&r.user.name)||'—'}</td>
                 <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
                 <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
                 <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
@@ -162,7 +162,7 @@ function loadData(){
     // Update today stats
     empFetch('/api/v1/employee/sellers/payment-requests/list?status=approved&per_page=100').then(data=>{
         const today=new Date().toDateString();
-        const todayRows=(data.data||[]).filter(r=>new Date(r.processed_at).toDateString()===today);
+        const todayRows=((data.data&&data.data.data)||[]).filter(r=>new Date(r.processed_at).toDateString()===today);
         document.getElementById('sApprovedToday').textContent=todayRows.length;
         document.getElementById('sApprovedAmt').textContent='₹'+fmtMoney(todayRows.reduce((s,r)=>s+(r.amount||0),0));
     }).catch(()=>{});
@@ -175,16 +175,17 @@ function loadHistory(page){
     if(q) params.set('search',q); if(s) params.set('status',s);
     document.getElementById('historyBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Loading…</td></tr>';
     empFetch(`/api/v1/employee/sellers/payment-requests/list?${params}`).then(data=>{
-        const rows=data.data||[];
+        const pagination=data.data||{};
+        const rows=pagination.data||[];
         document.getElementById('historyBody').innerHTML=rows.length
             ?rows.map(r=>`<tr>
                 <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
-                <td style="font-weight:600">${r.seller_name||'—'}</td>
+                <td style="font-weight:600">${(r.user&&r.user.name)||'—'}</td>
                 <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
                 <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
                 <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
                 <td style="font-size:12px;color:var(--text-secondary)">${fmtDate(r.processed_at)}</td>
-                <td style="font-size:12px;color:var(--text-secondary)">${r.processed_by||'—'}</td>
+                <td style="font-size:12px;color:var(--text-secondary)">${r.admin_notes||'—'}</td>
                 <td>${badge(r.status)}</td>
             </tr>`).join('')
             :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No requests found</td></tr>';

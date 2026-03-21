@@ -38,10 +38,16 @@ class SellerController extends Controller
 
         $sellers = $query->latest()->paginate($request->integer('per_page', 25));
 
-        // Append wallet balance
+        // Append wallet balance, api_key_hint, and integration_status
         $sellers->getCollection()->transform(function ($u) {
             $wallet = DB::table('wallets')->where('user_id', $u->id)->first();
             $u->wallet_balance = $wallet ? (float) $wallet->balance : 0.0;
+
+            $apiKey = DB::table('api_keys')->where('user_id', $u->id)->where('is_active', true)->latest()->first();
+            $u->api_key_hint = $apiKey ? $apiKey->key_prefix : null;
+
+            $u->integration_status = $u->latestIntegration ? $u->latestIntegration->status : 'none';
+
             return $u;
         });
 

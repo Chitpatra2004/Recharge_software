@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeAuthController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
 use App\Http\Controllers\Api\AuthController;
@@ -282,4 +283,8 @@ Route::prefix('v1/employee/sellers')
     Route::post('/{id}/approve',       [AdminSellerController::class, 'approve']);
     Route::post('/{id}/reject',        [AdminSellerController::class, 'reject']);
     Route::post('/{id}/login-as',      [AdminSellerController::class, 'loginAs']);
+
+    // Wallet management
+    Route::post('/{id}/wallet/adjust',       [AdminWalletController::class, 'adjust']);
+    Route::get('/{id}/wallet/transactions',  [AdminWalletController::class, 'transactions']);
 });
