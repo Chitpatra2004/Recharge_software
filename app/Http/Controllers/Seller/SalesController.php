@@ -26,6 +26,9 @@ class SalesController extends Controller
         if ($request->filled('date_to')) {
             $query->whereDate('recharge_transactions.created_at', '<=', $request->date_to);
         }
+        if ($request->filled('operator')) {
+            $query->where('operator_code', $request->operator);
+        }
         if ($request->filled('search')) {
             $q = $request->search;
             $query->where('mobile', 'like', "%{$q}%");
@@ -37,6 +40,6 @@ class SalesController extends Controller
             'operator_txn_id', 'created_at',
         ]);
 
-        return response()->json(['data' => $results]);
+        return response()->json($results);
     }
 }

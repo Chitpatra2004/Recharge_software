@@ -206,7 +206,7 @@
             flex-shrink: 0;
         }
         .sidebar-user-info { flex: 1; min-width: 0; }
-        .sidebar-user-name { font-size: 12.5px; font-weight: 600; color: #fff; truncate: true; }
+        .sidebar-user-name { font-size: 12.5px; font-weight: 600; color: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .sidebar-user-role { font-size: 11px; color: var(--sidebar-section); }
         .sidebar-logout {
             background: none; border: none; cursor: pointer;
@@ -656,7 +656,7 @@
         input::placeholder, textarea::placeholder { color: var(--text-muted, #94a3b8) !important; }
         select option { background: var(--card-bg, #fff); color: var(--text-primary, #1e293b); }
     </style>
-    <script>(function(){try{var s=localStorage.getItem('rh_admin_theme');if(s){var d=JSON.parse(s);Object.entries(d.vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
+    <script>(function(){try{var s=localStorage.getItem('rh_admin_theme');if(s){var d=JSON.parse(s);Object.entries(d.vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});return;}var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--sidebar-bg':'#1a2035','--sidebar-hover':'#252d47','--sidebar-active':'#2563eb','--accent-blue':'#2563eb','--bg-page':'#f0f4f8','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e293b','--text-secondary':'#64748b','--border':'#e2e8f0'},'Midnight':{'--sidebar-bg':'#111827','--sidebar-hover':'#1f2937','--sidebar-active':'#3b82f6','--accent-blue':'#3b82f6','--bg-page':'#1a2535','--card-bg':'#111827','--topbar-bg':'#0f172a','--text-primary':'#e2e8f0','--text-secondary':'#94a3b8','--border':'#2d3748'},'Violet':{'--sidebar-bg':'#1e1b4b','--sidebar-hover':'#2d2a6b','--sidebar-active':'#7c3aed','--accent-blue':'#7c3aed','--bg-page':'#f5f3ff','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e1b4b','--text-secondary':'#6d6a9a','--border':'#ddd6fe'},'Forest':{'--sidebar-bg':'#052e16','--sidebar-hover':'#14532d','--sidebar-active':'#16a34a','--accent-blue':'#16a34a','--bg-page':'#f0fdf4','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#052e16','--text-secondary':'#166534','--border':'#bbf7d0'},'Ocean':{'--sidebar-bg':'#042f2e','--sidebar-hover':'#134e4a','--sidebar-active':'#0d9488','--accent-blue':'#0d9488','--bg-page':'#f0fdfa','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#042f2e','--text-secondary':'#0f766e','--border':'#99f6e4'},'Ember':{'--sidebar-bg':'#431407','--sidebar-hover':'#7c2d12','--sidebar-active':'#ea580c','--accent-blue':'#ea580c','--bg-page':'#fff7ed','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#431407','--text-secondary':'#9a3412','--border':'#fed7aa'}};if(u&&m[u]){Object.entries(m[u]).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
     @stack('head')
 </head>
 <body>
@@ -731,6 +731,13 @@
             </svg>
             Seller Payments
             <span class="nav-badge orange" id="sb-pending-payments" style="display:none">0</span>
+        </a>
+        <a href="/admin/user-payments" class="nav-item {{ request()->is('admin/user-payments') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            User Payments
+            <span class="nav-badge orange" id="sb-pending-user-payments" style="display:none">0</span>
         </a>
 
         <div class="nav-section">Manage</div>
@@ -1153,10 +1160,16 @@ function closeThemePanel() { document.getElementById('tp-panel').classList.remov
 function _applyAdminVars(vars) {
     Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
 }
+// Reverse map: admin preset name → unified theme name (for cross-layout sync)
+const _A_TO_UNIFIED = {'Blue Classic':'Cosmic','Dark Mode':'Midnight','Purple Night':'Violet','Forest Green':'Forest','Ocean Teal':'Ocean','Sunset':'Ember'};
+
 function _selectAdminPreset(name) {
     const t = _THEMES_A[name]; if (!t) return;
     _applyAdminVars(t.vars);
     try { localStorage.setItem('rh_admin_theme', JSON.stringify({name, vars:t.vars})); } catch(e) {}
+    // Sync unified theme key so user portal and landing page follow
+    const unified = _A_TO_UNIFIED[name];
+    if (unified) try { localStorage.setItem('rh_theme', unified); } catch(e) {}
     document.querySelectorAll('#tp-presets-grid .tp-preset').forEach(b => b.classList.toggle('active', b.dataset.t === name));
     document.getElementById('tc-sb').value = t.vars['--sidebar-bg'];
     document.getElementById('tc-ac').value = t.vars['--accent-blue'];
@@ -1187,11 +1200,26 @@ function _resetAdminTheme() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const grid = document.getElementById('tp-presets-grid');
+    // Unified name → admin preset name
+    const _UNIFIED_TO_A = {'Cosmic':'Blue Classic','Midnight':'Dark Mode','Violet':'Purple Night','Forest':'Forest Green','Ocean':'Ocean Teal','Ember':'Sunset'};
     let activeName = 'Blue Classic';
-    try { activeName = JSON.parse(localStorage.getItem('rh_admin_theme') || '{}').name || 'Blue Classic'; } catch(e) {}
+    try {
+        const unified = localStorage.getItem('rh_theme');
+        const local   = JSON.parse(localStorage.getItem('rh_admin_theme') || '{}');
+        if (local.name && local.vars) {
+            // User has an explicit saved preference — always respect and re-apply.
+            activeName = _THEMES_A[local.name] ? local.name : 'Custom';
+            _applyAdminVars(local.vars);
+        } else if (unified && _UNIFIED_TO_A[unified]) {
+            // No explicit local preference → pull from cross-layout unified key
+            activeName = _UNIFIED_TO_A[unified];
+            const t = _THEMES_A[activeName];
+            if (t) { _applyAdminVars(t.vars); localStorage.setItem('rh_admin_theme', JSON.stringify({name:activeName,vars:t.vars})); }
+        }
+    } catch(e) {}
     Object.entries(_THEMES_A).forEach(([name, t]) => {
         const btn = document.createElement('button');
-        btn.className = 'tp-preset' + (name === activeName ? ' active' : '');
+        btn.className = 'tp-preset' + (name === activeName && activeName !== 'Custom' ? ' active' : '');
         btn.dataset.t = name;
         btn.onclick = () => _selectAdminPreset(name);
         btn.innerHTML = '<div class="tp-swatches">' + t.sw.map(c => '<span class="tp-swatch" style="background:' + c + '"></span>').join('') + '</div><div class="tp-name">' + name + '</div>';

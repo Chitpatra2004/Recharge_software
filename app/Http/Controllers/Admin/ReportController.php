@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -32,7 +33,7 @@ class ReportController extends Controller
     public function users(Request $request): JsonResponse
     {
         $filters = $this->parseFilters($request, [
-            'role'    => ['sometimes', 'in:admin,retailer,distributor,api_user'],
+            'role'    => ['sometimes', 'in:admin,retailer,distributor,api_user,buyer'],
             'status'  => ['sometimes', 'in:active,inactive,suspended'],
             'search'  => ['sometimes', 'string', 'max:100'],
         ]);
@@ -169,7 +170,7 @@ class ReportController extends Controller
     {
         $filters = $this->parseFilters($request, [
             'status'      => ['sometimes', 'in:active,frozen'],
-            'role'        => ['sometimes', 'in:retailer,distributor,api_user'],
+            'role'        => ['sometimes', 'in:retailer,distributor,api_user,buyer'],
             'type'        => ['sometimes', 'in:credit,debit,reserve,release,reversal'],
             'min_balance' => ['sometimes', 'numeric', 'min:0'],
             'max_balance' => ['sometimes', 'numeric', 'min:0'],
@@ -189,6 +190,70 @@ class ReportController extends Controller
         ]);
     }
 
+    // ── 8. Pending / Queued Transactions ─────────────────────────────────────
+
+    public function pending(Request $request): JsonResponse
+    {
+        $perPage    = min((int) $request->integer('per_page', 25), 100);
+        $minAge     = $request->integer('min_age', 0);   // minutes
+        $operator   = $request->input('operator_code');
+        $dateFilter = $request->input('date');           // YYYY-MM-DD
+
+        $query = DB::table('recharge_transactions as rt')
+            ->leftJoin('users as u', 'u.id', '=', 'rt.user_id')
+            ->whereIn('rt.status', ['pending', 'queued', 'processing'])
+            ->whereNull('rt.deleted_at')
+            ->select([
+                'rt.id',
+                'rt.mobile',
+                'rt.operator_code',
+                'rt.amount',
+                'rt.status',
+                'rt.retry_count',
+                'rt.created_at',
+                'rt.updated_at',
+                'rt.failure_reason',
+                'u.name as seller_name',
+                'u.email as seller_email',
+                DB::raw('TIMESTAMPDIFF(MINUTE, rt.created_at, NOW()) as age_minutes'),
+            ]);
+
+        if ($operator) {
+            $query->where('rt.operator_code', strtoupper($operator));
+        }
+
+        if ($dateFilter) {
+            $query->whereDate('rt.created_at', $dateFilter);
+        }
+
+        if ($minAge > 0) {
+            $query->whereRaw('TIMESTAMPDIFF(MINUTE, rt.created_at, NOW()) >= ?', [$minAge]);
+        }
+
+        $query->orderByDesc('rt.created_at');
+
+        $rows = $query->paginate($perPage);
+
+        // Stats
+        $stats = DB::table('recharge_transactions')
+            ->whereIn('status', ['pending', 'queued', 'processing'])
+            ->whereNull('deleted_at')
+            ->selectRaw("
+                COUNT(*)                                                        as total,
+                SUM(amount)                                                     as total_amount,
+                SUM(CASE WHEN status = 'queued'     THEN 1 ELSE 0 END)        as queued,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END)        as processing,
+                SUM(CASE WHEN TIMESTAMPDIFF(MINUTE, created_at, NOW()) > 30
+                         THEN 1 ELSE 0 END)                                    as stuck
+            ")
+            ->first();
+
+        return response()->json([
+            'data'  => $rows,
+            'stats' => $stats,
+        ]);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Shared helpers
     // ─────────────────────────────────────────────────────────────────────────
@@ -204,6 +269,7 @@ class ReportController extends Controller
             'date_to'   => ['sometimes', 'date', 'after_or_equal:date_from'],
             'user_id'   => ['sometimes', 'integer', 'exists:users,id'],
             'per_page'  => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'page'      => ['sometimes', 'integer', 'min:1'],
         ], $extraRules);
 
         $validator = Validator::make($request->all(), $rules);

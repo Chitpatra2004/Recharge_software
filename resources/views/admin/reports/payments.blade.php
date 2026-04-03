@@ -242,7 +242,7 @@ function renderTransactions(rows) {
             <td style="font-weight:700">${fmtAmt(r.amount)}</td>
             <td><span style="background:${bg};color:${sc};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${r.status || '—'}</span></td>
             <td style="font-size:12px;color:var(--text-muted)">${r.reference_id || r.transaction_id || '—'}</td>
-            <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—'}</td>
         </tr>`;
     }).join('');
 }

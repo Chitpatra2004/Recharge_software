@@ -42,12 +42,12 @@ function loadReport(){
 }
 
 function renderReport(d){
-    const s = d.summary || {};
+    const s = d.data || {};
     const html = `
     <div class="stats-grid" style="margin-bottom:20px">
         <div class="stat-card">
             <div class="stat-icon" style="background:rgba(16,185,129,.15)"><svg fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
-            <div class="stat-body"><div class="stat-label">Total Recharges</div><div class="stat-value">${s.total_count||0}</div></div>
+            <div class="stat-body"><div class="stat-label">Total Recharges</div><div class="stat-value">${s.total_recharges||0}</div></div>
         </div>
         <div class="stat-card">
             <div class="stat-icon" style="background:rgba(59,130,246,.15)"><svg fill="none" viewBox="0 0 24 24" stroke="#3b82f6" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1"/></svg></div>
@@ -55,11 +55,11 @@ function renderReport(d){
         </div>
         <div class="stat-card">
             <div class="stat-icon" style="background:rgba(16,185,129,.15)"><svg fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="stat-body"><div class="stat-label">Successful</div><div class="stat-value">${s.success_count||0}</div><div class="stat-sub">₹${fmtMoney(s.success_amount||0)}</div></div>
+            <div class="stat-body"><div class="stat-label">Successful</div><div class="stat-value">${s.success_count||0}</div><div class="stat-sub">Wallet: ₹${fmtMoney(s.wallet_balance||0)}</div></div>
         </div>
         <div class="stat-card">
             <div class="stat-icon" style="background:rgba(239,68,68,.15)"><svg fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="stat-body"><div class="stat-label">Failed</div><div class="stat-value">${s.failure_count||0}</div><div class="stat-sub">Success rate: ${s.success_rate||0}%</div></div>
+            <div class="stat-body"><div class="stat-label">Failed</div><div class="stat-value">${s.failed_count||0}</div><div class="stat-sub">Success rate: ${s.success_rate||0}%</div></div>
         </div>
     </div>
     <div class="card">

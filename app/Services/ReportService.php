@@ -38,9 +38,12 @@ class ReportService
                 SUM(CASE WHEN u.status = 'active'    THEN 1 ELSE 0 END) AS active_users,
                 SUM(CASE WHEN u.status = 'inactive'  THEN 1 ELSE 0 END) AS inactive_users,
                 SUM(CASE WHEN u.status = 'suspended' THEN 1 ELSE 0 END) AS suspended_users,
-                SUM(CASE WHEN u.role   = 'retailer'  THEN 1 ELSE 0 END) AS retailers,
+                SUM(CASE WHEN u.role   = 'retailer'    THEN 1 ELSE 0 END) AS retailers,
                 SUM(CASE WHEN u.role   = 'distributor' THEN 1 ELSE 0 END) AS distributors,
-                SUM(CASE WHEN u.role   = 'api_user'  THEN 1 ELSE 0 END) AS api_users
+                SUM(CASE WHEN u.role   = 'api_user'    THEN 1 ELSE 0 END) AS api_users,
+                SUM(CASE WHEN u.role   = 'buyer'       THEN 1 ELSE 0 END) AS buyers,
+                SUM(CASE WHEN u.created_at >= DATE_FORMAT(NOW(),'%Y-%m-01') THEN 1 ELSE 0 END) AS new_this_month,
+                SUM(CASE WHEN DATE(u.created_at) = CURDATE() THEN 1 ELSE 0 END) AS new_today
             ")
             ->whereNull('u.deleted_at')
             ->when(isset($filters['role']),   fn ($q) => $q->where('u.role',   $filters['role']))

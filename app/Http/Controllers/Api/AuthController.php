@@ -28,40 +28,52 @@ class AuthController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function register(RegisterRequest $request): JsonResponse
     {
-        // Handle document upload
+        $uploadDir = 'documents/' . date('Y/m');
+
+        // Handle optional general document upload
         $documentPath = null;
         if ($request->hasFile('document') && $request->file('document')->isValid()) {
-            $documentPath = $request->file('document')
-                ->store('documents/' . date('Y/m'), 'private');
+            $documentPath = $request->file('document')->store($uploadDir, 'private');
+        }
+
+        // Handle PAN image upload
+        $panImagePath = null;
+        if ($request->hasFile('pan_image') && $request->file('pan_image')->isValid()) {
+            $panImagePath = $request->file('pan_image')->store($uploadDir . '/pan', 'private');
+        }
+
+        // Handle GST certificate upload
+        $gstCertificatePath = null;
+        if ($request->hasFile('gst_certificate') && $request->file('gst_certificate')->isValid()) {
+            $gstCertificatePath = $request->file('gst_certificate')->store($uploadDir . '/gst', 'private');
         }
 
         $user = User::create([
-            'name'          => $request->name,
-            'email'         => $request->email,
-            'mobile'        => $request->mobile,
-            'password'      => $request->password,
-            'role'          => $request->input('role', 'retailer'),
-            'status'        => 'active',
-            'document_path' => $documentPath,
+            'name'                 => $request->name,
+            'email'                => $request->email,
+            'mobile'               => $request->mobile,
+            'password'             => $request->password,
+            'role'                 => $request->input('role', 'retailer'),
+            'status'               => 'inactive',   // blocked until admin approves
+            'approval_status'      => 'pending',
+            'document_path'        => $documentPath,
+            'pan_image_path'       => $panImagePath,
+            'gst_certificate_path' => $gstCertificatePath,
         ]);
 
         $this->walletService->getOrCreateWallet($user);
 
-        ActivityLogger::log('auth.register', 'New user registered.', $user, [
-            'role'          => $user->role,
-            'has_document'  => (bool) $documentPath,
+        ActivityLogger::log('auth.register', 'New user registered — pending approval.', $user, [
+            'role'            => $user->role,
+            'has_document'    => (bool) $documentPath,
+            'has_pan'         => (bool) $panImagePath,
+            'has_gst'         => (bool) $gstCertificatePath,
         ], $user->id, $request);
 
         return response()->json([
-            'message'  => 'Registration successful. Please login to continue.',
-            'redirect' => '/user/login',
-            'user'     => [
-                'id'     => $user->id,
-                'name'   => $user->name,
-                'email'  => $user->email,
-                'mobile' => $user->mobile,
-                'role'   => $user->role,
-            ],
+            'message'  => 'Registration submitted successfully. Your account is pending admin approval. You will be notified via email once approved.',
+            'redirect' => '/user/login?registered=1',
+            'status'   => 'pending_approval',
         ], 201);
     }
 
@@ -87,9 +99,19 @@ class AuthController extends Controller
             return response()->json(['message' => 'Incorrect password.'], 401);
         }
 
+        // Account pending approval
+        if ($user->approval_status === 'pending') {
+            return response()->json(['message' => 'Your registration is pending admin approval. You will be notified via email once approved.'], 403);
+        }
+
+        // Registration rejected
+        if ($user->approval_status === 'rejected') {
+            return response()->json(['message' => 'Your registration has been rejected. Please contact support for assistance.'], 403);
+        }
+
         // Account suspended
         if (! $user->isActive()) {
-            return response()->json(['message' => 'Your account has been suspended.'], 403);
+            return response()->json(['message' => 'Your account has been suspended. Please contact support.'], 403);
         }
 
         // ── 2FA Required ───────────────────────────────────────────────────

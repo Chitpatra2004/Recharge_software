@@ -10,7 +10,7 @@
     <div class="card">
         <div class="card-body" style="text-align:center">
             <div id="p-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue-dk),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;margin:0 auto 16px;box-shadow:0 8px 24px rgba(99,102,241,.35)">U</div>
-            <div id="p-name" style="font-size:17px;font-weight:700;color:#fff;margin-bottom:4px">—</div>
+            <div id="p-name" style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px">—</div>
             <div id="p-role" style="font-size:12px;font-weight:600;color:var(--muted);background:var(--card2);display:inline-block;padding:3px 12px;border-radius:20px;margin-bottom:14px">—</div>
             <div style="font-size:13px;color:var(--muted)" id="p-email">—</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px" id="p-mobile">—</div>

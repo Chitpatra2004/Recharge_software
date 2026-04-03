@@ -461,13 +461,16 @@
         <label class="form-label" for="account_type">Account Type <span class="req">*</span></label>
         <div class="input-wrap">
           <select id="account_type" name="account_type" class="form-input">
-            <option value="" disabled selected>Select account type</option>
-            <option value="retailer">Retailer</option>
-            <option value="distributor">Distributor</option>
-            <option value="api_user">API User</option>
+            <option value="retailer" selected>Retailer — I sell recharges to customers</option>
+            <option value="distributor">Distributor — I manage a network of retailers</option>
           </select>
         </div>
         <div class="field-error" id="account_typeError"></div>
+      </div>
+
+      <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#a5b4fc;display:flex;align-items:center;gap:10px">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Are you a developer or want API access? <a href="/user/register-api" style="color:#818cf8;font-weight:700;text-decoration:none">Register as API User →</a></span>
       </div>
 
       <div class="form-group">
@@ -563,6 +566,60 @@
           <button type="button" class="file-remove" id="fileRemove" aria-label="Remove file">&times;</button>
         </div>
         <div class="field-error" id="documentError"></div>
+      </div>
+
+      {{-- PAN Card Upload --}}
+      <div class="form-group">
+        <label class="form-label" for="pan_image">
+          PAN Card Image
+          <span style="color:rgba(255,255,255,.3);font-weight:400;margin-left:4px;">(Optional)</span>
+        </label>
+        <div class="drop-zone" id="panDropZone" style="border-color:rgba(234,179,8,.25)">
+          <input type="file" id="pan_image" name="pan_image" accept=".jpg,.jpeg,.png,.pdf,.webp" onchange="updateFileLabel('pan_image','panFileName','panFileChosen')" />
+          <div class="drop-icon" style="color:rgba(234,179,8,.5)">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z"/>
+            </svg>
+          </div>
+          <div class="drop-text-main">Upload PAN Card</div>
+          <div class="drop-text-sub">JPG, PNG, PDF, WEBP &mdash; max 4 MB</div>
+        </div>
+        <div class="file-chosen" id="panFileChosen" style="display:none">
+          <svg viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor" style="width:16px;height:16px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          <span id="panFileName"></span>
+          <button type="button" style="margin-left:auto;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);font-size:16px" onclick="clearFileInput('pan_image','panFileName','panFileChosen')">&times;</button>
+        </div>
+        <div class="field-error" id="pan_imageError"></div>
+      </div>
+
+      {{-- GST Certificate Upload --}}
+      <div class="form-group">
+        <label class="form-label" for="gst_certificate">
+          GST Certificate
+          <span style="color:rgba(255,255,255,.3);font-weight:400;margin-left:4px;">(Optional)</span>
+        </label>
+        <div class="drop-zone" id="gstDropZone" style="border-color:rgba(99,102,241,.25)">
+          <input type="file" id="gst_certificate" name="gst_certificate" accept=".jpg,.jpeg,.png,.pdf,.webp" onchange="updateFileLabel('gst_certificate','gstFileName','gstFileChosen')" />
+          <div class="drop-icon" style="color:rgba(99,102,241,.5)">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+            </svg>
+          </div>
+          <div class="drop-text-main">Upload GST Certificate</div>
+          <div class="drop-text-sub">JPG, PNG, PDF, WEBP &mdash; max 4 MB</div>
+        </div>
+        <div class="file-chosen" id="gstFileChosen" style="display:none">
+          <svg viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor" style="width:16px;height:16px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          <span id="gstFileName"></span>
+          <button type="button" style="margin-left:auto;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);font-size:16px" onclick="clearFileInput('gst_certificate','gstFileName','gstFileChosen')">&times;</button>
+        </div>
+        <div class="field-error" id="gst_certificateError"></div>
+      </div>
+
+      {{-- Approval notice --}}
+      <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#fde68a;display:flex;align-items:flex-start;gap:10px">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <span>After submitting, your account will be <strong>pending admin approval</strong>. You will receive an email notification once your account is approved and you can login.</span>
       </div>
 
       <button type="submit" class="btn-primary" id="submitBtn">
@@ -702,7 +759,7 @@
     }
 
     function clearAllErrors() {
-      ['name','mobile','email','account_type','password','password_confirmation','document'].forEach(function (f) {
+      ['name','mobile','email','password','password_confirmation','document'].forEach(function (f) {
         clearFieldError(f + 'Error');
       });
       document.getElementById('alertError').classList.remove('show');
@@ -715,7 +772,6 @@
       var name  = document.getElementById('name').value.trim();
       var mobile = document.getElementById('mobile').value.trim();
       var email  = document.getElementById('email').value.trim();
-      var acType = document.getElementById('account_type').value;
       var pwd    = document.getElementById('password').value;
       var cpwd   = document.getElementById('password_confirmation').value;
 
@@ -729,10 +785,6 @@
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showFieldError('emailError', 'Enter a valid email address');
-        ok = false;
-      }
-      if (!acType) {
-        showFieldError('account_typeError', 'Please select an account type');
         ok = false;
       }
       if (pwd.length < 8) {
@@ -764,12 +816,18 @@
       formData.append('name',                  document.getElementById('name').value.trim());
       formData.append('mobile',                document.getElementById('mobile').value.trim());
       formData.append('email',                 document.getElementById('email').value.trim());
-      formData.append('account_type',          document.getElementById('account_type').value);
+      formData.append('role',                   document.getElementById('account_type').value);
       formData.append('password',              document.getElementById('password').value);
       formData.append('password_confirmation', document.getElementById('password_confirmation').value);
 
       var docFile = document.getElementById('document').files[0];
       if (docFile) formData.append('document', docFile);
+
+      var panFile = document.getElementById('pan_image').files[0];
+      if (panFile) formData.append('pan_image', panFile);
+
+      var gstFile = document.getElementById('gst_certificate').files[0];
+      if (gstFile) formData.append('gst_certificate', gstFile);
 
       fetch('/api/v1/auth/register', {
         method: 'POST',
@@ -787,9 +845,11 @@
         var data   = result.data;
 
         if (status === 201 || (status >= 200 && status < 300)) {
-          document.getElementById('alertSuccessText').textContent = 'Account created! Redirecting to login...';
+          document.getElementById('alertSuccessText').textContent = 'Registration submitted! Your account is pending admin approval. You will be notified via email once approved.';
           document.getElementById('alertSuccess').classList.add('show');
-          setTimeout(function () { window.location.href = '/user/login?registered=1'; }, 1500);
+          submitBtn.disabled = true;
+          submitText.textContent = 'Registration Submitted';
+          setTimeout(function () { window.location.href = '/user/login?registered=1'; }, 4000);
         } else {
           if (data.errors) {
             Object.keys(data.errors).forEach(function (field) {
@@ -814,6 +874,20 @@
     });
 
   })();
+
+  // Helper functions for PAN / GST file inputs
+  function updateFileLabel(inputId, nameId, choserId) {
+    var file = document.getElementById(inputId).files[0];
+    if (file) {
+      document.getElementById(nameId).textContent = file.name;
+      document.getElementById(choserId).style.display = 'flex';
+    }
+  }
+  function clearFileInput(inputId, nameId, choserId) {
+    document.getElementById(inputId).value = '';
+    document.getElementById(nameId).textContent = '';
+    document.getElementById(choserId).style.display = 'none';
+  }
 </script>
 </body>
 </html>

@@ -20,52 +20,105 @@ class RechargeController extends Controller
 
     /**
      * POST /api/v1/recharge
-     * Initiates a recharge — debits wallet and queues processing.
+     *
+     * Real-time synchronous processing — no queue workers required.
+     * Reserves wallet balance → calls operator API → returns final result.
+     *
+     * HTTP status codes:
+     *   200 — success or clean failure (amount refunded)
+     *   202 — pending (operator API timed out; cron will retry)
+     *   409 — duplicate transaction
+     *   422 — insufficient balance / validation error
+     *   403 — wallet frozen
+     *   503 — operator unavailable (no configured routes)
+     *   500 — unexpected server error
      */
     public function store(RechargeRequest $request): JsonResponse
     {
         try {
-            $data                  = $request->validated();
-            $data['ip_address']    = $request->ip();
+            $data                = $request->validated();
+            $data['ip_address']  = $request->ip();
 
-            $transaction = $this->rechargeService->initiate($request->user(), $data);
+            // ── Synchronous: validate → reserve → API call → finalise ──────
+            $transaction = $this->rechargeService->processSync($request->user(), $data);
+
+            $status = $transaction->status;
 
             ActivityLogger::log(
-                'recharge.initiated',
-                "Recharge queued for {$transaction->mobile}",
+                'recharge.' . $status,
+                "Recharge {$status} for {$transaction->mobile}",
                 $transaction,
-                ['amount' => $transaction->amount],
+                ['amount' => $transaction->amount, 'operator_ref' => $transaction->operator_ref],
                 $request->user()->id,
                 $request
             );
 
+            // ── Build response based on final status ───────────────────────
+            if ($status === 'success') {
+                return response()->json([
+                    'message'        => 'Recharge successful.',
+                    'transaction_id' => $transaction->id,
+                    'status'         => 'success',
+                    'amount'         => $transaction->amount,
+                    'mobile'         => $transaction->mobile,
+                    'operator'       => $transaction->operator_code,
+                    'operator_ref'   => $transaction->operator_ref,
+                    'processed_at'   => $transaction->processed_at,
+                ], 200);
+            }
+
+            if ($status === 'pending') {
+                return response()->json([
+                    'message'        => 'Recharge is being processed. You will be notified once confirmed.',
+                    'transaction_id' => $transaction->id,
+                    'status'         => 'pending',
+                    'amount'         => $transaction->amount,
+                    'mobile'         => $transaction->mobile,
+                ], 202);
+            }
+
+            // Failed — wallet already refunded by processSync()
             return response()->json([
-                'message'        => 'Recharge queued successfully.',
+                'message'        => 'Recharge failed. Amount has been refunded to your wallet.',
                 'transaction_id' => $transaction->id,
-                'status'         => $transaction->status,
+                'status'         => 'failed',
                 'amount'         => $transaction->amount,
                 'mobile'         => $transaction->mobile,
-            ], 202); // 202 Accepted — async processing
+                'reason'         => $transaction->failure_reason,
+            ], 200);
 
         } catch (DuplicateTransactionException $e) {
             return response()->json([
-                'message'        => 'Duplicate transaction.',
+                'message'        => 'Duplicate transaction. This recharge was already submitted.',
                 'transaction_id' => $e->existing->id,
                 'status'         => $e->existing->status,
             ], 409);
 
         } catch (InsufficientBalanceException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
 
         } catch (WalletFrozenException $e) {
-            return response()->json(['message' => $e->getMessage()], 403);
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 403);
 
         } catch (OperatorUnavailableException $e) {
-            return response()->json(['message' => $e->getMessage()], 503);
+            return response()->json([
+                'message' => 'Service temporarily unavailable. Please try again in a few minutes.',
+            ], 503);
 
         } catch (\Throwable $e) {
-            Log::error('Recharge initiation error', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Server error. Please try again.'], 500);
+            Log::error('Recharge processSync error', [
+                'user_id' => $request->user()?->id,
+                'mobile'  => $request->input('mobile'),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Server error. Please try again.',
+            ], 500);
         }
     }
 
@@ -91,7 +144,14 @@ class RechargeController extends Controller
 
         $this->rechargeService->refund($transaction, $request->user());
 
-        ActivityLogger::log('recharge.refunded', "Refund issued for txn #{$id}", $transaction, [], $request->user()->id, $request);
+        ActivityLogger::log(
+            'recharge.refunded',
+            "Refund issued for txn #{$id}",
+            $transaction,
+            [],
+            $request->user()->id,
+            $request
+        );
 
         return response()->json(['message' => 'Refund processed.']);
     }
@@ -99,21 +159,12 @@ class RechargeController extends Controller
     /**
      * POST /api/v1/recharge/callback  (Operator webhook)
      *
-     * Security: the callback_secret in config/recharge.php must match the
-     * RECHARGE_CALLBACK_SECRET in .env.  When set, every callback must carry
-     * an X-Signature header containing  HMAC-SHA256(raw_body, secret).
-     * Use hash_equals() to prevent timing-attack enumeration of the secret.
+     * HMAC-SHA256 verified via X-Signature header (FIX H3).
      */
     public function callback(Request $request): JsonResponse
     {
-        // ── HMAC-SHA256 signature verification ───────────────────────────────
         $secret = config('recharge.callback_secret');
         if ($secret) {
-            // FIX H3: Accept signature from HEADERS ONLY.
-            // Accepting it from $request->input('signature') was wrong because
-            // the signature field would be PART of the body being verified —
-            // an attacker could craft any body and include a matching signature
-            // in that same body (circular trust).
             $signature = $request->header('X-Signature')
                       ?? $request->header('X-Callback-Signature');
 
@@ -125,26 +176,21 @@ class RechargeController extends Controller
             $expected = hash_hmac('sha256', $request->getContent(), $secret);
 
             if (! hash_equals($expected, (string) $signature)) {
-                Log::warning('Callback: invalid HMAC signature', [
-                    'ip'        => $request->ip(),
-                    'signature' => substr((string) $signature, 0, 8) . '…',
-                ]);
+                Log::warning('Callback: invalid HMAC signature', ['ip' => $request->ip()]);
                 return response()->json(['message' => 'Unauthorized — invalid signature.'], 401);
             }
         }
 
-        // ── Extract fields ────────────────────────────────────────────────────
         $operatorRef = $request->input('ref_id')
                     ?? $request->input('txn_id')
                     ?? $request->input('operator_ref');
         $status      = $request->input('status');
-        $payload     = $request->all();
 
         if (! $operatorRef || ! $status) {
             return response()->json(['message' => 'Invalid callback — ref_id and status are required.'], 400);
         }
 
-        $this->rechargeService->handleCallback($operatorRef, $status, $payload);
+        $this->rechargeService->handleCallback($operatorRef, $status, $request->all());
 
         return response()->json(['message' => 'Callback received.']);
     }

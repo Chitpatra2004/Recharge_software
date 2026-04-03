@@ -667,6 +667,7 @@ async function doRecharge(svc) {
     const origText = btnEl.innerHTML;
     btnEl.innerHTML = '<div class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle"></div> Processing…';
 
+    body.idempotency_key = 'rh_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
     const res = await apiFetch('/api/v1/recharge', { method: 'POST', body: JSON.stringify(body) });
     btnEl.disabled = false;
     btnEl.innerHTML = origText;
@@ -674,8 +675,21 @@ async function doRecharge(svc) {
     if (!res) return;
     const data = await res.json();
     if (res.ok) {
-        showSvcMsg(msgEl, '✓ Transaction submitted! Txn ID: ' + (data.txn_id || data.id || '—'), 'success');
+        showSvcMsg(msgEl, '✓ Recharge submitted! Opening receipt…', 'success');
         loadTxns();
+        // Build receipt object from API response
+        const txn = data.transaction || data.data || data;
+        const receiptTxn = {
+            id:            txn.id || data.id || '—',
+            mobile:        txn.mobile || body.mobile || '—',
+            operator_code: txn.operator_code || body.operator_code || '—',
+            recharge_type: txn.recharge_type || body.recharge_type || svc,
+            amount:        txn.amount || body.amount || 0,
+            status:        txn.status || 'pending',
+            operator_ref:  txn.operator_ref || txn.operator_txn_id || null,
+            created_at:    txn.created_at || new Date().toISOString(),
+        };
+        setTimeout(() => showReceipt(receiptTxn), 300);
     } else {
         showSvcMsg(msgEl, data.message || 'Transaction failed. Please try again.', 'error');
     }
@@ -714,14 +728,15 @@ async function loadTxns(page = 1) {
 
     document.getElementById('txn-tbody').innerHTML = txns.map(t => {
         const sc  = t.status === 'success' ? 'success' : t.status === 'failed' ? 'failure' : 'pending';
-        const dt  = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        const dt  = t.created_at ? new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
+        const reason = t.failure_reason ? `<div style="font-size:10px;color:#ef4444;margin-top:2px">${t.failure_reason}</div>` : '';
         return `<tr>
             <td style="font-family:monospace;font-size:11px;color:var(--muted)">#${t.id||'—'}</td>
             <td style="font-weight:600">${t.mobile||'—'}</td>
             <td>${t.operator_code||'—'}</td>
             <td style="font-size:12px;text-transform:capitalize">${(t.recharge_type||'—').replace('bbps_','')}</td>
             <td style="font-weight:700">₹${parseFloat(t.amount||0).toFixed(2)}</td>
-            <td><span class="badge ${sc}">${t.status||'—'}</span></td>
+            <td><span class="badge ${sc}">${t.status||'—'}</span>${reason}</td>
             <td style="font-size:11px;color:var(--muted)">${dt}</td>
             <td>${t.status==='success'||t.status==='refunded'
                 ? `<button onclick="showReceipt(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:rgba(16,185,129,.15);border:none;color:#34d399;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer">Receipt</button>`
@@ -748,7 +763,7 @@ async function loadTxns(page = 1) {
 function showReceipt(txn) {
     currentReceipt = txn;
     const user = getUserData();
-    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN') : '—';
+    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
     const statusColor = txn.status === 'success' ? '#059669' : '#2563eb';
     document.getElementById('receipt-body').innerHTML = `
         <div style="text-align:center;margin-bottom:20px">
@@ -774,7 +789,7 @@ function showReceipt(txn) {
 function rrow(l,v){return `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9"><span style="color:#6b7280;font-weight:500">${l}</span><span style="color:#111;font-weight:600;text-align:right;max-width:60%">${v}</span></div>`;}
 function closeReceipt(){ document.getElementById('receipt-overlay').style.display='none'; }
 function printReceipt(){
-    const u=getUserData(), t=currentReceipt, date=t.created_at?new Date(t.created_at).toLocaleString('en-IN'):'—';
+    const u=getUserData(), t=currentReceipt, date=t.created_at?new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}):'—';
     const w=window.open('','_blank','width=480,height=700');
     w.document.write(`<!DOCTYPE html><html><head><title>Receipt #${t.id}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#111}.brand{font-size:22px;font-weight:800;color:#2563eb;text-align:center;margin-bottom:20px}.amount{font-size:36px;font-weight:900;text-align:center;margin:12px 0}.status{color:#059669;font-weight:600;font-size:14px;text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}.footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}@media print{body{padding:0}}</style></head><body><div class="brand">RechargeHub</div><div class="amount">₹${parseFloat(t.amount||0).toFixed(2)}</div><div class="status">${(t.status||'').toUpperCase()}</div><table><tr><td style="color:#6b7280">Transaction ID</td><td>#${t.id}</td></tr><tr><td style="color:#6b7280">Mobile / Account</td><td>${t.mobile||'—'}</td></tr><tr><td style="color:#6b7280">Operator</td><td>${t.operator_code||'—'}</td></tr><tr><td style="color:#6b7280">Type</td><td>${(t.recharge_type||'—').replace('bbps_','').toUpperCase()}</td></tr><tr><td style="color:#6b7280">Amount</td><td>₹${parseFloat(t.amount||0).toFixed(2)}</td></tr>${t.operator_ref?`<tr><td style="color:#6b7280">Ref</td><td>${t.operator_ref}</td></tr>`:''}<tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr><tr><td style="color:#6b7280">Account</td><td>${u.name||'—'}</td></tr></table><div class="footer">Thank you for using RechargeHub<br>Keep this receipt for your records</div><script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();

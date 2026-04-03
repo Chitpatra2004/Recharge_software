@@ -65,10 +65,13 @@ function openIntgModal(){
     document.getElementById('intg-modal').classList.add('show');
 }
 
-function renderConfig(data){
+function renderConfig(raw){
+    // API returns {data: {server_ip, api_key: {prefix,...}, integration: {...}}}
+    const data = raw.data || raw;
     configData = data;
-    const intg = data.integration;
-    const hasApiKey = !!data.api_key_hint;
+    const intg      = data.integration;
+    const apiKeyObj = data.api_key;
+    const hasApiKey = !!apiKeyObj?.prefix;
     let html = '';
 
     // Integration status banner
@@ -105,7 +108,7 @@ function renderConfig(data){
                 <div>
                     <div style="font-size:11.5px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Server IP (Whitelist This)</div>
                     <div class="code-box" style="display:flex;align-items:center;justify-content:space-between">
-                        <span id="server-ip">${data.server_ip||'—'}</span>
+                        <span id="server-ip">${data.server_ip||window.location.hostname}</span>
                         <button onclick="copyText('server-ip')" style="background:none;border:none;cursor:pointer;color:#10b981;font-size:12px;font-weight:600">Copy</button>
                     </div>
                 </div>
@@ -129,10 +132,10 @@ function renderConfig(data){
                     <div style="font-size:11.5px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">API Key</div>
                     ${hasApiKey
                         ? `<div class="code-box" style="display:flex;align-items:center;justify-content:space-between">
-                                <span id="api-key-hint" style="font-family:monospace;letter-spacing:1px">${data.api_key_hint}</span>
+                                <span style="font-family:monospace;letter-spacing:1px">${apiKeyObj.prefix}••••••••••••••••</span>
                                 <span style="font-size:11px;color:#94a3b8">Partial</span>
                            </div>
-                           <div style="font-size:11.5px;color:#10b981;margin-top:5px">✓ API key is active. Full key was shown once at creation.</div>`
+                           <div style="font-size:11.5px;color:#10b981;margin-top:5px">✓ API key active since ${fmtDate(apiKeyObj.created_at)}. Full key was shown once at creation.</div>`
                         : `<div style="background:#f1f5f9;border-radius:8px;padding:12px;font-size:13px;color:#64748b;text-align:center">${intg?.status==='approved'?'API key not generated yet. Contact admin.':'Pending integration approval'}</div>`
                     }
                 </div>
@@ -219,7 +222,7 @@ document.getElementById('intg-form').addEventListener('submit', async e=>{
     document.getElementById('intg-btn-text').textContent='Submitting…';
     document.getElementById('intg-error').style.display='none';
     try{
-        const res = await apiFetch('/api/v1/seller/api-config/integration','POST',body);
+        await apiFetch('/api/v1/seller/api-config/integration', {method:'POST', body:JSON.stringify(body)});
         closeIntgModal();
         loadConfig();
     }catch(err){

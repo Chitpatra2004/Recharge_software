@@ -251,7 +251,7 @@ async function loadWallet(page = 1) {
         document.getElementById('ledger-tbody').innerHTML = txns.length
             ? txns.map(t => {
                 const isCredit = t.type === 'credit' || t.type === 'release';
-                const date = t.created_at ? new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+                const date = t.created_at ? new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
                 return `<tr>
                     <td><span style="font-size:11px;font-weight:700;color:${typeColor[t.type]||'#fff'}">${(t.type||'').toUpperCase()}</span></td>
                     <td style="font-weight:700;color:${isCredit?'var(--green)':'var(--red)'}">${isCredit?'+':'−'}${fmtAmt(t.amount)}</td>
@@ -280,7 +280,7 @@ async function loadWallet(page = 1) {
 
 function printWalletReceipt(txn) {
     const user = getUserData();
-    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN') : '—';
+    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
     const isCredit = txn.type === 'credit' || txn.type === 'release';
     const w = window.open('', '_blank', 'width=480,height=600');
     w.document.write(`<!DOCTYPE html><html><head><title>Wallet Receipt</title>

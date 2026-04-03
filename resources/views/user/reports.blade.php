@@ -96,8 +96,9 @@
         </div>
     </div>
 
-    <div style="text-align:right;margin-bottom:16px">
-        <button class="btn btn-outline btn-sm" onclick="printAccountReport()">🖨 Print Account Report</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="exportAccountCSV()">⬇ Export CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="printAccountReport()">🖨 Print / PDF Report</button>
     </div>
 
     <div class="card">
@@ -137,9 +138,12 @@
     </div>
 
     <div class="card">
-        <div class="card-header" style="justify-content:space-between">
-            <span class="card-title">Wallet Transactions</span>
-            <span id="r3-count" style="font-size:12px;color:var(--muted)"></span>
+        <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <span class="card-title">Wallet Transactions <span id="r3-count" style="font-size:12px;color:var(--muted);font-weight:400"></span></span>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-outline btn-sm" onclick="downloadCSV('topup')">⬇ CSV</button>
+                <button class="btn btn-outline btn-sm" onclick="printLedgerReport()">🖨 Ledger PDF</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table id="r3-table">
@@ -211,7 +215,7 @@ async function loadR1(page = 1) {
     document.getElementById('r1-tbody').innerHTML = txns.length
         ? txns.map(t => {
             const sc = t.status==='success'?'success':t.status==='failed'?'failure':'pending';
-            const date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+            const date = t.created_at ? new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
             return `<tr>
                 <td style="font-family:monospace;font-size:11px;color:var(--muted)">#${t.id}</td>
                 <td style="font-weight:600">${t.mobile||'—'}</td>
@@ -263,7 +267,7 @@ async function loadAccount() {
         document.getElementById('ac-recent').innerHTML = txns.length
             ? txns.map(t => {
                 const sc = t.status==='success'?'success':t.status==='failed'?'failure':'pending';
-                const date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+                const date = t.created_at ? new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
                 return `<tr>
                     <td style="font-family:monospace;font-size:11px;color:var(--muted)">#${t.id}</td>
                     <td style="font-weight:600">${t.mobile||'—'}</td>
@@ -287,33 +291,63 @@ async function loadAccount() {
     }
 }
 
-function printAccountReport() {
+async function printAccountReport() {
     const user = getUserData();
-    const w = window.open('', '_blank', 'width=700,height=800');
-    const rows = Array.from(document.querySelectorAll('#ac-recent tr')).map(r => r.outerHTML).join('');
+    // Fetch all transactions for the report (up to 500)
+    let txnRows = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:16px">No transactions yet</td></tr>';
+    try {
+        const res = await apiFetch('/api/v1/transactions?per_page=500&page=1');
+        if (res?.ok) {
+            const d = await res.json();
+            const txns = d.data?.data || d.data || [];
+            if (txns.length) {
+                const sc = s => s==='success'?'#059669':s==='failed'?'#dc2626':'#d97706';
+                txnRows = txns.map(t => {
+                    const dt = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+                    return `<tr>
+                        <td style="font-family:monospace;color:#6b7280;font-size:11px">#${t.id}</td>
+                        <td style="font-weight:600">${t.mobile||'—'}</td>
+                        <td>${t.operator_code||'—'}</td>
+                        <td style="text-transform:capitalize;font-size:11px">${t.recharge_type||'—'}</td>
+                        <td style="font-weight:700;text-align:right">₹${parseFloat(t.amount||0).toFixed(2)}</td>
+                        <td style="font-weight:600;color:${sc(t.status)};text-align:center">${(t.status||'').toUpperCase()}</td>
+                        <td style="color:#6b7280;font-size:11px">${dt}</td>
+                    </tr>`;
+                }).join('');
+            }
+        }
+    } catch(e) {}
+
     const detRows = document.getElementById('ac-details').innerHTML;
     const walRows = document.getElementById('ac-wallet').innerHTML;
-    w.document.write(`<!DOCTYPE html><html><head><title>Account Report</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#111}
-    h1{font-size:22px;font-weight:800;color:#2563eb;margin-bottom:4px}
-    h2{font-size:15px;font-weight:700;margin:20px 0 10px;color:#374151}
-    .det-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+    const w = window.open('', '_blank', 'width=850,height=900');
+    w.document.write(`<!DOCTYPE html><html><head><title>Account Report — ${user.name||''}</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:28px;color:#111;font-size:13px}
+    .brand{font-size:22px;font-weight:800;color:#2563eb}.sub{font-size:12px;color:#6b7280;margin-top:2px;margin-bottom:20px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2563eb;padding-bottom:14px;margin-bottom:20px}
+    h2{font-size:14px;font-weight:700;margin:18px 0 10px;color:#374151;border-left:3px solid #2563eb;padding-left:8px}
+    .det-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:12px}
     .det-label{color:#6b7280}.det-val{font-weight:600}
-    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
-    th{background:#f8fafc;padding:8px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb}
-    td{padding:8px;border-bottom:1px solid #f1f5f9}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-    .footer{text-align:center;margin-top:30px;font-size:11px;color:#9ca3af}
-    @media print{body{padding:0}}</style></head><body>
-    <h1>RechargeHub — Account Report</h1>
-    <div style="font-size:12px;color:#6b7280;margin-bottom:20px">Generated: ${new Date().toLocaleString('en-IN')}</div>
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+    th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+    td{padding:7px 10px;border-bottom:1px solid #f1f5f9}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:4px}
+    .footer{text-align:center;margin-top:28px;font-size:10px;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:14px}
+    @media print{body{padding:0}@page{margin:12mm}}</style></head><body>
+    <div class="header">
+        <div><div class="brand">RechargeHub</div><div class="sub">Account Report Statement</div></div>
+        <div style="text-align:right;font-size:11px;color:#6b7280">Generated: ${new Date().toLocaleString('en-IN')}</div>
+    </div>
     <div class="grid">
     <div><h2>Account Details</h2>${detRows}</div>
     <div><h2>Wallet Summary</h2>${walRows}</div>
     </div>
-    <h2>Recent Transactions</h2>
-    <table><thead><tr><th>#</th><th>Mobile</th><th>Operator</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="footer">RechargeHub • Account Report • ${new Date().toLocaleDateString('en-IN')}</div>
+    <h2>All Transactions</h2>
+    <table>
+        <thead><tr><th>#</th><th>Mobile</th><th>Operator</th><th>Type</th><th style="text-align:right">Amount</th><th style="text-align:center">Status</th><th>Date</th></tr></thead>
+        <tbody>${txnRows}</tbody>
+    </table>
+    <div class="footer">RechargeHub • Account Report • ${user.email||''} • Confidential</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }
@@ -379,7 +413,7 @@ function buildPagination(id, curr, last, fn) {
 /* ── Receipt printers ─────────────────── */
 function printTxnReceipt(txn) {
     const user = getUserData();
-    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN') : '—';
+    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
     const w = window.open('', '_blank', 'width=480,height=680');
     w.document.write(`<!DOCTYPE html><html><head><title>Receipt #${txn.id}</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#111}
@@ -410,7 +444,7 @@ function printTxnReceipt(txn) {
 
 function printTopupReceipt(txn) {
     const user = getUserData();
-    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN') : '—';
+    const date = txn.created_at ? new Date(txn.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
     const isCredit = txn.type==='credit'||txn.type==='release';
     const w = window.open('', '_blank', 'width=480,height=600');
     w.document.write(`<!DOCTYPE html><html><head><title>Wallet Receipt</title>
@@ -444,19 +478,93 @@ function printTopupReceipt(txn) {
 function downloadCSV(type) {
     let headers, rows, filename;
     if (type === 'txn') {
-        headers = ['ID','Mobile','Operator','Type','Amount','Status','Date'];
-        rows = r1Data.map(t => [t.id, t.mobile, t.operator_code, t.recharge_type, t.amount, t.status, t.created_at]);
-        filename = 'transaction-history.csv';
+        headers = ['ID','Mobile','Operator','Type','Amount','Status','Date','Operator Ref'];
+        rows = r1Data.map(t => [t.id, t.mobile||'', t.operator_code||'', t.recharge_type||'', t.amount||0, t.status||'', t.created_at||'', t.operator_ref||t.operator_txn_id||'']);
+        filename = 'transaction-history-' + new Date().toISOString().slice(0,10) + '.csv';
     } else {
-        headers = ['Type','Amount','Description','Balance After','Date'];
-        rows = r3Data.map(t => [t.type, t.amount, t.description, t.balance_after, t.created_at]);
-        filename = 'wallet-topup-report.csv';
+        headers = ['Type','Amount (₹)','Description','Balance After (₹)','Date & Time','Reference'];
+        rows = r3Data.map(t => [t.type||'', t.amount||0, t.description||'', t.balance_after||0, t.created_at||'', t.txn_id||t.id||'']);
+        filename = 'wallet-ledger-' + new Date().toISOString().slice(0,10) + '.csv';
     }
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v ?? ''}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
     const a = document.createElement('a');
-    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
     a.download = filename;
     a.click();
+}
+
+async function exportAccountCSV() {
+    // Fetch all transactions (up to 500) and export
+    const res = await apiFetch('/api/v1/transactions?per_page=500&page=1');
+    if (!res) return;
+    const d = await res.json();
+    const txns = d.data?.data || d.data || [];
+    const headers = ['ID','Mobile','Operator','Type','Amount (₹)','Status','Date','Operator Ref'];
+    const rows = txns.map(t => [t.id, t.mobile||'', t.operator_code||'', t.recharge_type||'', t.amount||0, t.status||'', t.created_at||'', t.operator_ref||t.operator_txn_id||'']);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = 'account-report-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+}
+
+/* ── Ledger PDF Print ──────────────────── */
+function printLedgerReport() {
+    const user  = getUserData();
+    const from  = document.getElementById('r3-from').value;
+    const to    = document.getElementById('r3-to').value;
+    const w = window.open('', '_blank', 'width=800,height=900');
+    const typeColor = { credit:'#059669', debit:'#dc2626', reserve:'#d97706', release:'#2563eb', reversal:'#7c3aed' };
+    const rows = r3Data.map(t => {
+        const isCredit = t.type==='credit'||t.type==='release';
+        const date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        return `<tr>
+            <td style="font-size:11px;color:#6b7280">${date}</td>
+            <td style="font-weight:700;color:${typeColor[t.type]||'#111'};font-size:11px">${(t.type||'').toUpperCase()}</td>
+            <td style="color:#374151;font-size:12px">${t.description||'—'}</td>
+            <td style="font-family:monospace;font-size:11px;color:#6b7280">${t.txn_id||t.id||'—'}</td>
+            <td style="text-align:right;font-weight:600;color:${isCredit?'#059669':'#dc2626'}">${isCredit?'+':'−'}₹${parseFloat(t.amount||0).toFixed(2)}</td>
+            <td style="text-align:right;font-weight:600">₹${parseFloat(t.balance_after||0).toFixed(2)}</td>
+        </tr>`;
+    }).join('');
+
+    let credit=0,debit=0;
+    r3Data.forEach(t=>{if(t.type==='credit'||t.type==='release')credit+=parseFloat(t.amount||0);else debit+=parseFloat(t.amount||0);});
+
+    w.document.write(`<!DOCTYPE html><html><head><title>Wallet Ledger — ${user.name||''}</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:28px;color:#111;font-size:13px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid #2563eb;padding-bottom:16px}
+    .brand{font-size:22px;font-weight:800;color:#2563eb}.sub{font-size:12px;color:#6b7280;margin-top:2px}
+    .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+    .info-box{background:#f8fafc;border-radius:8px;padding:12px 14px}
+    .info-lbl{font-size:10px;font-weight:600;text-transform:uppercase;color:#6b7280;letter-spacing:.5px;margin-bottom:4px}
+    .info-val{font-size:16px;font-weight:700;color:#111}
+    table{width:100%;border-collapse:collapse;margin-top:4px;font-size:12px}
+    th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+    th:last-child,th:nth-last-child(2){text-align:right}
+    td{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+    .footer{text-align:center;margin-top:24px;font-size:10px;color:#9ca3af}
+    @media print{body{padding:0}@page{margin:15mm}}</style></head><body>
+    <div class="header">
+        <div><div class="brand">RechargeHub</div><div class="sub">Wallet Ledger Statement</div></div>
+        <div style="text-align:right;font-size:12px;color:#6b7280">
+            <div>Account: <strong style="color:#111">${user.name||'—'}</strong></div>
+            <div>Period: ${from||'All time'} ${to?'to '+to:''}</div>
+            <div>Generated: ${new Date().toLocaleString('en-IN')}</div>
+        </div>
+    </div>
+    <div class="info-grid">
+        <div class="info-box"><div class="info-lbl">Total Credits</div><div class="info-val" style="color:#059669">+₹${credit.toFixed(2)}</div></div>
+        <div class="info-box"><div class="info-lbl">Total Debits</div><div class="info-val" style="color:#dc2626">−₹${debit.toFixed(2)}</div></div>
+        <div class="info-box"><div class="info-lbl">Net</div><div class="info-val">₹${(credit-debit).toFixed(2)}</div></div>
+    </div>
+    <table>
+        <thead><tr><th>Date & Time</th><th>Type</th><th>Description</th><th>Reference</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance After</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#6b7280">No transactions in this period</td></tr>'}</tbody>
+    </table>
+    <div class="footer">RechargeHub Wallet Ledger • ${user.email||''} • Confidential</div>
+    <script>window.onload=()=>{window.print()}<\/script></body></html>`);
+    w.document.close();
 }
 
 /* ── Init ─────────────────────────────── */

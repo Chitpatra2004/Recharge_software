@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>(function(){try{var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--bg-body':'#040d21','--bg-deep':'#070f2b','--nav-bg':'rgba(4,13,33,.85)','--blue':'#3b82f6','--blue-dk':'#2563eb','--indigo':'#6366f1','--purple':'#8b5cf6'},'Midnight':{'--bg-body':'#050505','--bg-deep':'#0f0f0f','--nav-bg':'rgba(5,5,5,.85)','--blue':'#60a5fa','--blue-dk':'#2563eb','--indigo':'#818cf8','--purple':'#a78bfa'},'Violet':{'--bg-body':'#0f0723','--bg-deep':'#160d33','--nav-bg':'rgba(15,7,35,.85)','--blue':'#a78bfa','--blue-dk':'#7c3aed','--indigo':'#8b5cf6','--purple':'#c084fc'},'Forest':{'--bg-body':'#020d07','--bg-deep':'#041a0d','--nav-bg':'rgba(2,13,7,.85)','--blue':'#34d399','--blue-dk':'#059669','--indigo':'#6ee7b7','--purple':'#a78bfa'},'Ocean':{'--bg-body':'#020c18','--bg-deep':'#031221','--nav-bg':'rgba(2,12,24,.85)','--blue':'#38bdf8','--blue-dk':'#0284c7','--indigo':'#0ea5e9','--purple':'#818cf8'},'Ember':{'--bg-body':'#150500','--bg-deep':'#1f0a00','--nav-bg':'rgba(21,5,0,.85)','--blue':'#fb923c','--blue-dk':'#ea580c','--indigo':'#f97316','--purple':'#f472b6'}};if(u&&m[u]){Object.entries(m[u]).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -22,6 +23,7 @@
             /* Dark theme palette */
             --bg-body:  #040d21;
             --bg-deep:  #070f2b;
+            --nav-bg:   rgba(4,13,33,.85);
             --bg-card:  rgba(255,255,255,.04);
             --bg-card2: rgba(255,255,255,.06);
             --border:   rgba(255,255,255,.08);
@@ -54,7 +56,7 @@
         /* ── NAV ─────────────────────────────────────────── */
         nav {
             position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-            background: rgba(4,13,33,.85);
+            background: var(--nav-bg, rgba(4,13,33,.85));
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             padding: 0 5%;
@@ -567,6 +569,27 @@
             .footer-grid { grid-template-columns: 1fr; }
             .ribbon-grid { grid-template-columns: 1fr 1fr; }
         }
+        /* ── Theme Panel ─────────────────────────────────── */
+        .tp-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s}
+        .tp-overlay.open{opacity:1;pointer-events:all}
+        .tp-panel{position:fixed;top:0;right:0;width:272px;height:100vh;z-index:1001;background:#0c1526;border-left:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+        .tp-panel.open{transform:translateX(0)}
+        .tp-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+        .tp-head h3{font-size:14px;font-weight:700;color:#f1f5f9;margin:0}
+        .tp-close{background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;line-height:1;padding:2px 7px;border-radius:6px;transition:color .15s}
+        .tp-close:hover{color:#f1f5f9}
+        .tp-body{padding:18px 20px;flex:1;overflow-y:auto}
+        .tp-label{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+        .tp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .tp-preset{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 8px;cursor:pointer;transition:all .2s;text-align:center;font-family:inherit}
+        .tp-preset:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.07)}
+        .tp-preset.active{border-color:#3b82f6;background:rgba(59,130,246,.1)}
+        .tp-swatches{display:flex;gap:3px;justify-content:center;margin-bottom:6px}
+        .tp-swatch{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,.15)}
+        .tp-name{font-size:11px;font-weight:600;color:#94a3b8}
+        .tp-preset.active .tp-name{color:#60a5fa}
+        .btn-theme{width:34px;height:34px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:all .15s;font-size:0;padding:0}
+        .btn-theme:hover{color:#f1f5f9;background:rgba(255,255,255,.12)}
     </style>
 </head>
 <body>
@@ -587,6 +610,9 @@
         <a href="#contact">Contact</a>
     </div>
     <div class="nav-actions">
+        <button class="btn-theme" onclick="openThemePanel()" title="Switch Theme">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+        </button>
         <a href="/user/login" class="btn-ghost">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             User Login
@@ -948,6 +974,70 @@
         <div class="f-badge">Systems Operational</div>
     </div>
 </footer>
+
+<!-- ── THEME PANEL ─────────────────────────────────────────────────────── -->
+<div class="tp-overlay" id="tp-overlay" onclick="closeThemePanel()"></div>
+<div class="tp-panel" id="tp-panel">
+    <div class="tp-head">
+        <h3>&#127912; Choose Theme</h3>
+        <button class="tp-close" onclick="closeThemePanel()">&#10005;</button>
+    </div>
+    <div class="tp-body">
+        <div class="tp-label">Select a theme</div>
+        <div class="tp-grid" id="tp-grid"></div>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#475569;line-height:1.7">
+            Your theme choice syncs automatically across the <strong style="color:#64748b">User Portal</strong>, <strong style="color:#64748b">Admin Panel</strong>, and this page.
+        </div>
+    </div>
+</div>
+
+<script>
+/* ── Unified Theme Engine ─────────────────────────────────────────────── */
+// Shared localStorage key: 'rh_theme' — stores just the theme NAME.
+// Each layout has its own mapping from unified name → layout-specific CSS vars.
+const _THEMES_L = {
+    'Cosmic':   {sw:['#040d21','#3b82f6','#6366f1'], vars:{'--bg-body':'#040d21','--bg-deep':'#070f2b','--nav-bg':'rgba(4,13,33,.85)','--blue':'#3b82f6','--blue-dk':'#2563eb','--indigo':'#6366f1','--purple':'#8b5cf6'}},
+    'Midnight': {sw:['#050505','#60a5fa','#818cf8'], vars:{'--bg-body':'#050505','--bg-deep':'#0f0f0f','--nav-bg':'rgba(5,5,5,.85)','--blue':'#60a5fa','--blue-dk':'#2563eb','--indigo':'#818cf8','--purple':'#a78bfa'}},
+    'Violet':   {sw:['#0f0723','#a78bfa','#7c3aed'], vars:{'--bg-body':'#0f0723','--bg-deep':'#160d33','--nav-bg':'rgba(15,7,35,.85)','--blue':'#a78bfa','--blue-dk':'#7c3aed','--indigo':'#8b5cf6','--purple':'#c084fc'}},
+    'Forest':   {sw:['#020d07','#34d399','#059669'], vars:{'--bg-body':'#020d07','--bg-deep':'#041a0d','--nav-bg':'rgba(2,13,7,.85)','--blue':'#34d399','--blue-dk':'#059669','--indigo':'#6ee7b7','--purple':'#a78bfa'}},
+    'Ocean':    {sw:['#020c18','#38bdf8','#0ea5e9'], vars:{'--bg-body':'#020c18','--bg-deep':'#031221','--nav-bg':'rgba(2,12,24,.85)','--blue':'#38bdf8','--blue-dk':'#0284c7','--indigo':'#0ea5e9','--purple':'#818cf8'}},
+    'Ember':    {sw:['#150500','#fb923c','#ea580c'], vars:{'--bg-body':'#150500','--bg-deep':'#1f0a00','--nav-bg':'rgba(21,5,0,.85)','--blue':'#fb923c','--blue-dk':'#ea580c','--indigo':'#f97316','--purple':'#f472b6'}},
+};
+const _L_VAR_KEYS = ['--bg-body','--bg-deep','--nav-bg','--blue','--blue-dk','--indigo','--purple'];
+
+function _applyLandingTheme(vars) {
+    _L_VAR_KEYS.forEach(k => document.documentElement.style.removeProperty(k));
+    Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+    const nav = document.querySelector('nav');
+    if (nav) nav.style.background = vars['--nav-bg'] || 'rgba(4,13,33,.85)';
+}
+function openThemePanel()  { document.getElementById('tp-panel').classList.add('open'); document.getElementById('tp-overlay').classList.add('open'); }
+function closeThemePanel() { document.getElementById('tp-panel').classList.remove('open'); document.getElementById('tp-overlay').classList.remove('open'); }
+
+function _selectLandingTheme(name) {
+    const t = _THEMES_L[name]; if (!t) return;
+    _applyLandingTheme(t.vars);
+    try { localStorage.setItem('rh_theme', name); } catch(e) {}
+    document.querySelectorAll('#tp-grid .tp-preset').forEach(b => b.classList.toggle('active', b.dataset.t === name));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('tp-grid');
+    let activeName = 'Cosmic';
+    try { const s = localStorage.getItem('rh_theme'); if (s && _THEMES_L[s]) activeName = s; } catch(e) {}
+    Object.entries(_THEMES_L).forEach(([name, t]) => {
+        const btn = document.createElement('button');
+        btn.className = 'tp-preset' + (name === activeName ? ' active' : '');
+        btn.dataset.t = name;
+        btn.onclick = () => _selectLandingTheme(name);
+        btn.innerHTML = '<div class="tp-swatches">' + t.sw.map(c => '<span class="tp-swatch" style="background:'+c+'"></span>').join('') + '</div><div class="tp-name">'+name+'</div>';
+        grid.appendChild(btn);
+    });
+    // Apply saved theme on load (also handles cross-layout sync)
+    const saved = _THEMES_L[activeName];
+    if (saved && activeName !== 'Cosmic') _applyLandingTheme(saved.vars);
+});
+</script>
 
 </body>
 </html>

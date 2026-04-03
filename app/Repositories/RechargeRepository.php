@@ -16,7 +16,8 @@ class RechargeRepository implements RechargeRepositoryInterface
     private const LIST_COLUMNS = [
         'id', 'user_id', 'mobile', 'operator_code', 'recharge_type',
         'amount', 'commission', 'status', 'idempotency_key',
-        'operator_ref', 'retry_count', 'created_at', 'updated_at',
+        'operator_ref', 'failure_reason', 'retry_count',
+        'processed_at', 'created_at', 'updated_at',
     ];
 
     public function create(array $data): RechargeTransaction

@@ -81,7 +81,9 @@
 
 <script>
 (function(){
-    apiFetch('/api/v1/seller/dashboard').then(data=>{
+    apiFetch('/api/v1/seller/dashboard').then(d=>{
+        const data = d.data?.stats || {};
+
         // Stats
         el('s-total').textContent    = data.total_sales ?? '0';
         el('s-total-amt').textContent= '₹' + fmtMoney(data.total_amount ?? 0);
@@ -90,8 +92,8 @@
         el('s-wallet').textContent   = '₹' + fmtMoney(data.wallet_balance ?? 0);
         el('s-payments').textContent = data.pending_payments ?? '0';
 
-        // Integration status
-        const intg = data.integration;
+        // Integration status — API returns d.data.integration, integration has 'website' not 'website_url'
+        const intg = d.data?.integration;
         let ibody = '';
         if (!intg || intg.status === 'none') {
             ibody = `<div style="text-align:center;padding:16px 0">
@@ -115,7 +117,7 @@
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <span style="font-size:13px;color:#64748b">Website URL</span>
-                    <span style="font-size:13px;font-weight:500;color:#1e293b;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${intg.website_url||'—'}</span>
+                    <span style="font-size:13px;font-weight:500;color:#1e293b;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${intg.website||intg.website_url||'—'}</span>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <span style="font-size:13px;color:#64748b">Submitted</span>
@@ -128,15 +130,15 @@
         document.getElementById('integration-card-body').innerHTML = ibody;
 
         // Recent transactions
-        const txns = data.recent_transactions || [];
+        const txns = d.data?.recent_sales || [];
         if (!txns.length) {
             document.getElementById('recent-txns').innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;font-size:13.5px">No transactions yet</div>';
         } else {
             let html = '<table class="table"><thead><tr><th>Mobile</th><th>Operator</th><th>Amount</th><th>Status</th></tr></thead><tbody>';
             txns.forEach(t => {
                 html += `<tr>
-                    <td style="font-weight:500">${t.mobile_number}</td>
-                    <td><span style="font-size:12px">${t.operator||'—'}</span></td>
+                    <td style="font-weight:500">${t.mobile||t.mobile_number||'—'}</td>
+                    <td><span style="font-size:12px">${t.operator_code||t.operator||'—'}</span></td>
                     <td>₹${fmtMoney(t.amount)}</td>
                     <td>${statusBadge(t.status)}</td>
                 </tr>`;

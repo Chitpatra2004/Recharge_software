@@ -16,10 +16,12 @@ class GstController extends Controller
         $perPage = min($request->integer('per_page', 20), 100);
 
         $invoices = SellerGstInvoice::where('user_id', $user->id)
+            ->when($request->filled('date_from'), fn($q) => $q->whereDate('invoice_date', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn($q) => $q->whereDate('invoice_date', '<=', $request->date_to))
             ->orderByDesc('invoice_date')
             ->paginate($perPage);
 
-        return response()->json(['data' => $invoices]);
+        return response()->json($invoices);
     }
 
     /** POST /api/v1/seller/gst */

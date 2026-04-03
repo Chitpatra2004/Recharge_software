@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class RegisterRequest extends FormRequest
@@ -29,6 +30,14 @@ class RegisterRequest extends FormRequest
                 'mimes:jpg,jpeg,png,pdf,webp',
                 'max:4096',
             ],
+            'pan_image' => [
+                Rule::requiredIf(fn () => $this->input('role') === 'api_user'),
+                'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,webp', 'max:4096',
+            ],
+            'gst_certificate' => [
+                Rule::requiredIf(fn () => $this->input('role') === 'api_user'),
+                'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,webp', 'max:4096',
+            ],
         ];
     }
 
@@ -40,8 +49,14 @@ class RegisterRequest extends FormRequest
             'mobile.digits'     => 'Mobile number must be exactly 10 digits.',
             'password.confirmed'=> 'Password confirmation does not match.',
             'password.min'      => 'Password must be at least 8 characters.',
-            'document.mimes'    => 'Document must be JPG, PNG, PDF, or WebP.',
-            'document.max'      => 'Document must not exceed 4 MB.',
+            'document.mimes'         => 'Document must be JPG, PNG, PDF, or WebP.',
+            'document.max'           => 'Document must not exceed 4 MB.',
+            'pan_image.required'     => 'PAN card image is required for API user registration.',
+            'pan_image.mimes'        => 'PAN image must be JPG, PNG, PDF, or WebP.',
+            'pan_image.max'          => 'PAN image must not exceed 4 MB.',
+            'gst_certificate.required' => 'GST certificate is required for API user registration.',
+            'gst_certificate.mimes'  => 'GST certificate must be JPG, PNG, PDF, or WebP.',
+            'gst_certificate.max'    => 'GST certificate must not exceed 4 MB.',
         ];
     }
 }

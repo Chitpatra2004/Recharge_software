@@ -28,9 +28,10 @@
                 <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Role</label>
                 <select id="f-role" style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text-primary);background:#fff;outline:none;min-width:130px">
                     <option value="">All Roles</option>
-                    <option value="user">User</option>
                     <option value="retailer">Retailer</option>
+                    <option value="buyer">Buyer</option>
                     <option value="distributor">Distributor</option>
+                    <option value="api_user">API User</option>
                     <option value="admin">Admin</option>
                 </select>
             </div>
@@ -168,25 +169,26 @@ async function loadUsers() {
     const res = await apiFetch('/api/v1/admin/reports/users?' + q);
     if (!res) return;
     const json = await res.json();
-    const d = json.data || {};
-    const s = d.summary || {};
-    const users = d.users || d.data || json.data || [];
-    const meta  = d.meta || json.meta || {};
 
-    totalPages = meta.last_page ?? meta.total_pages ?? 1;
-    document.getElementById('page-info').textContent = `Page ${currentPage}/${totalPages} (${fmtNum(meta.total ?? users.length)} total)`;
+    // API returns: {report, summary:{total_users,active_users,...}, users:{data:[],total,last_page,...}}
+    const s     = json.summary || {};
+    const pager = json.users   || {};
+    const users = pager.data   || [];
+
+    totalPages = pager.last_page ?? 1;
+    document.getElementById('page-info').textContent = `Page ${currentPage}/${totalPages} (${fmtNum(pager.total ?? users.length)} total)`;
     document.getElementById('btn-prev').disabled = currentPage <= 1;
     document.getElementById('btn-next').disabled = currentPage >= totalPages;
 
-    document.getElementById('s-total').textContent        = fmtNum(s.total ?? meta.total ?? users.length);
-    document.getElementById('s-active').textContent       = fmtNum(s.active ?? 0) + ' active';
-    document.getElementById('s-active-count').textContent = fmtNum(s.active ?? 0);
-    const pct = (s.total && s.active) ? ((s.active / s.total) * 100).toFixed(1) + '%' : '—';
+    document.getElementById('s-total').textContent        = fmtNum(s.total_users ?? pager.total ?? users.length);
+    document.getElementById('s-active').textContent       = fmtNum(s.active_users ?? 0) + ' active';
+    document.getElementById('s-active-count').textContent = fmtNum(s.active_users ?? 0);
+    const pct = (s.total_users && s.active_users) ? ((s.active_users / s.total_users) * 100).toFixed(1) + '%' : '—';
     document.getElementById('s-active-pct').textContent   = pct + ' of total';
     document.getElementById('s-new-month').textContent    = fmtNum(s.new_this_month ?? 0);
     document.getElementById('s-new-today').textContent    = fmtNum(s.new_today ?? 0) + ' today';
-    document.getElementById('s-suspended').textContent    = fmtNum(s.suspended ?? 0);
-    document.getElementById('s-inactive').textContent     = fmtNum(s.inactive ?? 0) + ' inactive';
+    document.getElementById('s-suspended').textContent    = fmtNum(s.suspended_users ?? 0);
+    document.getElementById('s-inactive').textContent     = fmtNum(s.inactive_users ?? 0) + ' inactive';
 
     document.getElementById('users-loading').style.display = 'none';
     document.getElementById('users-table-wrap').style.display = 'block';

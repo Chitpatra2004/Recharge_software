@@ -13,11 +13,11 @@ use App\Exceptions\DuplicateTransactionException;
 use App\Exceptions\InsufficientBalanceException;
 use App\Exceptions\OperatorUnavailableException;
 use App\Exceptions\WalletFrozenException;
-use App\Jobs\ProcessRecharge;
 use App\Jobs\RetryRecharge;
 use App\Models\RechargeAttempt;
 use App\Models\RechargeTransaction;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -32,26 +32,235 @@ class RechargeService implements RechargeServiceInterface
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 1 · initiate()  — called by HTTP controller
+    // PRIMARY ENTRY POINT — Real-time synchronous processing
     //
-    // Responsibilities:
-    //   1. Idempotency key dedup (exact match → return existing record)
-    //   2. 60-second window dedup (same mobile+operator+type+amount)
-    //   3. Validate operator routes exist
-    //   4. Pessimistic-lock wallet, reserve balance
-    //   5. Persist transaction with status = 'queued'
-    //   6. Dispatch ProcessRecharge job
+    // Flow (no queue workers needed):
+    //   1. Idempotency key dedup
+    //   2. Validate operator routes exist
+    //   3. DB::transaction: 60-sec window dedup → lock wallet → reserve → persist
+    //      (transaction committed before HTTP so DB connection is not held during API call)
+    //   4. Call operator API synchronously with Guzzle (timeout: 10 s)
+    //   5a. Success  → DB::transaction: finalize debit + mark 'success'
+    //   5b. Failure  → DB::transaction: release reserve + mark 'failed'
+    //   5c. Timeout  → leave reserve, mark 'pending' (cron RetryRecharge will retry)
+    //   6. Return transaction with final status
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function initiate(User $user, array $data): RechargeTransaction
+    public function processSync(User $user, array $data): RechargeTransaction
     {
-        // ── Fast idempotency check (before acquiring DB lock) ────────────────
+        // ── Step 1: Fast idempotency check (no lock needed yet) ───────────────
         $existing = $this->rechargeRepo->findByIdempotencyKey($data['idempotency_key']);
         if ($existing) {
             throw new DuplicateTransactionException($existing);
         }
 
-        // ── Ensure at least one operator route exists before touching wallet ──
+        // ── Step 2: Validate routes BEFORE touching wallet ────────────────────
+        $routes = $this->operatorRepo->getActiveRoutes(
+            $data['operator_code'],
+            $data['recharge_type'] ?? 'prepaid',
+            (float) $data['amount']
+        );
+        if ($routes->isEmpty()) {
+            throw new OperatorUnavailableException($data['operator_code']);
+        }
+
+        // ── Step 3: Reserve wallet balance + persist transaction ──────────────
+        // This transaction commits immediately so the DB connection is free
+        // during the (potentially slow) HTTP call to the operator.
+        $transaction = DB::transaction(function () use ($user, $data) {
+
+            // Serializable dedup within 60-second window
+            $this->assertNoDuplicateInWindow($user->id, $data);
+
+            $wallet = $this->walletRepo->findByUserIdLocked($user->id);
+
+            if (! $wallet || ! $wallet->isActive()) {
+                throw new WalletFrozenException();
+            }
+
+            if (! $wallet->hasSufficientBalance((float) $data['amount'])) {
+                throw new InsufficientBalanceException(
+                    (float) $data['amount'],
+                    $wallet->availableBalance()
+                );
+            }
+
+            $commission = round((float) $data['amount'] * ($user->commission_rate / 100), 2);
+            $netAmount  = round((float) $data['amount'] - $commission, 2);
+
+            // Reserve (not debit) — actual debit only on confirmed success
+            $this->walletRepo->reserve($wallet, (float) $data['amount']);
+
+            return $this->rechargeRepo->create([
+                'user_id'         => $user->id,
+                'buyer_id'        => $data['buyer_id']      ?? null,
+                'idempotency_key' => $data['idempotency_key'],
+                'mobile'          => $data['mobile'],
+                'operator_code'   => $data['operator_code'],
+                'circle'          => $data['circle']        ?? null,
+                'recharge_type'   => $data['recharge_type'] ?? 'prepaid',
+                'amount'          => $data['amount'],
+                'commission'      => $commission,
+                'net_amount'      => $netAmount,
+                'status'          => 'pending',
+                'ip_address'      => $data['ip_address']    ?? null,
+            ]);
+        });
+
+        event(new RechargeInitiated($transaction));
+
+        // ── Step 4: Call operator API synchronously ───────────────────────────
+        $this->rechargeRepo->updateStatus($transaction->id, 'processing');
+
+        $syncTimeout    = (int) config('recharge.sync_timeout', 10);
+        $connectTimeout = (int) config('recharge.connect_timeout', 5);
+        $attemptNumber  = 1;
+        $succeeded      = false;
+        $timedOut       = false;
+
+        foreach ($routes as $route) {
+            $startTime = microtime(true);
+
+            try {
+                $apiRef = (string) Str::uuid();
+                [$payload, $safePayload] = $this->buildPayload($transaction, $route->api_config ?? [], $apiRef);
+
+                $this->rechargeRepo->updateStatus($transaction->id, 'processing', [
+                    'api_ref' => $apiRef,
+                ]);
+
+                // Guzzle HTTP call — enforces hard timeout
+                $routeTimeout = min($route->timeout_seconds ?? $syncTimeout, $syncTimeout);
+
+                $response = Http::timeout($routeTimeout)
+                    ->connectTimeout($connectTimeout)
+                    ->withHeaders(['Accept' => 'application/json'])
+                    ->post($route->api_endpoint, $payload);
+
+                $duration = (int) ((microtime(true) - $startTime) * 1000);
+                $isOk     = $response->successful() && $this->isOperatorSuccess($response->json());
+
+                RechargeAttempt::create([
+                    'recharge_transaction_id' => $transaction->id,
+                    'operator_route_id'       => $route->id,
+                    'attempt_number'          => $attemptNumber,
+                    'status'                  => $isOk ? 'success' : 'failed',
+                    'request_url'             => $route->api_endpoint,
+                    'request_payload'         => $safePayload,
+                    'response_payload'        => $response->json(),
+                    'response_code'           => $response->status(),
+                    'duration_ms'             => $duration,
+                ]);
+
+                if ($isOk) {
+                    // ── Step 5a: Confirmed success ────────────────────────────
+                    $operatorRef = $response->json('txn_id')
+                                ?? $response->json('ref_id')
+                                ?? $response->json('operator_ref');
+
+                    DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
+                        $this->rechargeRepo->updateStatus($transaction->id, 'success', [
+                            'operator_ref'      => $operatorRef,
+                            'operator_route_id' => $route->id,
+                            'operator_response' => $response->json(),
+                            'processed_at'      => now(),
+                        ]);
+                        $this->finalizeDebit($transaction);
+                    });
+
+                    $this->operatorRepo->incrementSuccessRate($route->id);
+                    event(new RechargeCompleted($transaction->fresh()));
+                    $succeeded = true;
+                    break;
+                }
+
+                // Operator returned failure — try next route
+                $this->operatorRepo->decrementSuccessRate($route->id);
+                $attemptNumber++;
+
+            } catch (ConnectionException $e) {
+                // ── Guzzle connection / read timeout ──────────────────────────
+                $duration = (int) ((microtime(true) - $startTime) * 1000);
+
+                RechargeAttempt::create([
+                    'recharge_transaction_id' => $transaction->id,
+                    'operator_route_id'       => $route->id,
+                    'attempt_number'          => $attemptNumber,
+                    'status'                  => 'error',
+                    'request_url'             => $route->api_endpoint,
+                    'request_payload'         => $safePayload ?? [],
+                    'duration_ms'             => $duration,
+                    'error_message'           => 'Timeout: ' . $e->getMessage(),
+                ]);
+
+                Log::warning('Recharge sync: operator API timeout', [
+                    'transaction_id' => $transaction->id,
+                    'route_id'       => $route->id,
+                    'duration_ms'    => $duration,
+                ]);
+
+                // Don't fail permanently on timeout — try next route
+                $timedOut = true;
+                $attemptNumber++;
+
+            } catch (\Throwable $e) {
+                $duration = (int) ((microtime(true) - $startTime) * 1000);
+
+                RechargeAttempt::create([
+                    'recharge_transaction_id' => $transaction->id,
+                    'operator_route_id'       => $route->id,
+                    'attempt_number'          => $attemptNumber,
+                    'status'                  => 'error',
+                    'request_url'             => $route->api_endpoint,
+                    'request_payload'         => $safePayload ?? [],
+                    'duration_ms'             => $duration,
+                    'error_message'           => $e->getMessage(),
+                ]);
+
+                Log::error('Recharge sync: unexpected exception', [
+                    'transaction_id' => $transaction->id,
+                    'route_id'       => $route->id,
+                    'error'          => $e->getMessage(),
+                ]);
+
+                $this->operatorRepo->decrementSuccessRate($route->id);
+                $attemptNumber++;
+            }
+        }
+
+        // ── Step 5b / 5c: All routes tried — decide outcome ───────────────────
+        if (! $succeeded) {
+            if ($timedOut) {
+                // 5c: At least one route timed out, none succeeded
+                // Keep reserved balance, mark pending — cron (RetryRecharge) will retry
+                DB::transaction(function () use ($transaction) {
+                    $this->rechargeRepo->updateStatus($transaction->id, 'pending', [
+                        'failure_reason' => 'Operator API timed out. Pending automatic retry.',
+                        'next_retry_at'  => now()->addMinutes(5),
+                    ]);
+                });
+
+                Log::info('Recharge sync: marked pending (timeout)', ['transaction_id' => $transaction->id]);
+            } else {
+                // 5b: All routes explicitly failed — immediate refund
+                $this->handleFailure($transaction, 'All operator routes exhausted.');
+            }
+        }
+
+        return $transaction->fresh();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEGACY — kept for RetryRecharge cron job
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function initiate(User $user, array $data): RechargeTransaction
+    {
+        $existing = $this->rechargeRepo->findByIdempotencyKey($data['idempotency_key']);
+        if ($existing) {
+            throw new DuplicateTransactionException($existing);
+        }
+
         $routes = $this->operatorRepo->getActiveRoutes(
             $data['operator_code'],
             $data['recharge_type'] ?? 'prepaid',
@@ -62,16 +271,9 @@ class RechargeService implements RechargeServiceInterface
         }
 
         return DB::transaction(function () use ($user, $data) {
-
-            // ── 60-second window duplicate prevention ─────────────────────
-            // Runs inside the transaction so the check is serializable with
-            // the subsequent INSERT — prevents race conditions where two
-            // requests slip past a pre-transaction check simultaneously.
             $this->assertNoDuplicateInWindow($user->id, $data);
 
-            // ── Pessimistic-lock wallet row ───────────────────────────────
             $wallet = $this->walletRepo->findByUserIdLocked($user->id);
-
             if (! $wallet || ! $wallet->isActive()) {
                 throw new WalletFrozenException();
             }
@@ -86,55 +288,39 @@ class RechargeService implements RechargeServiceInterface
                 );
             }
 
-            // ── Reserve balance (locked; released on terminal status) ─────
-            // We do NOT debit yet — the balance is only moved to
-            // reserved_balance. Actual debit happens in finalizeDebit()
-            // after a confirmed success from the operator.
             $this->walletRepo->reserve($wallet, (float) $data['amount']);
 
-            // ── Persist transaction ───────────────────────────────────────
             $transaction = $this->rechargeRepo->create([
-                'user_id'          => $user->id,
-                'buyer_id'         => $data['buyer_id']      ?? null,
-                'idempotency_key'  => $data['idempotency_key'],
-                'mobile'           => $data['mobile'],
-                'operator_code'    => $data['operator_code'],
-                'circle'           => $data['circle']        ?? null,
-                'recharge_type'    => $data['recharge_type'] ?? 'prepaid',
-                'amount'           => $data['amount'],
-                'commission'       => $commission,
-                'net_amount'       => $netAmount,
-                'status'           => 'queued',
-                'ip_address'       => $data['ip_address']    ?? null,
+                'user_id'         => $user->id,
+                'buyer_id'        => $data['buyer_id']      ?? null,
+                'idempotency_key' => $data['idempotency_key'],
+                'mobile'          => $data['mobile'],
+                'operator_code'   => $data['operator_code'],
+                'circle'          => $data['circle']        ?? null,
+                'recharge_type'   => $data['recharge_type'] ?? 'prepaid',
+                'amount'          => $data['amount'],
+                'commission'      => $commission,
+                'net_amount'      => $netAmount,
+                'status'          => 'queued',
+                'ip_address'      => $data['ip_address']    ?? null,
             ]);
 
-            // ── Async processing — tiny delay lets DB replica catch up ────
-            ProcessRecharge::dispatch($transaction->id)
-                ->onQueue(config('recharge.queue', 'recharges'))
-                ->delay(now()->addSeconds(2));
+            // NOTE: No dispatch here. RetryRecharge job is dispatched by
+            // scheduleRetryOrFail() for pending transactions that timed out.
 
             event(new RechargeInitiated($transaction));
-
             return $transaction;
         });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 2 · process()  — called by ProcessRecharge / RetryRecharge job
-    //
-    // Flow:
-    //   • Guard: skip if already terminal (idempotent worker)
-    //   • Mark 'processing'
-    //   • Loop operator routes in priority order, attempt HTTP call each
-    //   • On success → finalizeDebit() + fire RechargeCompleted
-    //   • On exhausted routes → schedule RetryRecharge with exponential backoff
-    //     or call handleFailure() when max retries reached
+    // process() — used by RetryRecharge cron job to retry pending transactions
     // ─────────────────────────────────────────────────────────────────────────
 
     public function process(RechargeTransaction $transaction): void
     {
         if ($transaction->isTerminal()) {
-            return; // idempotent
+            return;
         }
 
         $this->rechargeRepo->updateStatus($transaction->id, 'processing');
@@ -160,26 +346,25 @@ class RechargeService implements RechargeServiceInterface
                 $apiRef = (string) Str::uuid();
                 [$payload, $safePayload] = $this->buildPayload($transaction, $route->api_config ?? [], $apiRef);
 
-                // Store our outgoing ref on the transaction so callbacks can match
                 $this->rechargeRepo->updateStatus($transaction->id, 'processing', [
                     'api_ref' => $apiRef,
                 ]);
 
-                $response = Http::timeout($route->timeout_seconds)
+                $response = Http::timeout($route->timeout_seconds ?? 10)
+                    ->connectTimeout(5)
                     ->withHeaders(['Accept' => 'application/json'])
                     ->post($route->api_endpoint, $payload);
 
                 $duration = (int) ((microtime(true) - $startTime) * 1000);
                 $isOk     = $response->successful() && $this->isOperatorSuccess($response->json());
 
-                // Log every attempt — use $safePayload (api_key masked) not $payload
                 RechargeAttempt::create([
                     'recharge_transaction_id' => $transaction->id,
                     'operator_route_id'       => $route->id,
                     'attempt_number'          => $attemptNumber,
                     'status'                  => $isOk ? 'success' : 'failed',
                     'request_url'             => $route->api_endpoint,
-                    'request_payload'         => $safePayload,   // FIX C2: masked
+                    'request_payload'         => $safePayload,
                     'response_payload'        => $response->json(),
                     'response_code'           => $response->status(),
                     'duration_ms'             => $duration,
@@ -190,7 +375,6 @@ class RechargeService implements RechargeServiceInterface
                                 ?? $response->json('ref_id')
                                 ?? $response->json('operator_ref');
 
-                    // Atomic: debit wallet + mark success in one transaction
                     DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
                         $this->rechargeRepo->updateStatus($transaction->id, 'success', [
                             'operator_ref'      => $operatorRef,
@@ -207,7 +391,6 @@ class RechargeService implements RechargeServiceInterface
                     break;
                 }
 
-                // Operator returned a failure response — try next route
                 $this->operatorRepo->decrementSuccessRate($route->id);
                 $attemptNumber++;
 
@@ -220,12 +403,12 @@ class RechargeService implements RechargeServiceInterface
                     'attempt_number'          => $attemptNumber,
                     'status'                  => 'error',
                     'request_url'             => $route->api_endpoint,
-                    'request_payload'         => $safePayload ?? [],  // FIX C2: masked
+                    'request_payload'         => $safePayload ?? [],
                     'duration_ms'             => $duration,
                     'error_message'           => $e->getMessage(),
                 ]);
 
-                Log::error('Recharge attempt exception', [
+                Log::error('Recharge process (retry) exception', [
                     'transaction_id' => $transaction->id,
                     'route_id'       => $route->id,
                     'error'          => $e->getMessage(),
@@ -242,23 +425,11 @@ class RechargeService implements RechargeServiceInterface
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 3 · handleCallback()  — called by webhook controller
-    //
-    // Operators may respond asynchronously. This method:
-    //   • Locates the transaction by operator_ref
-    //   • Skips if already in a terminal state (idempotent)
-    //   • Finalises debit on success, or releases reserve on failure
+    // handleCallback() — operator async webhook
     // ─────────────────────────────────────────────────────────────────────────
 
     public function handleCallback(string $operatorRef, string $status, array $payload): void
     {
-        // ── FIX C1: Lock the transaction row BEFORE reading terminal status ────
-        // Without this lock, two simultaneous callbacks both see isTerminal()=false
-        // and both proceed to finalizeDebit() → double-debit.
-        // lockForUpdate() serialises concurrent callbacks for the same operator_ref.
-        //
-        // Events are fired OUTSIDE the transaction to avoid holding a lock
-        // while executing listener code (cache writes, log inserts, etc.).
         $eventToFire = null;
 
         DB::transaction(function () use ($operatorRef, $status, $payload, &$eventToFire) {
@@ -272,7 +443,6 @@ class RechargeService implements RechargeServiceInterface
             }
 
             if ($transaction->isTerminal()) {
-                // Already finalised — idempotent, nothing to do
                 return;
             }
 
@@ -287,14 +457,12 @@ class RechargeService implements RechargeServiceInterface
                 $eventToFire = new RechargeCompleted($transaction->fresh());
 
             } elseif (in_array($normalised, ['pending', 'processing', 'queued'])) {
-                // Operator says still in progress — leave status as-is
                 Log::info('Callback: operator reports pending', [
                     'transaction_id' => $transaction->id,
                     'ref'            => $operatorRef,
                 ]);
 
             } else {
-                // Inline failure logic to avoid nested DB::transaction() calls
                 $this->rechargeRepo->updateStatus($transaction->id, 'failed', [
                     'failure_reason' => $payload['message'] ?? "Operator callback failure: {$status}",
                     'processed_at'   => now(),
@@ -305,14 +473,13 @@ class RechargeService implements RechargeServiceInterface
             }
         });
 
-        // Fire event after the transaction commits so listeners see the final state
         if ($eventToFire) {
             event($eventToFire);
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 4 · refund()  — admin action
+    // refund() — admin manual refund
     // ─────────────────────────────────────────────────────────────────────────
 
     public function refund(RechargeTransaction $transaction, User $requestedBy): void
@@ -339,17 +506,28 @@ class RechargeService implements RechargeServiceInterface
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // handleFailure() — public so jobs can call it as a safety net
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function handleFailure(RechargeTransaction $transaction, string $reason): void
+    {
+        DB::transaction(function () use ($transaction, $reason) {
+            $this->rechargeRepo->updateStatus($transaction->id, 'failed', [
+                'failure_reason' => $reason,
+                'processed_at'   => now(),
+            ]);
+
+            $wallet = $this->walletRepo->findByUserIdLocked($transaction->user_id);
+            $this->walletRepo->releaseReserve($wallet, (float) $transaction->amount);
+        });
+
+        event(new RechargeFailed($transaction->fresh()));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Block the same mobile + operator + type + amount within the configured
-     * dedup window (default 60 seconds).
-     *
-     * Must be called INSIDE a DB::transaction() so that the read and the
-     * subsequent INSERT are serializable, preventing two concurrent requests
-     * from both slipping through simultaneously.
-     */
     private function assertNoDuplicateInWindow(int $userId, array $data): void
     {
         $windowSeconds = config('recharge.dedup_window', 60);
@@ -369,13 +547,6 @@ class RechargeService implements RechargeServiceInterface
         }
     }
 
-    /**
-     * Increment retry count, then either schedule a RetryRecharge job
-     * (with exponential back-off) or mark the transaction as permanently failed.
-     *
-     * Back-off schedule (retries = 1 → 2 → 3):
-     *   retry 1 after  2 min,  retry 2 after  4 min,  retry 3 after  8 min.
-     */
     private function scheduleRetryOrFail(RechargeTransaction $transaction, string $reason): void
     {
         $this->rechargeRepo->incrementRetryCount($transaction->id);
@@ -384,14 +555,14 @@ class RechargeService implements RechargeServiceInterface
         $maxRetries = config('recharge.max_retries', 3);
 
         if ($transaction->retry_count <= $maxRetries) {
-            // Exponential backoff: 2^retry_count minutes
             $delayMinutes = 2 ** $transaction->retry_count;
             $nextRetryAt  = now()->addMinutes($delayMinutes);
 
-            $this->rechargeRepo->updateStatus($transaction->id, 'queued', [
+            $this->rechargeRepo->updateStatus($transaction->id, 'pending', [
                 'next_retry_at' => $nextRetryAt,
             ]);
 
+            // Dispatch retry job (runs via cron / manual worker — optional)
             RetryRecharge::dispatch($transaction->id)
                 ->onQueue(config('recharge.queue', 'recharges'))
                 ->delay($nextRetryAt);
@@ -409,31 +580,6 @@ class RechargeService implements RechargeServiceInterface
         }
     }
 
-    /**
-     * Terminal failure: release reserved balance, fire RechargeFailed event.
-     * Public so ProcessRecharge::failed() can call it as a safety net when the
-     * job infrastructure crashes before normal service logic runs.
-     */
-    public function handleFailure(RechargeTransaction $transaction, string $reason): void
-    {
-        DB::transaction(function () use ($transaction, $reason) {
-            $this->rechargeRepo->updateStatus($transaction->id, 'failed', [
-                'failure_reason' => $reason,
-                'processed_at'   => now(),
-            ]);
-
-            // Release reserved balance back to available
-            $wallet = $this->walletRepo->findByUserIdLocked($transaction->user_id);
-            $this->walletRepo->releaseReserve($wallet, (float) $transaction->amount);
-        });
-
-        event(new RechargeFailed($transaction->fresh()));
-    }
-
-    /**
-     * Move amount from reserved_balance to deducted_balance (actual debit).
-     * Must be called within a DB::transaction().
-     */
     private function finalizeDebit(RechargeTransaction $transaction): void
     {
         $wallet = $this->walletRepo->findByUserIdLocked($transaction->user_id);
@@ -444,42 +590,28 @@ class RechargeService implements RechargeServiceInterface
             'reference_id'   => $transaction->id,
         ]);
 
-        // Release the reservation that was created during initiation
         $this->walletRepo->releaseReserve($wallet, (float) $transaction->amount);
     }
 
-    /**
-     * Build the outgoing payload for the operator API.
-     * Returns [payload_to_send, safe_payload_for_log] — the log copy masks the api_key.
-     *
-     * @return array{0: array, 1: array}
-     */
     private function buildPayload(RechargeTransaction $t, array $config, string $apiRef): array
     {
         $payload = [
-            'api_key'    => $config['api_key'] ?? '',
-            'mobile'     => $t->mobile,
-            'operator'   => $t->operator_code,
-            'amount'     => $t->amount,
-            'ref_id'     => $apiRef,       // our unique outgoing reference
-            'txn_id'     => $t->id,        // internal ID for reconciliation
-            'circle'     => $t->circle,
-            'type'       => $t->recharge_type,
+            'api_key'  => $config['api_key'] ?? '',
+            'mobile'   => $t->mobile,
+            'operator' => $t->operator_code,
+            'amount'   => $t->amount,
+            'ref_id'   => $apiRef,
+            'txn_id'   => $t->id,
+            'circle'   => $t->circle,
+            'type'     => $t->recharge_type,
         ];
 
-        // ── FIX C2: Never log operator credentials in plain text ──────────────
-        // Store a sanitised copy in recharge_attempts; keep full payload only in
-        // memory for the actual HTTP call.
-        $safePayload          = $payload;
-        $safePayload['api_key'] = $this->maskSecret($payload['api_key']);
+        $safePayload              = $payload;
+        $safePayload['api_key']   = $this->maskSecret($payload['api_key']);
 
         return [$payload, $safePayload];
     }
 
-    /**
-     * Return first 4 chars + asterisks, e.g.  "abcd************".
-     * Shows enough for debugging (key prefix) without exposing the secret.
-     */
     private function maskSecret(string $value): string
     {
         $len = strlen($value);
@@ -489,9 +621,6 @@ class RechargeService implements RechargeServiceInterface
         return substr($value, 0, 4) . str_repeat('*', min($len - 4, 12));
     }
 
-    /**
-     * Normalise varied operator API success indicators into a boolean.
-     */
     private function isOperatorSuccess(array $response): bool
     {
         $status = strtolower(

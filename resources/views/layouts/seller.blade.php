@@ -144,15 +144,23 @@
 
         /* Modal */
         .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500; align-items:center; justify-content:center; padding:20px; }
-        .modal-overlay.open { display:flex; }
-        .modal { background:#fff; border-radius:var(--radius); width:100%; max-width:500px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+        .modal-overlay.open, .modal-overlay.show { display:flex; }
+        .modal, .modal-box { background:#fff; border-radius:var(--radius); width:100%; max-width:500px; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto; padding:28px; position:relative; }
         .modal-head { padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
         .modal-title { font-size:15px; font-weight:700; }
-        .modal-close { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; border-radius:6px; }
-        .modal-close:hover { color:var(--text); }
+        .modal-close { position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; border-radius:6px; line-height:0; }
+        .modal-close:hover { color:var(--text); background:var(--bg); }
         .modal-close svg { width:18px; height:18px; }
         .modal-body { padding:20px; }
         .modal-footer { padding:16px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+        .form-control { width:100%; border:1.5px solid #e5e7eb; border-radius:9px; padding:9px 12px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--text); outline:none; transition:border-color .15s; }
+        .form-control:focus { border-color:var(--blue); }
+        .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+        .page-title { font-size:20px; font-weight:700; color:var(--text); }
+        .page-sub { font-size:13px; color:var(--muted); margin-top:3px; }
+        .stat-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .stat-icon svg { width:22px; height:22px; }
+        .stat-card { display:flex; align-items:center; gap:14px; }
 
         .form-group { margin-bottom:16px; }
         .form-label { font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:5px; }
@@ -161,7 +169,22 @@
         select.form-input { cursor:pointer; }
         textarea.form-input { resize:vertical; min-height:80px; }
 
-        @media(max-width:768px) { .sidebar { transform:translateX(-100%); } .sidebar.open { transform:none; } .main { margin-left:0; } .stats-grid { grid-template-columns:repeat(2,1fr); } .page-body { padding:16px; } }
+        @media(max-width:768px) {
+            .sidebar { transform:translateX(-100%); transition:transform .25s ease; }
+            .sidebar.open { transform:none; box-shadow:4px 0 20px rgba(0,0,0,.4); }
+            .main { margin-left:0; }
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .page-body { padding:16px; }
+            .topbar { padding:0 16px; }
+            .page-header { flex-direction:column; align-items:flex-start; gap:10px; }
+            #menu-toggle { display:flex !important; }
+        }
+        @media(max-width:480px) {
+            .stats-grid { grid-template-columns:1fr; }
+            .modal-overlay { padding:10px; }
+        }
+        .sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99; }
+        .sb-overlay.show { display:block; }
         ::-webkit-scrollbar { width:5px; height:5px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:10px; }
     </style>
     @stack('head')
@@ -242,9 +265,10 @@
     </div>
 </aside>
 
+<div class="sb-overlay" id="sb-overlay" onclick="toggleSidebar()"></div>
 <div class="main">
     <header class="topbar">
-        <button class="topbar-btn" onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none" id="menu-toggle">
+        <button class="topbar-btn" onclick="toggleSidebar()" id="menu-toggle" style="display:none">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="topbar-title">@yield('page-title','Dashboard')</div>
@@ -262,14 +286,13 @@
 const SELLER_TOKEN_KEY = 'seller_token';
 const SELLER_USER_KEY  = 'seller_user';
 
-function getToken()  { return localStorage.getItem(SELLER_TOKEN_KEY); }
-function getUser()   { try { return JSON.parse(localStorage.getItem(SELLER_USER_KEY)||'{}'); } catch { return {}; } }
+/* ── Shortcuts ── */
+const el = id => document.getElementById(id);
+function getToken() { return localStorage.getItem(SELLER_TOKEN_KEY); }
+function getUser()  { try { return JSON.parse(localStorage.getItem(SELLER_USER_KEY)||'{}'); } catch { return {}; } }
+function requireAuth() { if (!getToken()) { window.location.href = '/seller/login'; return false; } return true; }
 
-function requireAuth() {
-    if (!getToken()) { window.location.href = '/seller/login'; return false; }
-    return true;
-}
-
+/* ── apiFetch — returns parsed JSON or throws ── */
 async function apiFetch(url, options = {}) {
     const token = getToken();
     const res = await fetch(url, {
@@ -281,70 +304,75 @@ async function apiFetch(url, options = {}) {
             ...(options.headers || {}),
         },
     });
-    if (res.status === 401) { window.location.href = '/seller/login'; return null; }
-    if (res.status === 403) {
-        const d = await res.json().catch(() => ({}));
-        if (d.status === 'pending') window.location.href = '/seller/login';
-        return null;
-    }
-    return res;
+    if (res.status === 401) { window.location.href = '/seller/login'; throw new Error('Unauthenticated'); }
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 403) { if (data.status === 'pending') window.location.href = '/seller/login'; throw new Error(data.message || 'Forbidden'); }
+    if (!res.ok) throw new Error(data.message || 'Request failed (' + res.status + ')');
+    return data;
 }
 
-function fmtMoney(n) { return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* ── Helpers ── */
+function fmtMoney(n) { return Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function fmtDate(s)  { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); }
-function statusBadge(s) { const m={success:'badge-success',failed:'badge-failed',pending:'badge-pending',processing:'badge-processing',approved:'badge-approved',rejected:'badge-rejected',refunded:'badge-info'}; return `<span class="badge ${m[s]||'badge-info'}">${s}</span>`; }
+function statusBadge(s) { const m={success:'badge-success',failed:'badge-failed',pending:'badge-pending',processing:'badge-processing',approved:'badge-approved',rejected:'badge-rejected',refunded:'badge-info'}; return `<span class="badge ${m[s]||'badge-info'}">${(s||'').replace(/_/g,' ')}</span>`; }
 
+/* ── Sidebar submenu ── */
 function toggleSub(id, btn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.toggle('open');
+    const sub = el(id);
+    if (!sub) return;
+    sub.classList.toggle('open');
     btn.classList.toggle('open');
 }
 
+/* ── Mobile sidebar toggle ── */
+function toggleSidebar() {
+    const sb = el('sidebar'), ov = el('sb-overlay');
+    const open = sb.classList.toggle('open');
+    if (ov) ov.classList.toggle('show', open);
+}
+
+/* ── Logout ── */
 function doLogout() {
     if (!confirm('Logout from seller portal?')) return;
-    apiFetch('/api/v1/seller/auth/logout', { method:'POST' }).finally(() => {
+    apiFetch('/api/v1/seller/auth/logout', { method:'POST' }).catch(()=>{}).finally(() => {
         localStorage.removeItem(SELLER_TOKEN_KEY);
         localStorage.removeItem(SELLER_USER_KEY);
         window.location.href = '/seller/login';
     });
 }
 
-// Init: auth check + load user info
+/* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
 
     // Clock
-    const clockEl = document.getElementById('clock');
+    const clockEl = el('clock');
     if (clockEl) setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }, 1000);
 
-    // User info from localStorage
+    // User info
     const u = getUser();
     if (u.name) {
-        const nm = document.getElementById('sb-name');
-        const av = document.getElementById('sb-avatar');
+        const nm = el('sb-name'), av = el('sb-avatar');
         if (nm) nm.textContent = u.name;
         if (av) av.textContent = u.name.charAt(0).toUpperCase();
     }
 
-    // Fetch dashboard stats for sidebar (wallet balance + pending payments)
-    const res = await apiFetch('/api/v1/seller/dashboard');
-    if (res?.ok) {
-        const d = await res.json();
+    // Responsive hamburger
+    const checkMobile = () => { const mt = el('menu-toggle'); if (mt) mt.style.display = window.innerWidth <= 768 ? 'flex' : 'none'; };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    // Sidebar wallet balance
+    try {
+        const d = await apiFetch('/api/v1/seller/dashboard');
         const stats = d.data?.stats || {};
-        const balEl = document.getElementById('sb-balance');
-        if (balEl) balEl.textContent = fmtMoney(stats.wallet_balance);
+        const balEl = el('sb-balance');
+        if (balEl) balEl.textContent = '₹' + fmtMoney(stats.wallet_balance);
         if (stats.pending_payments > 0) {
-            const pbEl = document.getElementById('sb-pending-payments');
+            const pbEl = el('sb-pending-payments');
             if (pbEl) { pbEl.textContent = stats.pending_payments; pbEl.style.display = 'inline-flex'; }
         }
-    }
-
-    // Mobile menu toggle visibility
-    if (window.innerWidth <= 768) {
-        const mt = document.getElementById('menu-toggle');
-        if (mt) mt.style.display = 'flex';
-    }
+    } catch(e) { /* silent — non-critical */ }
 });
 </script>
 

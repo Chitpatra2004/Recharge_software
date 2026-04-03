@@ -296,7 +296,7 @@ function renderComplaints(rows) {
             <td>${sBadge(r.status)}</td>
             <td><span style="background:${slaBg};color:${slaC};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${slaTxt}</span></td>
             <td style="font-size:12px;color:var(--text-muted)">${r.assigned_to || r.agent_name || '—'}</td>
-            <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—'}</td>
         </tr>`;
     }).join('');
 }

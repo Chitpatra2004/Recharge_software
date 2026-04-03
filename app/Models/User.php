@@ -16,9 +16,10 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'mobile', 'password',
-        'role', 'status', 'api_key', 'ip_whitelist',
+        'role', 'status', 'approval_status', 'api_key', 'ip_whitelist',
         'commission_rate', 'email_verified_at',
-        'document_path', 'totp_secret', 'totp_enabled', 'two_factor_method',
+        'document_path', 'pan_image_path', 'gst_certificate_path',
+        'totp_secret', 'totp_enabled', 'two_factor_method',
     ];
 
     protected $hidden = ['password', 'remember_token', 'api_key', 'totp_secret'];

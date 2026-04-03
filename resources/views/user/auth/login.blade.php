@@ -279,7 +279,7 @@
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <span>Registration successful! Please sign in.</span>
+      <span>Registration submitted! Your account is <strong>pending admin approval</strong>. You will be notified via email once approved — then you can login.</span>
     </div>
 
     <div class="alert alert-error" id="alertError">

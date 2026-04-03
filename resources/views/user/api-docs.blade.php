@@ -236,7 +236,7 @@
                     ['partial','#a78bfa','Partial recharge done'],
                 ] as [$status,$color,$desc])
                 <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:12px">
-                    <code style="color:{{ $color }};font-weight:700">{{ $status }}</code>
+                    <code class="sc-{{ $status }}">{{ $status }}</code>
                     <div style="color:var(--muted);font-size:11px;margin-top:2px">{{ $desc }}</div>
                 </div>
                 @endforeach
@@ -678,6 +678,12 @@ recharge().catch(console.error);</div>
 .opt { background:rgba(16,185,129,.1);color:#34d399;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px }
 .lang-btn { background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s }
 .lang-btn.active { background:var(--blue-dk);border-color:var(--blue-dk);color:#fff }
+.sc-queued { color:#94a3b8;font-weight:700 }
+.sc-processing { color:#fbbf24;font-weight:700 }
+.sc-success { color:#34d399;font-weight:700 }
+.sc-failed { color:#f87171;font-weight:700 }
+.sc-refunded { color:#60a5fa;font-weight:700 }
+.sc-partial { color:#a78bfa;font-weight:700 }
 </style>
 @endsection
 

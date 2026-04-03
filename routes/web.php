@@ -11,6 +11,7 @@ Route::prefix('user')->name('user.')->group(function () {
 
     Route::get('/login',           fn () => view('user.auth.login'))->name('login');
     Route::get('/register',        fn () => view('user.auth.register'))->name('register');
+    Route::get('/register-api',    fn () => view('user.auth.register-api'))->name('register-api');
     Route::get('/otp',             fn () => view('user.auth.otp'))->name('otp');
     Route::get('/forgot-password', fn () => view('user.auth.forgot-password'))->name('forgot-password');
     Route::get('/reset-password',  fn () => view('user.auth.reset-password'))->name('reset-password');
@@ -23,7 +24,6 @@ Route::prefix('user')->name('user.')->group(function () {
     Route::get('/complaints', fn () => view('user.complaints'))->name('complaints');
     Route::get('/profile',    fn () => view('user.profile'))->name('profile');
     Route::get('/reports',      fn () => view('user.reports'))->name('reports');
-    Route::get('/api-docs',     fn () => view('user.api-docs'))->name('api-docs');
     Route::get('/bbps',         fn () => view('user.bbps'))->name('bbps');
     Route::get('/transactions', fn () => view('user.transactions'))->name('transactions');
     Route::get('/add-money',    fn () => view('user.add-money'))->name('add-money');
@@ -150,5 +150,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Seller / API-user management
     Route::get('/sellers',                  fn () => view('admin.sellers.index'))->name('sellers');
     Route::get('/sellers/payment-requests', fn () => view('admin.sellers.payment-requests'))->name('sellers.payments');
+
+    // User payment requests (add-money requests from users)
+    Route::get('/user-payments',            fn () => view('admin.reports.user-payments'))->name('user-payments');
 
 });

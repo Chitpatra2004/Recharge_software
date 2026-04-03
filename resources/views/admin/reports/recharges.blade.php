@@ -49,8 +49,10 @@
                 <select id="f-status" style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text-primary);background:#fff;outline:none;min-width:120px">
                     <option value="">All</option>
                     <option value="success">Success</option>
-                    <option value="failure">Failure</option>
+                    <option value="failed">Failed</option>
                     <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="refunded">Refunded</option>
                 </select>
             </div>
             <div>
@@ -217,20 +219,22 @@ async function loadReport() {
 
 async function loadSummary() {
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/recharges?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/recharges?' + q);
     if (!res) return;
     const json = await res.json();
-    const s = json.data?.summary || json.summary || {};
+    const s = json.summary || json.data?.summary || {};
 
-    document.getElementById('s-total-count').textContent  = fmtNum(s.total_count ?? s.total ?? 0);
+    const total = s.total_txns ?? s.total_count ?? s.total ?? 0;
+    document.getElementById('s-total-count').textContent  = fmtNum(total);
     document.getElementById('s-total-amt').textContent    = fmtAmt(s.total_amount ?? 0);
-    const rate = s.success_rate ?? (s.total_count ? ((s.success_count / s.total_count) * 100) : 0);
+    const rate = s.success_rate_pct ?? s.success_rate ?? (total ? ((s.success_count / total) * 100) : 0);
     document.getElementById('s-success-rate').textContent = Number(rate).toFixed(1) + '%';
     document.getElementById('s-success-amt').textContent  = fmtNum(s.success_count ?? 0) + ' success';
     document.getElementById('s-total-amount').textContent = fmtAmt(s.total_amount ?? 0);
-    document.getElementById('s-pending-count').textContent= fmtNum(s.pending_count ?? 0) + ' pending';
-    document.getElementById('s-fail-count').textContent   = fmtNum(s.failure_count ?? s.failed_count ?? 0);
-    document.getElementById('s-fail-amt').textContent     = fmtAmt(s.failure_amount ?? 0);
+    const pendingCount = (s.processing_count ?? 0) + (s.queued_count ?? 0);
+    document.getElementById('s-pending-count').textContent= fmtNum(pendingCount) + ' pending';
+    document.getElementById('s-fail-count').textContent   = fmtNum(s.failed_count ?? s.failure_count ?? 0);
+    document.getElementById('s-fail-amt').textContent     = fmtAmt(s.failure_amount ?? s.failed_amount ?? 0);
 }
 
 async function loadDaily() {
@@ -238,10 +242,10 @@ async function loadDaily() {
     document.getElementById('daily-table-wrap').style.display = 'none';
 
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/recharges?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/recharges?' + q);
     if (!res) return;
     const json = await res.json();
-    const rows = json.data?.daily || json.daily || [];
+    const rows = json.daily || json.data?.daily || [];
 
     document.getElementById('daily-loading').style.display = 'none';
     document.getElementById('daily-table-wrap').style.display = 'block';
@@ -259,7 +263,7 @@ async function loadDaily() {
             <td style="font-weight:600">${r.date || '—'}</td>
             <td>${fmtNum(r.total)}</td>
             <td style="color:#10b981;font-weight:600">${fmtNum(r.success)}</td>
-            <td style="color:#ef4444;font-weight:600">${fmtNum(r.failure)}</td>
+            <td style="color:#ef4444;font-weight:600">${fmtNum(r.failed)}</td>
             <td style="color:#f59e0b;font-weight:600">${fmtNum(r.pending)}</td>
             <td>${fmtAmt(r.amount ?? r.total_amount)}</td>
             <td><span style="color:${rc};font-weight:600">${Number(rate).toFixed(1)}%</span></td>
@@ -272,11 +276,12 @@ async function loadTransactions() {
     document.getElementById('txn-table-wrap').style.display = 'none';
 
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/recharges?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/recharges?' + q);
     if (!res) return;
     const json = await res.json();
-    const txns = json.data?.transactions || json.transactions || json.data?.data || [];
-    const meta = json.data?.meta || json.meta || {};
+    const pg   = json.transactions || json.data?.transactions || {};
+    const txns = pg.data || [];
+    const meta = { last_page: pg.last_page, total: pg.total, per_page: pg.per_page, current_page: pg.current_page };
 
     totalPages = meta.last_page ?? meta.total_pages ?? 1;
     const total = meta.total ?? txns.length;
@@ -295,8 +300,8 @@ async function loadTransactions() {
     const offset = (currentPage - 1) * (meta.per_page ?? 20);
     tbody.innerHTML = txns.map((tx, i) => {
         const st = (tx.status || '').toLowerCase();
-        const sc = st === 'success' ? '#10b981' : st === 'failure' ? '#ef4444' : '#f59e0b';
-        const bg = st === 'success' ? '#d1fae5' : st === 'failure' ? '#fee2e2' : '#fef3c7';
+        const sc = st === 'success' ? '#10b981' : st === 'failed' || st === 'refunded' ? '#ef4444' : '#f59e0b';
+        const bg = st === 'success' ? '#d1fae5' : st === 'failed' || st === 'refunded' ? '#fee2e2' : '#fef3c7';
         return `<tr>
             <td style="color:var(--text-muted)">${offset + i + 1}</td>
             <td style="font-weight:600">${tx.mobile || tx.mobile_number || '—'}</td>
@@ -304,7 +309,7 @@ async function loadTransactions() {
             <td style="font-weight:600">${fmtAmt(tx.amount)}</td>
             <td><span style="background:${bg};color:${sc};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${tx.status || '—'}</span></td>
             <td style="font-size:12px;color:var(--text-muted)">${tx.reference_id || tx.ref_id || '—'}</td>
-            <td style="font-size:12px;color:var(--text-muted)">${tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN') : '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—'}</td>
         </tr>`;
     }).join('');
 }

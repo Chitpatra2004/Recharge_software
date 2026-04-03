@@ -247,7 +247,7 @@ function renderDetails(rows) {
         <td style="font-weight:600">${fmtAmt(r.amount)}</td>
         <td style="color:#ef4444">${r.failure_reason || r.reason || '—'}</td>
         <td style="font-size:12px;color:var(--text-muted)">${r.reference_id || r.ref_id || '—'}</td>
-        <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—'}</td>
     </tr>`).join('');
 }
 

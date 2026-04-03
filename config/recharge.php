@@ -15,8 +15,20 @@ return [
     // a duplicate and rejected (prevents accidental double-charges)
     'dedup_window' => (int) env('RECHARGE_DEDUP_WINDOW', 60),
 
-    // Queue name for recharge processing jobs
+    // Queue name for recharge processing jobs (RetryRecharge cron only)
     'queue' => env('RECHARGE_QUEUE', 'recharges'),
+
+    // ── Synchronous API timeout settings ──────────────────────────────────
+    // Maximum seconds to wait for an operator API response (per route attempt)
+    'sync_timeout' => (int) env('RECHARGE_SYNC_TIMEOUT', 10),
+
+    // Maximum seconds to wait for TCP connection to be established
+    'connect_timeout' => (int) env('RECHARGE_CONNECT_TIMEOUT', 5),
+
+    // ── BBPS API endpoints (set in .env; leave empty to use sandbox/demo mode)
+    'bbps_fetch_endpoint' => env('RECHARGE_BBPS_FETCH_ENDPOINT', ''),
+    'bbps_pay_endpoint'   => env('RECHARGE_BBPS_PAY_ENDPOINT', ''),
+    'bbps_api_key'        => env('RECHARGE_BBPS_API_KEY', ''),
 
     // Minimum recharge amount (INR)
     'min_amount' => (float) env('RECHARGE_MIN_AMOUNT', 10.00),

@@ -128,6 +128,40 @@
         .csel-opt.selected{color:var(--primary,var(--blue,#3b82f6));font-weight:600}
         .csel-opt[data-value=""]{color:var(--muted,#94a3b8)}
 
+        /* ── LIGHT SCHEME: sidebar stays dark-navy; override its text ─── */
+        html[data-scheme="light"] .sidebar{background:#1a2035;border-right-color:rgba(255,255,255,.08)}
+        html[data-scheme="light"] .sb-section{color:rgba(255,255,255,.35)}
+        html[data-scheme="light"] .sb-item{color:rgba(255,255,255,.65)}
+        html[data-scheme="light"] .sb-item:hover,
+        html[data-scheme="light"] .sb-item.active{background:rgba(255,255,255,.1);color:#fff}
+        html[data-scheme="light"] .sb-item.active::before{background:var(--blue)}
+        html[data-scheme="light"] .sb-footer{border-top-color:rgba(255,255,255,.1)}
+        html[data-scheme="light"] .sb-user-role{color:rgba(255,255,255,.5)}
+        html[data-scheme="light"] .sb-logout{color:rgba(255,255,255,.4)}
+        html[data-scheme="light"] .sb-logout:hover{color:#f87171}
+        html[data-scheme="light"] .topbar{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+        html[data-scheme="light"] thead th{background:#f8faff}
+        /* Stat cards — stronger colors in light mode */
+        html[data-scheme="light"] .stat-card.blue  {background:linear-gradient(135deg,#dbeafe,#e0e7ff);border-color:#bfdbfe}
+        html[data-scheme="light"] .stat-card.green {background:linear-gradient(135deg,#d1fae5,#ccfbf1);border-color:#6ee7b7}
+        html[data-scheme="light"] .stat-card.orange{background:linear-gradient(135deg,#fef3c7,#ffedd5);border-color:#fcd34d}
+        html[data-scheme="light"] .stat-card.red   {background:linear-gradient(135deg,#fee2e2,#fce7f3);border-color:#fca5a5}
+        html[data-scheme="light"] .stat-card.blue  .stat-value{color:#1d4ed8}
+        html[data-scheme="light"] .stat-card.green .stat-value{color:#047857}
+        html[data-scheme="light"] .stat-card.orange .stat-value{color:#b45309}
+        html[data-scheme="light"] .stat-card.red   .stat-value{color:#dc2626}
+        html[data-scheme="light"] .stat-label{color:var(--muted)}
+        html[data-scheme="light"] .stat-sub{color:var(--muted2)}
+        /* Cards and tables */
+        html[data-scheme="light"] .card{box-shadow:0 1px 4px rgba(0,0,0,.06)}
+        html[data-scheme="light"] .btn-outline{background:#fff;border-color:var(--border2)}
+        html[data-scheme="light"] tbody tr:hover td{background:#f1f5f9}
+        html[data-scheme="light"] input[type="date"],
+        html[data-scheme="light"] input[type="time"],
+        html[data-scheme="light"] input[type="datetime-local"],
+        html[data-scheme="light"] input[type="month"],
+        html[data-scheme="light"] input[type="week"]{color-scheme:light}
+
         @media(max-width:768px){
             .sidebar{transform:translateX(-100%)}
             .sidebar.open{transform:none}
@@ -168,7 +202,7 @@
         .tp-icon-btn:hover{background:var(--card2);color:var(--text)}
         .tp-icon-btn svg{width:17px;height:17px}
     </style>
-    <script>(function(){try{var s=localStorage.getItem('rh_user_theme');if(s){var d=JSON.parse(s);Object.entries(d.vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
+    <script>(function(){function _lum(h){if(!h||h[0]!=='#'||h.length<7)return 0;var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000;}try{var s=localStorage.getItem('rh_user_theme');if(s){var d=JSON.parse(s);Object.entries(d.vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});if(_lum(d.vars['--bg'])>128)document.documentElement.dataset.scheme='light';return;}var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--bg':'#040d21','--bg2':'#070f2b','--topbar-bg':'#070f2b','--blue':'#3b82f6','--blue-dk':'#2563eb','--indigo':'#6366f1'},'Midnight':{'--bg':'#050505','--bg2':'#0f0f0f','--topbar-bg':'#0f0f0f','--blue':'#60a5fa','--blue-dk':'#2563eb','--indigo':'#818cf8'},'Violet':{'--bg':'#0f0723','--bg2':'#160d33','--topbar-bg':'#160d33','--blue':'#a78bfa','--blue-dk':'#7c3aed','--indigo':'#8b5cf6'},'Forest':{'--bg':'#020d07','--bg2':'#041a0d','--topbar-bg':'#041a0d','--blue':'#34d399','--blue-dk':'#059669','--indigo':'#6366f1'},'Ocean':{'--bg':'#020c18','--bg2':'#031221','--topbar-bg':'#031221','--blue':'#38bdf8','--blue-dk':'#0284c7','--indigo':'#0ea5e9'},'Ember':{'--bg':'#150500','--bg2':'#1f0a00','--topbar-bg':'#1f0a00','--blue':'#fb923c','--blue-dk':'#ea580c','--indigo':'#f97316'}};if(u&&m[u]){Object.entries(m[u]).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
     @stack('head')
 </head>
 <body>
@@ -180,7 +214,7 @@
     </a>
 
     <nav class="sb-nav">
-        <div class="sb-section">Menu</div>
+        <div class="sb-section">Main</div>
         <a href="/user/dashboard" class="sb-item {{ request()->is('user/dashboard') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
@@ -189,10 +223,24 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Recharges
         </a>
+        <a href="/user/bbps" class="sb-item {{ request()->is('user/bbps') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Bill Payments
+        </a>
+        <div class="sb-section">Finance</div>
         <a href="/user/wallet" class="sb-item {{ request()->is('user/wallet') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             Wallet
         </a>
+        <a href="/user/add-money" class="sb-item {{ request()->is('user/add-money') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Add Money
+        </a>
+        <a href="/user/transactions" class="sb-item {{ request()->is('user/transactions') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+            Transactions
+        </a>
+        <div class="sb-section">More</div>
         <a href="/user/complaints" class="sb-item {{ request()->is('user/complaints') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             Complaints
@@ -201,15 +249,18 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Reports
         </a>
-        <div class="sb-section">Developer</div>
-        <a href="/user/api-docs" class="sb-item {{ request()->is('user/api-docs') ? 'active' : '' }}">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            API Integration
+        <a href="/user/support" class="sb-item {{ request()->is('user/support') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Help & Support
         </a>
         <div class="sb-section">Account</div>
         <a href="/user/profile" class="sb-item {{ request()->is('user/profile') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             My Profile
+        </a>
+        <a href="/user/terms" class="sb-item {{ request()->is('user/terms') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Terms & Conditions
         </a>
     </nav>
 
@@ -434,7 +485,14 @@ const _DARK_BASE = {
     '--text':'#f1f5f9','--muted':'#94a3b8','--muted2':'#64748b',
     '--green':'#10b981','--orange':'#f59e0b','--red':'#ef4444','--purple':'#8b5cf6'
 };
+const _LIGHT_BASE = {
+    '--card':'#ffffff','--card2':'#f1f5f9',
+    '--border':'#e2e8f0','--border2':'#cbd5e1',
+    '--text':'#1e293b','--muted':'#475569','--muted2':'#94a3b8',
+    '--green':'#059669','--orange':'#d97706','--red':'#dc2626','--purple':'#7c3aed'
+};
 const _THEMES_U = {
+    /* ── Dark themes ── */
     'Cosmic Dark': { sw:['#040d21','#3b82f6','#6366f1'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#040d21','--bg2':'#070f2b','--topbar-bg':'#070f2b','--blue':'#3b82f6','--blue-dk':'#2563eb','--indigo':'#6366f1'}) },
     'Deep Ocean':  { sw:['#020c18','#38bdf8','#0ea5e9'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#020c18','--bg2':'#031221','--topbar-bg':'#031221','--blue':'#38bdf8','--blue-dk':'#0284c7','--indigo':'#0ea5e9'}) },
     'Midnight':    { sw:['#050505','#60a5fa','#818cf8'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#050505','--bg2':'#0f0f0f','--topbar-bg':'#0f0f0f','--blue':'#60a5fa','--blue-dk':'#2563eb','--indigo':'#818cf8','--green':'#34d399','--orange':'#fbbf24','--red':'#f87171','--purple':'#a78bfa'}) },
@@ -443,13 +501,16 @@ const _THEMES_U = {
     'Ember Dark':  { sw:['#150500','#fb923c','#ea580c'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#150500','--bg2':'#1f0a00','--topbar-bg':'#1f0a00','--blue':'#fb923c','--blue-dk':'#ea580c','--indigo':'#f97316'}) },
     'Slate Dark':  { sw:['#0d1117','#58a6ff','#1f6feb'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#0d1117','--bg2':'#161b22','--topbar-bg':'#161b22','--blue':'#58a6ff','--blue-dk':'#1f6feb','--indigo':'#8b949e','--muted':'#8b949e','--muted2':'#6e7681'}) },
     'Rose Night':  { sw:['#150012','#f472b6','#db2777'], vars:Object.assign({}, _DARK_BASE, {'--bg':'#150012','--bg2':'#200018','--topbar-bg':'#200018','--blue':'#f472b6','--blue-dk':'#db2777','--indigo':'#ec4899','--red':'#fb7185'}) },
+    /* ── Light themes ── */
+    'Classic Light':{ sw:['#f0f4f8','#2563eb','#1a2035'], light:true, vars:Object.assign({}, _LIGHT_BASE, {'--bg':'#f0f4f8','--bg2':'#1a2035','--topbar-bg':'#ffffff','--blue':'#2563eb','--blue-dk':'#1d4ed8','--indigo':'#4f46e5'}) },
+    'Violet Light': { sw:['#f5f3ff','#7c3aed','#1e1b4b'], light:true, vars:Object.assign({}, _LIGHT_BASE, {'--bg':'#f5f3ff','--bg2':'#1e1b4b','--topbar-bg':'#ffffff','--blue':'#7c3aed','--blue-dk':'#6d28d9','--indigo':'#8b5cf6'}) },
+    'Forest Light': { sw:['#f0fdf4','#16a34a','#052e16'], light:true, vars:Object.assign({}, _LIGHT_BASE, {'--bg':'#f0fdf4','--bg2':'#052e16','--topbar-bg':'#ffffff','--blue':'#16a34a','--blue-dk':'#15803d','--indigo':'#22c55e'}) },
+    'Ocean Light':  { sw:['#f0fdfa','#0d9488','#042f2e'], light:true, vars:Object.assign({}, _LIGHT_BASE, {'--bg':'#f0fdfa','--bg2':'#042f2e','--topbar-bg':'#ffffff','--blue':'#0d9488','--blue-dk':'#0f766e','--indigo':'#06b6d4'}) },
+    'Sunset Light': { sw:['#fff7ed','#ea580c','#431407'], light:true, vars:Object.assign({}, _LIGHT_BASE, {'--bg':'#fff7ed','--bg2':'#431407','--topbar-bg':'#ffffff','--blue':'#ea580c','--blue-dk':'#c2410c','--indigo':'#f97316'}) },
 };
 
 // ── ALL variable keys that need resetting on theme change ──────────────────
-// '--primary' is derived from '--blue' via CSS :root, but we also set it
-// explicitly so pages that use var(--primary) inline see the correct colour
-// immediately without waiting for the CSS cascade to re-resolve.
-const _ALL_VARS = Object.keys(Object.assign({}, _DARK_BASE, {'--bg':'','--bg2':'','--topbar-bg':'','--blue':'','--blue-dk':'','--indigo':'','--primary':''}));
+const _ALL_VARS = Object.keys(Object.assign({}, _DARK_BASE, _LIGHT_BASE, {'--bg':'','--bg2':'','--topbar-bg':'','--blue':'','--blue-dk':'','--indigo':'','--primary':''}));
 
 function openThemePanel()  {
     document.getElementById('tp-panel').classList.add('open');
@@ -460,6 +521,12 @@ function closeThemePanel() {
     document.getElementById('tp-overlay').classList.remove('open');
 }
 
+function _isLightColor(hex) {
+    if (!hex || hex[0] !== '#' || hex.length < 7) return false;
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return (r*299 + g*587 + b*114) / 1000 > 128;
+}
+
 function _applyUserVars(vars) {
     // First clear ALL known vars so no stale value bleeds through
     _ALL_VARS.forEach(k => document.documentElement.style.removeProperty(k));
@@ -467,12 +534,26 @@ function _applyUserVars(vars) {
     // Ensure --primary always mirrors --blue so active-state highlights update
     const blue = vars['--blue'] || getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
     if (blue) document.documentElement.style.setProperty('--primary', blue);
+    // Toggle sidebar light-override CSS rules
+    document.documentElement.dataset.scheme = _isLightColor(vars['--bg'] || '') ? 'light' : 'dark';
 }
+
+// Reverse map: user preset name → unified theme name (for cross-layout sync)
+const _U_TO_UNIFIED = {
+    'Cosmic Dark':'Cosmic','Deep Ocean':'Ocean','Midnight':'Midnight',
+    'Purple Haze':'Violet','Forest Night':'Forest','Ember Dark':'Ember',
+    'Slate Dark':'Midnight','Rose Night':'Ember',
+    'Classic Light':'Cosmic','Violet Light':'Violet','Forest Light':'Forest',
+    'Ocean Light':'Ocean','Sunset Light':'Ember',
+};
 
 function _selectUserPreset(name) {
     const t = _THEMES_U[name]; if (!t) return;
     _applyUserVars(t.vars);
     try { localStorage.setItem('rh_user_theme', JSON.stringify({name, vars:t.vars})); } catch(e) {}
+    // Sync unified theme key so landing page and admin panel follow
+    const unified = _U_TO_UNIFIED[name];
+    if (unified) try { localStorage.setItem('rh_theme', unified); } catch(e) {}
     // Mark active preset
     document.querySelectorAll('#tp-presets-grid .tp-preset').forEach(b => b.classList.toggle('active', b.dataset.t === name));
     // Sync color pickers to preset
@@ -489,8 +570,9 @@ function _applyCustomUser() {
     const ac  = document.getElementById('tc-ac').value;
     // Derive a slightly purple indigo from accent for gradient variety
     const indigo = _shiftHue(ac, 30);
-    const vars = Object.assign({}, _DARK_BASE, {
-        '--bg':bg,'--bg2':bg2,'--topbar-bg':bg2,
+    const isLight = _isLightColor(bg);
+    const vars = Object.assign({}, isLight ? _LIGHT_BASE : _DARK_BASE, {
+        '--bg':bg,'--bg2':bg2,'--topbar-bg':isLight ? '#ffffff' : bg2,
         '--blue':ac,'--blue-dk':_darken(ac,12),'--indigo':indigo,
     });
     _applyUserVars(vars);
@@ -554,11 +636,30 @@ function _shiftHue(hex, deg) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const grid = document.getElementById('tp-presets-grid');
+    // Unified name → user preset name
+    const _UNIFIED_TO_U = {'Cosmic':'Cosmic Dark','Midnight':'Midnight','Violet':'Purple Haze','Forest':'Forest Night','Ocean':'Deep Ocean','Ember':'Ember Dark'};
     let activeName = 'Cosmic Dark';
-    try { activeName = JSON.parse(localStorage.getItem('rh_user_theme') || '{}').name || 'Cosmic Dark'; } catch(e) {}
+    try {
+        const unified = localStorage.getItem('rh_theme');
+        const local   = JSON.parse(localStorage.getItem('rh_user_theme') || '{}');
+        if (local.name && local.vars) {
+            // User has an explicit saved preference — always respect it and re-apply vars.
+            activeName = _THEMES_U[local.name] ? local.name : 'Custom';
+            _applyUserVars(local.vars);
+        } else if (unified && _UNIFIED_TO_U[unified]) {
+            // No explicit local preference → pull from cross-layout unified key
+            activeName = _UNIFIED_TO_U[unified];
+            const t = _THEMES_U[activeName];
+            if (t) { _applyUserVars(t.vars); localStorage.setItem('rh_user_theme', JSON.stringify({name:activeName,vars:t.vars})); }
+        }
+    } catch(e) {}
+    // data-scheme is already set by _applyUserVars above, but ensure fallback for Cosmic Dark default
+    if (!document.documentElement.dataset.scheme) {
+        document.documentElement.dataset.scheme = 'dark';
+    }
     Object.entries(_THEMES_U).forEach(([name, t]) => {
         const btn = document.createElement('button');
-        btn.className = 'tp-preset' + (name === activeName ? ' active' : '');
+        btn.className = 'tp-preset' + (name === activeName && activeName !== 'Custom' ? ' active' : '');
         btn.dataset.t = name;
         btn.onclick = () => _selectUserPreset(name);
         btn.innerHTML = '<div class="tp-swatches">' + t.sw.map(c => '<span class="tp-swatch" style="background:' + c + '"></span>').join('') + '</div><div class="tp-name">' + name + '</div>';

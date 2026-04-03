@@ -146,7 +146,7 @@ async function loadLogs(page = 1) {
     }
 
     document.getElementById('log-tbody').innerHTML = rows.map((r, i) => {
-        const date = r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—';
+        const date = r.created_at ? new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
         const actor = actorLabel(r);
         const actionBadge = actionColor(r.action);
         return `<tr style="cursor:pointer" onclick='showDetail(${JSON.stringify(r).replace(/'/g, "\\'")})'>

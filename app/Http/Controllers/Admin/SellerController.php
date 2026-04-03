@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApiKey;
 use App\Models\SellerIntegrationRequest;
 use App\Models\User;
+use App\Notifications\RegistrationApprovedNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class SellerController extends Controller
     /** GET /api/v1/employee/sellers */
     public function index(Request $request): JsonResponse
     {
-        $query = User::where('role', 'api_user')
+        $query = User::whereIn('role', ['api_user', 'retailer'])
             ->with(['latestIntegration'])
             ->withCount([
                 'rechargeTransactions',
@@ -38,7 +39,7 @@ class SellerController extends Controller
 
         $sellers = $query->latest()->paginate($request->integer('per_page', 25));
 
-        // Append wallet balance, api_key_hint, and integration_status
+        // Append wallet balance, api_key_hint, integration_status, and doc flags
         $sellers->getCollection()->transform(function ($u) {
             $wallet = DB::table('wallets')->where('user_id', $u->id)->first();
             $u->wallet_balance = $wallet ? (float) $wallet->balance : 0.0;
@@ -48,17 +49,22 @@ class SellerController extends Controller
 
             $u->integration_status = $u->latestIntegration ? $u->latestIntegration->status : 'none';
 
+            // Document flags for admin review
+            $u->has_pan         = ! empty($u->pan_image_path);
+            $u->has_gst         = ! empty($u->gst_certificate_path);
+            $u->has_document    = ! empty($u->document_path);
+
             return $u;
         });
 
         // Summary stats
         $stats = DB::table('users')
-            ->where('role', 'api_user')
+            ->whereIn('role', ['api_user', 'retailer'])
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(CASE WHEN status = 'inactive'  THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'active'    THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) as suspended
+                SUM(CASE WHEN approval_status = 'pending'  THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'active'            THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'suspended'         THEN 1 ELSE 0 END) as suspended
             ")
             ->first();
 
@@ -68,7 +74,7 @@ class SellerController extends Controller
     /** GET /api/v1/employee/sellers/{id} */
     public function show(int $id): JsonResponse
     {
-        $user = User::where('role', 'api_user')->findOrFail($id);
+        $user = User::whereIn('role', ['api_user', 'retailer'])->findOrFail($id);
 
         $wallet       = DB::table('wallets')->where('user_id', $id)->first();
         $integration  = SellerIntegrationRequest::where('user_id', $id)->latest()->first();
@@ -99,13 +105,24 @@ class SellerController extends Controller
     /** POST /api/v1/employee/sellers/{id}/approve */
     public function approve(Request $request, int $id): JsonResponse
     {
-        $user = User::where('role', 'api_user')->findOrFail($id);
-        $user->update(['status' => 'active']);
+        $user = User::whereIn('role', ['api_user', 'retailer'])->findOrFail($id);
+        $user->update([
+            'status'          => 'active',
+            'approval_status' => 'approved',
+        ]);
+
+        // Send email notification to the user
+        try {
+            $user->notify(new RegistrationApprovedNotification());
+        } catch (\Throwable $e) {
+            // Log but don't fail the approval if email fails
+            \Illuminate\Support\Facades\Log::warning("Approval notification failed for user #{$id}: " . $e->getMessage());
+        }
 
         ActivityLogger::log('admin.seller_approved', "Seller #{$id} ({$user->email}) approved", null,
             ['seller_id' => $id], null, $request);
 
-        return response()->json(['message' => 'Seller account approved. They can now login.']);
+        return response()->json(['message' => 'Seller account approved. Notification sent to user.']);
     }
 
     /** POST /api/v1/employee/sellers/{id}/reject */
@@ -113,13 +130,16 @@ class SellerController extends Controller
     {
         $request->validate(['notes' => ['sometimes', 'nullable', 'string', 'max:500']]);
 
-        $user = User::where('role', 'api_user')->findOrFail($id);
-        $user->update(['status' => 'suspended']);
+        $user = User::whereIn('role', ['api_user', 'retailer'])->findOrFail($id);
+        $user->update([
+            'status'          => 'suspended',
+            'approval_status' => 'rejected',
+        ]);
 
-        ActivityLogger::log('admin.seller_rejected', "Seller #{$id} ({$user->email}) rejected/suspended", null,
+        ActivityLogger::log('admin.seller_rejected', "Seller #{$id} ({$user->email}) rejected", null,
             ['seller_id' => $id, 'notes' => $request->notes], null, $request);
 
-        return response()->json(['message' => 'Seller account suspended.']);
+        return response()->json(['message' => 'Seller account rejected.']);
     }
 
     /** POST /api/v1/employee/sellers/integrations/{id}/decision */

@@ -101,11 +101,11 @@ function renderTable(data){
     rows.forEach(t=>{
         html += `<tr>
             <td style="font-size:12.5px;white-space:nowrap">${fmtDate(t.created_at)}</td>
-            <td style="font-weight:500">${t.mobile_number}</td>
-            <td><span style="font-size:12px;font-weight:600">${t.operator||'—'}</span></td>
+            <td style="font-weight:500">${t.mobile||t.mobile_number||'—'}</td>
+            <td><span style="font-size:12px;font-weight:600">${t.operator_code||t.operator||'—'}</span></td>
             <td style="font-size:12px">${t.circle||'—'}</td>
             <td style="font-weight:600">₹${fmtMoney(t.amount)}</td>
-            <td><span style="font-family:monospace;font-size:11.5px;color:#64748b">${t.transaction_id||'—'}</span></td>
+            <td><span style="font-family:monospace;font-size:11.5px;color:#64748b">${t.operator_txn_id||t.transaction_id||'—'}</span></td>
             <td><span style="font-family:monospace;font-size:11.5px;color:#64748b">${t.external_ref||'—'}</span></td>
             <td>${statusBadge(t.status)}</td>
         </tr>`;

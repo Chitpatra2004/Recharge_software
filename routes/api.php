@@ -6,9 +6,11 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeAuthController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\AdminRechargeController;
 use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
+use App\Http\Controllers\Admin\UserPaymentRequestController as AdminUserPaymentRequestController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\TwoFactorController;
@@ -94,6 +96,20 @@ Route::prefix('v1/employee')
     Route::post('/api-keys',             [ApiKeyController::class, 'store']);
     Route::delete('/api-keys/{id}',      [ApiKeyController::class, 'destroy']);
     Route::get('/users/search',          [ApiKeyController::class, 'searchUsers']);
+
+    // Reports (accessible by employees/admins)
+    Route::get('/reports/pending',       [ReportController::class, 'pending']);
+    Route::get('/reports/recharges',     [ReportController::class, 'recharges']);
+    Route::get('/reports/users',         [ReportController::class, 'users']);
+    Route::get('/reports/operators',     [ReportController::class, 'operators']);
+    Route::get('/reports/failures',      [ReportController::class, 'failures']);
+    Route::get('/reports/payments',      [ReportController::class, 'payments']);
+    Route::get('/reports/complaints',    [ReportController::class, 'complaints']);
+    Route::get('/reports/wallets',       [ReportController::class, 'wallets']);
+
+    // Recharge management
+    Route::get('/recharges/{id}',        [AdminRechargeController::class, 'show']);
+    Route::post('/recharges/{id}/refund',[AdminRechargeController::class, 'refund']);
 
 });
 
@@ -325,4 +341,14 @@ Route::prefix('v1/employee/sellers')
     // Wallet management
     Route::post('/{id}/wallet/adjust',       [AdminWalletController::class, 'adjust']);
     Route::get('/{id}/wallet/transactions',  [AdminWalletController::class, 'transactions']);
+});
+
+// ── Admin: User Payment Requests (Add Money) ────────────────────────────────
+Route::prefix('v1/employee/user-payment-requests')
+    ->middleware(['auth:employee', 'throttle:api', 'log.api', 'log.employee'])
+    ->group(function () {
+
+    Route::get('/',                    [AdminUserPaymentRequestController::class, 'index']);
+    Route::post('/{id}/approve',       [AdminUserPaymentRequestController::class, 'approve']);
+    Route::post('/{id}/reject',        [AdminUserPaymentRequestController::class, 'reject']);
 });
