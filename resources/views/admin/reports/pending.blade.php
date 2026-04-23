@@ -22,6 +22,8 @@
 .action-btn{padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#fff;color:#1e293b}
 .action-btn:hover{background:var(--bg-page)}
 .action-btn.refund{color:var(--accent-red);border-color:var(--accent-red)}
+.action-btn.info{color:var(--accent-blue);border-color:var(--accent-blue)}
+.action-btn.resend{color:var(--accent-green);border-color:var(--accent-green)}
 .txn-id{font-family:monospace;font-size:11.5px;color:#334155;background:#f1f5f9;padding:2px 6px;border-radius:4px}
 </style>
 @endpush
@@ -100,6 +102,18 @@
     </div>
 </div>
 
+<div id="detailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:550;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="width:900px;max-width:96vw;max-height:88vh;overflow:auto">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:15px;font-weight:700">Transaction Log Detail</span>
+            <button class="btn btn-outline btn-sm" onclick="closeDetailModal()">Close</button>
+        </div>
+        <div class="card-body" id="detailBody">
+            <div class="loading"><div class="spinner"></div> Loading...</div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 const TOKEN = () => localStorage.getItem('emp_token');
@@ -151,7 +165,9 @@ function renderTable(rows){
             <td style="color:#64748b;font-size:12.5px">${fmtDate(r.created_at)}</td>
             <td style="font-weight:700;color:${isStuck ? '#ef4444' : '#64748b'}">${ageLabel(age)}</td>
             <td>${statusBadge(r.status, age)}</td>
-            <td style="display:flex;gap:5px">
+            <td style="display:flex;gap:5px;flex-wrap:wrap">
+                <button class="action-btn info" onclick="viewLog(${r.id})">View Log</button>
+                <button class="action-btn resend" onclick="resendTxn(${r.id}, '${r.mobile}')">Resend</button>
                 <button class="action-btn refund" onclick="doRefund(${r.id}, '${r.mobile}', ${r.amount})">Refund</button>
             </td>
         </tr>`;
@@ -216,6 +232,112 @@ function doRefund(id, mobile, amount){
             .then(d => { alert('Refund successful: ' + (d.message || '')); loadPending(currentPage); })
             .catch(e => alert('Refund failed: ' + (e.message || 'Unknown error')));
     };
+}
+
+function resendTxn(id, mobile){
+    const modal = document.getElementById('actionModal');
+    document.getElementById('modalTitle').textContent = 'Resend Transaction';
+    document.getElementById('modalMsg').textContent   =
+        `Resend transaction for mobile ${mobile}? (Txn ID: ${id})`;
+    modal.style.display = 'flex';
+
+    document.getElementById('modalConfirm').onclick = () => {
+        modal.style.display = 'none';
+        empFetch(`/api/v1/employee/recharges/${id}/resend`, 'POST')
+            .then(d => { alert(d.message || 'Transaction resent successfully.'); loadPending(currentPage); })
+            .catch(e => alert('Resend failed: ' + (e.message || 'Unknown error')));
+    };
+}
+
+function closeDetailModal(){
+    document.getElementById('detailModal').style.display = 'none';
+}
+
+function fmtJson(value){
+    if (!value) return '—';
+    try {
+        return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2);
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function detailRow(label, value){
+    return `<tr>
+        <td style="padding:7px 0;width:140px;color:#64748b;font-weight:600;vertical-align:top">${label}</td>
+        <td style="padding:7px 0;color:#1e293b">${value}</td>
+    </tr>`;
+}
+
+function viewLog(id){
+    document.getElementById('detailModal').style.display = 'flex';
+    document.getElementById('detailBody').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+
+    empFetch(`/api/v1/employee/recharges/${id}`)
+        .then(res => {
+            const payload = res.data || {};
+            const tx = payload.transaction || {};
+            const attempts = payload.attempts || [];
+            const apiLogs = payload.api_logs || [];
+
+            const attemptsHtml = attempts.length
+                ? attempts.map(a => `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+                    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                        <strong>Attempt #${a.attempt_number}</strong>
+                        <span>Status: ${a.status || '—'} | Code: ${a.response_code || '—'} | ${a.duration_ms || 0} ms</span>
+                    </div>
+                    <div style="font-size:12px;color:#64748b;margin-bottom:6px">${a.request_url || a.api_endpoint || '—'}</div>
+                    ${a.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${a.error_message}</div>` : ''}
+                    <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(a.response_payload || a.request_payload)}</pre>
+                </div>`).join('')
+                : '<div style="color:#64748b">No recharge attempts found.</div>';
+
+            const apiLogsHtml = apiLogs.length
+                ? apiLogs.map(l => `<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px">
+                    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                        <strong>${l.method} ${l.path}</strong>
+                        <span>${l.status_code} | ${l.response_time_ms || 0} ms</span>
+                    </div>
+                    <div style="font-size:12px;color:#64748b;margin:6px 0">Ref: ${l.reference_id || '—'} | ${fmtDate(l.created_at)}</div>
+                    ${l.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${l.error_message}</div>` : ''}
+                    ${l.request_payload ? `<pre style="background:#f8fafc;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(l.request_payload)}</pre>` : ''}
+                </div>`).join('')
+                : '<div style="color:#64748b">No related API logs found.</div>';
+
+            document.getElementById('detailBody').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+                    <div class="card" style="box-shadow:none">
+                        <div class="card-body">
+                            <div style="font-size:13px;font-weight:700;margin-bottom:8px">Transaction</div>
+                            <table style="width:100%">${[
+                                detailRow('Txn ID', '#' + (tx.id || id)),
+                                detailRow('Mobile', tx.mobile || '—'),
+                                detailRow('Operator', tx.operator_code || '—'),
+                                detailRow('Amount', '₹' + fmtMoney(tx.amount || 0)),
+                                detailRow('Status', tx.status || '—'),
+                                detailRow('Seller', tx.seller_name || '—'),
+                                detailRow('Ref ID', tx.operator_ref || tx.api_ref || tx.idempotency_key || '—'),
+                                detailRow('Created', fmtDate(tx.created_at)),
+                            ].join('')}</table>
+                        </div>
+                    </div>
+                    <div class="card" style="box-shadow:none">
+                        <div class="card-body">
+                            <div style="font-size:13px;font-weight:700;margin-bottom:8px">Failure / Response</div>
+                            <div style="font-size:12px;color:#64748b;margin-bottom:8px">${tx.failure_reason || 'No failure reason recorded.'}</div>
+                            <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(tx.operator_response)}</pre>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:8px">Recharge Attempts</div>
+                ${attemptsHtml}
+                <div style="font-size:13px;font-weight:700;margin:16px 0 8px">Related API Logs</div>
+                ${apiLogsHtml}
+            `;
+        })
+        .catch(err => {
+            document.getElementById('detailBody').innerHTML = `<div style="color:#ef4444">${err.message || 'Failed to load log detail.'}</div>`;
+        });
 }
 
 function exportPending(){

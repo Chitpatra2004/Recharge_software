@@ -38,7 +38,9 @@ Route::prefix('seller')->name('seller.')->group(function () {
     Route::get('/login',            fn () => view('seller.auth.login'))->name('login');
     Route::get('/',                 fn () => redirect()->route('seller.dashboard'));
     Route::get('/dashboard',        fn () => view('seller.dashboard'))->name('dashboard');
-    Route::get('/api-config',       fn () => view('seller.api-config'))->name('api-config');
+    Route::get('/api-config',       fn () => redirect()->route('seller.api-setting'))->name('api-config');
+    Route::get('/api-setting',      fn () => view('seller.api-config'))->name('api-setting');
+    Route::get('/api-docs',         fn () => view('seller.api-docs'))->name('api-docs');
     Route::get('/sales',            fn () => view('seller.sales'))->name('sales');
     Route::get('/reports/account',  fn () => view('seller.reports.account'))->name('reports.account');
     Route::get('/reports/topup',    fn () => view('seller.reports.topup'))->name('reports.topup');
@@ -118,7 +120,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 
     // Users
-    Route::get('/users',     fn () => view('admin.users.index'))->name('users');
+    Route::get('/users',        fn () => view('admin.users.index'))->name('users');
+    Route::get('/users/{id}',   fn ($id) => view('admin.users.show', ['userId' => $id]))->name('users.show');
 
     // Manage
     Route::get('/operators', fn () => view('admin.manage.operators'))->name('operators');
@@ -141,6 +144,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/reminders', fn () => view('admin.tools.reminders'))->name('reminders');
     Route::get('/exports',   fn () => view('admin.tools.exports'))->name('exports');
     Route::get('/activity',  fn () => view('admin.tools.activity'))->name('activity');
+    Route::get('/api-logs',  fn () => view('admin.tools.api-logs'))->name('api-logs');
 
     // Complaints
     Route::get('/complaints',          fn () => view('admin.complaints.index'))->name('complaints');

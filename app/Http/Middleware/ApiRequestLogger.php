@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ApiRequestLogSchema;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,11 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ApiRequestLogger
 {
+    private const SENSITIVE_KEYS = [
+        'password', 'password_confirmation', 'token', 'api_key', 'key',
+        'secret', 'totp_secret', 'otp', 'pending_token', 'authorization',
+    ];
+
     public function handle(Request $request, Closure $next): Response
     {
         $startTime = microtime(true);
@@ -40,7 +46,7 @@ class ApiRequestLogger
         $apiKey = $request->attributes->get('resolved_api_key');
         $user   = $request->user();
 
-        DB::table('api_request_logs')->insert([
+        $data = [
             'api_key_id'       => $apiKey?->id,
             'user_id'          => $user?->id,
             'method'           => $request->method(),
@@ -56,7 +62,17 @@ class ApiRequestLogger
                                     ? $this->extractError($response)
                                     : null,
             'created_at'       => now(),
-        ]);
+        ];
+
+        if (ApiRequestLogSchema::has('reference_id')) {
+            $data['reference_id'] = $this->extractReferenceId($request);
+        }
+
+        if (ApiRequestLogSchema::has('request_payload')) {
+            $data['request_payload'] = $this->buildRequestPayload($request);
+        }
+
+        DB::table('api_request_logs')->insert($data);
 
         // Keep api_keys.last_used_at and request_count up-to-date
         if ($apiKey) {
@@ -80,5 +96,82 @@ class ApiRequestLogger
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function extractReferenceId(Request $request): ?string
+    {
+        $candidates = [
+            $request->route('id'),
+            $request->route('txnId'),
+            $request->input('transaction_id'),
+            $request->input('txn_id'),
+            $request->input('reference_id'),
+            $request->input('reference'),
+            $request->input('ref_id'),
+            $request->input('idempotency_key'),
+            $request->query('transaction_id'),
+            $request->query('txn_id'),
+            $request->query('reference_id'),
+            $request->query('ref_id'),
+            $request->query('idempotency_key'),
+        ];
+
+        foreach ($candidates as $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            return substr((string) $value, 0, 191);
+        }
+
+        return null;
+    }
+
+    private function buildRequestPayload(Request $request): ?string
+    {
+        $payload = $request->except([
+            'document', 'pan_image', 'gst_certificate',
+        ]);
+
+        if (empty($payload)) {
+            return null;
+        }
+
+        $masked = $this->maskSensitiveValues($payload);
+        $json = json_encode($masked, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if (! $json) {
+            return null;
+        }
+
+        return substr($json, 0, 5000);
+    }
+
+    private function maskSensitiveValues(array $payload): array
+    {
+        $masked = [];
+
+        foreach ($payload as $key => $value) {
+            $normalizedKey = strtolower((string) $key);
+
+            if (in_array($normalizedKey, self::SENSITIVE_KEYS, true)) {
+                $masked[$key] = '***';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $masked[$key] = $this->maskSensitiveValues($value);
+                continue;
+            }
+
+            if (is_string($value) && strlen($value) > 500) {
+                $masked[$key] = substr($value, 0, 500) . '...';
+                continue;
+            }
+
+            $masked[$key] = $value;
+        }
+
+        return $masked;
     }
 }

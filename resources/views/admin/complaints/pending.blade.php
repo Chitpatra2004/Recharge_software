@@ -89,7 +89,7 @@ async function loadPending(page = 1) {
     if (priority) p.set('priority', priority);
     if (type)     p.set('type', type);
 
-    const res = await apiFetch('/api/v1/admin/reports/complaints?' + p.toString());
+    const res = await apiFetch('/api/v1/employee/reports/complaints?' + p.toString());
     if (!res) return;
     const data = await res.json();
 

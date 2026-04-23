@@ -168,12 +168,36 @@
                         <th>Status</th>
                         <th>Ref ID</th>
                         <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="txn-tbody">
-                    <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">No transactions found</td></tr>
+                    <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">No transactions found</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div id="rechargeActionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
+    <div class="card" style="width:400px;max-width:95vw;padding:24px">
+        <h3 id="rechargeModalTitle" style="font-size:15px;font-weight:700;margin-bottom:8px">Confirm Action</h3>
+        <p id="rechargeModalMsg" style="font-size:13px;color:#64748b;margin-bottom:20px"></p>
+        <div style="display:flex;gap:10px">
+            <button class="btn btn-primary" id="rechargeModalConfirm">Confirm</button>
+            <button class="btn btn-outline" onclick="closeRechargeActionModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="rechargeDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:550;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="width:900px;max-width:96vw;max-height:88vh;overflow:auto">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:15px;font-weight:700">Recharge Log Detail</span>
+            <button class="btn btn-outline btn-sm" onclick="closeRechargeDetailModal()">Close</button>
+        </div>
+        <div class="card-body" id="rechargeDetailBody">
+            <div class="loading-overlay"><div class="spinner"></div> Loading…</div>
         </div>
     </div>
 </div>
@@ -210,6 +234,122 @@ function clearFilters() {
 function changePage(dir) {
     currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
     loadTransactions();
+}
+
+function closeRechargeActionModal() {
+    document.getElementById('rechargeActionModal').style.display = 'none';
+}
+
+function closeRechargeDetailModal() {
+    document.getElementById('rechargeDetailModal').style.display = 'none';
+}
+
+function fmtJson(value) {
+    if (!value) return '—';
+    try {
+        return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2);
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function detailRow(label, value) {
+    return `<tr>
+        <td style="padding:7px 0;width:140px;color:#64748b;font-weight:600;vertical-align:top">${label}</td>
+        <td style="padding:7px 0;color:#1e293b">${value}</td>
+    </tr>`;
+}
+
+function resendTransaction(id, mobile) {
+    const modal = document.getElementById('rechargeActionModal');
+    document.getElementById('rechargeModalTitle').textContent = 'Resend Transaction';
+    document.getElementById('rechargeModalMsg').textContent = `Resend transaction for mobile ${mobile}? (Txn ID: ${id})`;
+    modal.style.display = 'flex';
+
+    document.getElementById('rechargeModalConfirm').onclick = async () => {
+        closeRechargeActionModal();
+        try {
+            const res = await apiFetch(`/api/v1/employee/recharges/${id}/resend`, { method: 'POST' });
+            const json = await res.json();
+            alert(json.message || 'Transaction resent successfully.');
+            loadReport();
+        } catch (e) {
+            alert(e.message || 'Resend failed.');
+        }
+    };
+}
+
+async function viewRechargeLog(id) {
+    document.getElementById('rechargeDetailModal').style.display = 'flex';
+    document.getElementById('rechargeDetailBody').innerHTML =
+        '<div class="loading-overlay"><div class="spinner"></div> Loading…</div>';
+
+    try {
+        const res = await apiFetch(`/api/v1/employee/recharges/${id}`);
+        const json = await res.json();
+        const payload = json.data || {};
+        const tx = payload.transaction || {};
+        const attempts = payload.attempts || [];
+        const apiLogs = payload.api_logs || [];
+
+        const attemptsHtml = attempts.length
+            ? attempts.map(a => `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                    <strong>Attempt #${a.attempt_number}</strong>
+                    <span>Status: ${a.status || '—'} | Code: ${a.response_code || '—'} | ${a.duration_ms || 0} ms</span>
+                </div>
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px">${a.request_url || a.api_endpoint || '—'}</div>
+                ${a.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${a.error_message}</div>` : ''}
+                <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(a.response_payload || a.request_payload)}</pre>
+            </div>`).join('')
+            : '<div style="color:#64748b">No recharge attempts found.</div>';
+
+        const apiLogsHtml = apiLogs.length
+            ? apiLogs.map(l => `<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                    <strong>${l.method} ${l.path}</strong>
+                    <span>${l.status_code} | ${l.response_time_ms || 0} ms</span>
+                </div>
+                <div style="font-size:12px;color:#64748b;margin:6px 0">Ref: ${l.reference_id || '—'} | ${l.created_at ? new Date(l.created_at).toLocaleString('en-IN') : '—'}</div>
+                ${l.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${l.error_message}</div>` : ''}
+                ${l.request_payload ? `<pre style="background:#f8fafc;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(l.request_payload)}</pre>` : ''}
+            </div>`).join('')
+            : '<div style="color:#64748b">No related API logs found.</div>';
+
+        document.getElementById('rechargeDetailBody').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+                <div class="card" style="box-shadow:none">
+                    <div class="card-body">
+                        <div style="font-size:13px;font-weight:700;margin-bottom:8px">Transaction</div>
+                        <table style="width:100%">${[
+                            detailRow('Txn ID', '#' + (tx.id || id)),
+                            detailRow('Mobile', tx.mobile || '—'),
+                            detailRow('Operator', tx.operator_code || '—'),
+                            detailRow('Amount', fmtAmt(tx.amount || 0)),
+                            detailRow('Status', tx.status || '—'),
+                            detailRow('Seller', tx.seller_name || '—'),
+                            detailRow('Ref ID', tx.operator_ref || tx.api_ref || tx.idempotency_key || '—'),
+                            detailRow('Created', tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN') : '—'),
+                        ].join('')}</table>
+                    </div>
+                </div>
+                <div class="card" style="box-shadow:none">
+                    <div class="card-body">
+                        <div style="font-size:13px;font-weight:700;margin-bottom:8px">Failure / Response</div>
+                        <div style="font-size:12px;color:#64748b;margin-bottom:8px">${tx.failure_reason || 'No failure reason recorded.'}</div>
+                        <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(tx.operator_response)}</pre>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:8px">Recharge Attempts</div>
+            ${attemptsHtml}
+            <div style="font-size:13px;font-weight:700;margin:16px 0 8px">Related API Logs</div>
+            ${apiLogsHtml}
+        `;
+    } catch (e) {
+        document.getElementById('rechargeDetailBody').innerHTML =
+            `<div style="color:#ef4444">${e.message || 'Failed to load transaction log.'}</div>`;
+    }
 }
 
 async function loadReport() {
@@ -294,7 +434,7 @@ async function loadTransactions() {
 
     const tbody = document.getElementById('txn-tbody');
     if (!txns.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">No transactions found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">No transactions found</td></tr>';
         return;
     }
     const offset = (currentPage - 1) * (meta.per_page ?? 20);
@@ -302,14 +442,19 @@ async function loadTransactions() {
         const st = (tx.status || '').toLowerCase();
         const sc = st === 'success' ? '#10b981' : st === 'failed' || st === 'refunded' ? '#ef4444' : '#f59e0b';
         const bg = st === 'success' ? '#d1fae5' : st === 'failed' || st === 'refunded' ? '#fee2e2' : '#fef3c7';
+        const canResend = !['success', 'refunded'].includes(st);
         return `<tr>
             <td style="color:var(--text-muted)">${offset + i + 1}</td>
             <td style="font-weight:600">${tx.mobile || tx.mobile_number || '—'}</td>
             <td>${tx.operator_name || tx.operator_code || '—'}</td>
             <td style="font-weight:600">${fmtAmt(tx.amount)}</td>
             <td><span style="background:${bg};color:${sc};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${tx.status || '—'}</span></td>
-            <td style="font-size:12px;color:var(--text-muted)">${tx.reference_id || tx.ref_id || '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${tx.operator_ref || '—'}</td>
             <td style="font-size:12px;color:var(--text-muted)">${tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—'}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-outline btn-sm" onclick="viewRechargeLog(${tx.id})">View Log</button>
+                ${canResend ? `<button class="btn btn-primary btn-sm" style="background:#10b981" onclick="resendTransaction(${tx.id}, '${(tx.mobile || '').replace(/'/g,"\\'")}')">Resend</button>` : ''}
+            </td>
         </tr>`;
     }).join('');
 }

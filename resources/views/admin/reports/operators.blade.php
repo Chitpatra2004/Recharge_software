@@ -150,7 +150,7 @@ async function loadOperators() {
     document.getElementById('ops-table-wrap').style.display = 'none';
 
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/operators?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/operators?' + q);
     if (!res) return;
     const json = await res.json();
     const ops = json.data?.operators || json.operators || json.data || [];
@@ -191,7 +191,7 @@ async function loadRoutes() {
     document.getElementById('route-table-wrap').style.display = 'none';
 
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/operators?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/operators?' + q);
     if (!res) return;
     const json = await res.json();
     const routes = json.data?.route_performance || json.route_performance || [];

@@ -10,6 +10,7 @@ use App\Listeners\LogRechargeActivity;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
@@ -40,6 +41,9 @@ class AppServiceProvider extends EventServiceProvider
 
         // Fix "Specified key was too long" on MySQL < 8.0 or utf8mb4 setups
         Schema::defaultStringLength(191);
+
+        // Define authorization gate for admin-only API routes
+        Gate::define('admin', fn ($user) => $user->isAdmin());
 
         // Global API rate limiter — 60 req/min per user or IP
         RateLimiter::for('api', function (Request $request) {

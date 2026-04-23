@@ -168,8 +168,40 @@
 const el   = id => document.getElementById(id);
 const show = id => el(id).classList.add('show');
 const hide = id => el(id).classList.remove('show');
+const SELLER_TOKEN_KEY = 'seller_token';
+const SELLER_USER_KEY = 'seller_user';
+const SELLER_USER_FALLBACK_KEY = 'seller_data';
+const SELLER_IMPERSONATE_KEY = 'rh_seller_impersonate_token';
 (function(){
-    if(localStorage.getItem('seller_token')) window.location.href='/seller/dashboard';
+    try {
+        window.addEventListener('message', function(e){
+            if (e.origin !== window.location.origin) return;
+            if (e.data && e.data.type === 'rh_seller_impersonate' && e.data.token) {
+                const userJson = JSON.stringify(e.data.user || {});
+                localStorage.setItem(SELLER_TOKEN_KEY, e.data.token);
+                localStorage.setItem(SELLER_USER_KEY, userJson);
+                localStorage.setItem(SELLER_USER_FALLBACK_KEY, userJson);
+                window.location.href='/seller/dashboard';
+            }
+        });
+
+        const pending = localStorage.getItem(SELLER_IMPERSONATE_KEY);
+        if (pending) {
+            const data = JSON.parse(pending);
+            if (data && data.token && data.exp > Date.now()) {
+                const userJson = JSON.stringify(data.user || {});
+                localStorage.removeItem(SELLER_IMPERSONATE_KEY);
+                localStorage.setItem(SELLER_TOKEN_KEY, data.token);
+                localStorage.setItem(SELLER_USER_KEY, userJson);
+                localStorage.setItem(SELLER_USER_FALLBACK_KEY, userJson);
+                window.location.href='/seller/dashboard';
+                return;
+            }
+            localStorage.removeItem(SELLER_IMPERSONATE_KEY);
+        }
+    } catch (_) {}
+
+    if(localStorage.getItem(SELLER_TOKEN_KEY)) window.location.href='/seller/dashboard';
 })();
 function togglePwd(){
     const inp=el('password'),isText=inp.type==='text';
@@ -200,7 +232,8 @@ el('login-form').addEventListener('submit',async e=>{
         const data=await res.json();
         if(res.ok){
             localStorage.setItem('seller_token',data.token);
-            localStorage.setItem('seller_data',JSON.stringify(data.seller||{}));
+            localStorage.setItem('seller_user',JSON.stringify(data.user||{}));
+            localStorage.setItem('seller_data',JSON.stringify(data.user||{}));
             showSuccess('Login successful! Redirecting…');
             setTimeout(()=>window.location.href='/seller/dashboard',800);
         }else if(res.status===423){

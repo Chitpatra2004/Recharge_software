@@ -797,6 +797,12 @@
             </svg>
             Activity Logs
         </a>
+        <a href="/admin/api-logs" class="nav-item {{ request()->is('admin/api-logs') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 9h8M8 13h6m5 8H5a2 2 0 01-2-2V5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2z"/>
+            </svg>
+            API Logs
+        </a>
 
         <div class="nav-section">Developer</div>
         <button class="nav-item" onclick="toggleSubmenu('dev-sub', this)">
@@ -886,6 +892,65 @@
             <button class="topbar-icon-btn" title="Theme Customizer" onclick="openThemePanel()">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
             </button>
+
+            {{-- Profile Dropdown --}}
+            <div style="position:relative" id="profile-dropdown-wrap">
+                <button onclick="toggleProfileDropdown()" title="My Profile"
+                    style="display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg,#fff);cursor:pointer;transition:all .15s"
+                    onmouseenter="this.style.background='var(--bg-page)'" onmouseleave="this.style.background='var(--card-bg,#fff)'">
+                    <div id="topbar-avatar"
+                        style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent-blue,#2563eb),#6366f1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
+                        A
+                    </div>
+                    <div style="text-align:left;line-height:1.2">
+                        <div id="topbar-name" style="font-size:12.5px;font-weight:600;color:var(--text-primary);white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis">Admin</div>
+                        <div id="topbar-role" style="font-size:10.5px;color:var(--text-muted)">—</div>
+                    </div>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;color:var(--text-muted);flex-shrink:0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div id="profile-dropdown"
+                    style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:210px;background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:300;overflow:hidden">
+                    <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg-page)">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent-blue,#2563eb),#6366f1);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0" id="pd-avatar">A</div>
+                            <div>
+                                <div id="pd-name" style="font-size:13px;font-weight:700;color:var(--text-primary)">Admin</div>
+                                <div id="pd-role" style="font-size:11px;color:var(--text-muted);margin-top:1px">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding:6px 0">
+                        <a href="/admin/profile"
+                            style="display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--text-primary);text-decoration:none;transition:background .12s"
+                            onmouseenter="this.style.background='var(--bg-page)'" onmouseleave="this.style.background='transparent'">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--accent-blue)">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            My Profile
+                        </a>
+                        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+                        <button onclick="lockScreen();closeProfileDropdown()"
+                            style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 16px;font-size:13px;color:var(--text-primary);background:none;border:none;cursor:pointer;text-align:left;transition:background .12s;font-family:inherit"
+                            onmouseenter="this.style.background='var(--bg-page)'" onmouseleave="this.style.background='transparent'">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text-muted)">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            Lock Screen
+                        </button>
+                        <button onclick="confirmLogout();closeProfileDropdown()"
+                            style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 16px;font-size:13px;color:#ef4444;background:none;border:none;cursor:pointer;text-align:left;transition:background .12s;font-family:inherit"
+                            onmouseenter="this.style.background='#fff5f5'" onmouseleave="this.style.background='transparent'">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            Sign Out
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -1039,11 +1104,34 @@ async function apiFetch(url, opts = {}) {
 function bootSidebarUser() {
     const emp = getEmployee();
     if (emp.name) {
+        const init = emp.name.charAt(0).toUpperCase();
+        const role = (emp.role || '').replace('_', ' ');
+        // Sidebar
         document.getElementById('sb-name').textContent = emp.name;
-        document.getElementById('sb-role').textContent = (emp.role || '').replace('_', ' ');
-        document.getElementById('sb-avatar').textContent = emp.name.charAt(0).toUpperCase();
+        document.getElementById('sb-role').textContent = role;
+        document.getElementById('sb-avatar').textContent = init;
+        // Topbar profile
+        document.getElementById('topbar-avatar').textContent = init;
+        document.getElementById('topbar-name').textContent   = emp.name;
+        document.getElementById('topbar-role').textContent   = role;
+        document.getElementById('pd-avatar').textContent     = init;
+        document.getElementById('pd-name').textContent       = emp.name;
+        document.getElementById('pd-role').textContent       = role;
     }
 }
+
+// ── Profile dropdown ──────────────────────────────────────────────────────
+function toggleProfileDropdown() {
+    const dd = document.getElementById('profile-dropdown');
+    dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+function closeProfileDropdown() {
+    document.getElementById('profile-dropdown').style.display = 'none';
+}
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('profile-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) closeProfileDropdown();
+});
 
 // ── Clock ─────────────────────────────────────────────────────────────────
 function updateClock() {

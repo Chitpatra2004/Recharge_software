@@ -104,14 +104,22 @@ class ReportController extends Controller
                 operator_code as operator,
                 COUNT(*) as count,
                 SUM(amount) as total_amount,
+                SUM(CASE WHEN status = "success" THEN commission ELSE 0 END) as total_discount,
+                SUM(CASE WHEN status = "success" THEN net_amount  ELSE 0 END) as net_amount,
                 SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success,
                 SUM(CASE WHEN status = "failed"  THEN 1 ELSE 0 END) as failed
             ')
             ->orderByDesc('total_amount')
             ->get()
-            ->map(fn($r) => (object) array_merge((array) $r, [
-                'total_amount' => (float) $r->total_amount,
-            ]));
+            ->map(fn($r) => (object) [
+                'operator'       => $r->operator,
+                'count'          => (int)   $r->count,
+                'success'        => (int)   $r->success,
+                'failed'         => (int)   $r->failed,
+                'total_amount'   => (float) $r->total_amount,
+                'total_discount' => (float) $r->total_discount,
+                'net_amount'     => (float) $r->net_amount,
+            ]);
 
         return response()->json(['operators' => $rows]);
     }
@@ -120,18 +128,34 @@ class ReportController extends Controller
     public function ledger(Request $request): JsonResponse
     {
         $user    = $request->user();
-        $perPage = min($request->integer('per_page', 20), 100);
+        $perPage = min($request->integer('per_page', 25), 100);
 
-        $rows = DB::table('wallet_transactions')
-            ->where('user_id', $user->id)
-            ->when($request->filled('type'), fn($q) => $q->where('type', $request->type))
-            ->when($request->filled('date_from'), fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->filled('date_to'), fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
-            ->orderByDesc('created_at')
-            ->paginate($perPage, ['id','type','amount','balance_after','description','reference','created_at']);
+        $rechargeClass = \App\Models\RechargeTransaction::class;
 
-        $wallet  = DB::table('wallets')->where('user_id', $user->id)->first();
-        $arr     = $rows->toArray();
+        $rows = DB::table('wallet_transactions as wt')
+            ->leftJoin('recharge_transactions as rt', function ($join) use ($rechargeClass) {
+                $join->on('wt.reference_id', '=', 'rt.id')
+                     ->where('wt.reference_type', $rechargeClass);
+            })
+            ->where('wt.user_id', $user->id)
+            ->when($request->filled('type'), fn($q) => $q->where('wt.type', $request->type))
+            ->when($request->filled('date_from'), fn($q) => $q->whereDate('wt.created_at', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn($q) => $q->whereDate('wt.created_at', '<=', $request->date_to))
+            ->orderByDesc('wt.created_at')
+            ->paginate($perPage, [
+                'wt.id', 'wt.txn_id', 'wt.type',
+                'wt.amount as txn_amount',
+                'wt.balance_before as opening_balance',
+                'wt.balance_after  as closing_balance',
+                'wt.description', 'wt.created_at',
+                'rt.amount      as recharge_amount',
+                'rt.commission  as discount',
+                'rt.net_amount  as net_debit',
+                'rt.mobile', 'rt.operator_code',
+            ]);
+
+        $wallet = DB::table('wallets')->where('user_id', $user->id)->first();
+        $arr    = $rows->toArray();
         $arr['balance'] = $wallet ? (float) $wallet->balance : 0.0;
         return response()->json($arr);
     }

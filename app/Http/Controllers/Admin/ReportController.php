@@ -28,6 +28,117 @@ class ReportController extends Controller
 {
     public function __construct(private readonly ReportService $reports) {}
 
+    // ── 0a. Account Ledger ───────────────────────────────────────────────────
+
+    public function accountLedger(Request $request): JsonResponse
+    {
+        $q = DB::table('wallet_transactions as wt')
+            ->join('users as u', 'u.id', '=', 'wt.user_id')
+            ->select(
+                'wt.id', 'wt.type', 'wt.amount', 'wt.balance_before', 'wt.balance_after',
+                'wt.description', 'wt.bank_name', 'wt.rrn', 'wt.remark', 'wt.admin_remark',
+                'wt.reference_type', 'wt.reference_id', 'wt.txn_id', 'wt.created_at',
+                'u.name as user_name', 'u.id as user_id'
+            )
+            ->orderByDesc('wt.created_at');
+
+        if ($request->filled('type'))      { $q->where('wt.type', $request->type); }
+        if ($request->filled('date_from')) { $q->whereDate('wt.created_at', '>=', $request->date_from); }
+        if ($request->filled('date_to'))   { $q->whereDate('wt.created_at', '<=', $request->date_to); }
+        if ($request->filled('search')) {
+            $s = '%' . $request->search . '%';
+            $q->where(fn ($sq) => $sq->where('wt.description', 'like', $s)
+                ->orWhere('wt.txn_id', 'like', $s)
+                ->orWhere('wt.rrn', 'like', $s)
+                ->orWhere('u.name', 'like', $s));
+        }
+
+        $rows = $q->paginate($request->integer('per_page', 25));
+
+        $summary = DB::table('wallet_transactions')
+            ->selectRaw("
+                SUM(CASE WHEN type='credit' THEN amount ELSE 0 END) as total_credits,
+                SUM(CASE WHEN type='debit'  THEN amount ELSE 0 END) as total_debits,
+                COUNT(*) as total_entries
+            ")
+            ->first();
+
+        return response()->json(['data' => $rows, 'summary' => $summary]);
+    }
+
+    // ── 0b. Update Wallet Transaction ────────────────────────────────────────
+
+    public function updateWalletTransaction(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'bank_name'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'rrn'          => ['sometimes', 'nullable', 'string', 'max:100'],
+            'remark'       => ['sometimes', 'nullable', 'string', 'max:255'],
+            'admin_remark' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'amount'       => ['sometimes', 'numeric', 'min:0.01'],
+            'type'         => ['sometimes', 'in:credit,debit'],
+        ]);
+
+        $txn = DB::table('wallet_transactions')->where('id', $id)->first();
+        if (! $txn) {
+            return response()->json(['message' => 'Transaction not found.'], 404);
+        }
+
+        DB::table('wallet_transactions')->where('id', $id)->update(
+            array_merge(array_filter($data, fn ($v) => $v !== null), ['updated_at' => now()])
+        );
+
+        return response()->json([
+            'message' => 'Transaction updated successfully.',
+            'data'    => DB::table('wallet_transactions')->where('id', $id)->first(),
+        ]);
+    }
+
+    // ── 0. User Detail ────────────────────────────────────────────────────────
+
+    public function showUser(int $id): JsonResponse
+    {
+        $user = DB::table('users')->where('id', $id)->first();
+        if (! $user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $wallet = DB::table('wallets')->where('user_id', $id)->first();
+        $rechargeStats = DB::table('recharge_transactions')
+            ->where('user_id', $id)
+            ->selectRaw("COUNT(*) as total, SUM(amount) as total_amount,
+                SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) as success_count,
+                SUM(CASE WHEN status='failed'  THEN 1 ELSE 0 END) as failed_count")
+            ->first();
+
+        $recentRecharges = DB::table('recharge_transactions')
+            ->where('user_id', $id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get(['id','mobile','operator_code','amount','status','created_at']);
+
+        $walletTxns = DB::table('wallet_transactions')
+            ->where('user_id', $id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get(['id','type','amount','description','balance_after','created_at']);
+
+        $paymentRequests = DB::table('payment_requests')
+            ->where('user_id', $id)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'user'            => $user,
+            'wallet_balance'  => $wallet ? (float) $wallet->balance : 0.0,
+            'recharge_stats'  => $rechargeStats,
+            'recent_recharges'=> $recentRecharges,
+            'wallet_txns'     => $walletTxns,
+            'payment_requests'=> $paymentRequests,
+        ]);
+    }
+
     // ── 1. User Report ────────────────────────────────────────────────────────
 
     public function users(Request $request): JsonResponse

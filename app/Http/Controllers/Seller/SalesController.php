@@ -29,15 +29,23 @@ class SalesController extends Controller
         if ($request->filled('operator')) {
             $query->where('operator_code', $request->operator);
         }
-        if ($request->filled('search')) {
-            $q = $request->search;
+        if ($request->filled('mobile') || $request->filled('search')) {
+            $q = $request->input('mobile', $request->search);
             $query->where('mobile', 'like', "%{$q}%");
         }
 
         $perPage = min($request->integer('per_page', 20), 100);
         $results = $query->paginate($perPage, [
-            'id', 'mobile', 'operator_code', 'type', 'amount', 'status',
-            'operator_txn_id', 'created_at',
+            'id',
+            'mobile',
+            'operator_code',
+            'circle',
+            'recharge_type as type',
+            'amount',
+            'status',
+            'operator_ref as operator_txn_id',
+            'api_ref as external_ref',
+            'created_at',
         ]);
 
         return response()->json($results);

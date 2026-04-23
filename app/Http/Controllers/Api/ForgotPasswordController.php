@@ -49,9 +49,7 @@ class ForgotPasswordController extends Controller
 
         return response()->json([
             'message'    => 'OTP sent to your registered mobile number.',
-            'identifier' => $user->mobile,   // confirm which mobile got the OTP
-            // DEV ONLY
-            'debug_otp'  => config('app.debug') ? $result['otp'] : null,
+            'identifier' => $user->mobile,
         ]);
     }
 

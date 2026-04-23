@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RechargeTransaction;
+use App\Contracts\Services\RechargeServiceInterface;
+use App\Services\ApiRequestLogSchema;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +14,10 @@ use Illuminate\Support\Str;
 
 class AdminRechargeController extends Controller
 {
+    public function __construct(
+        private readonly RechargeServiceInterface $rechargeService
+    ) {}
+
     /**
      * POST /api/v1/employee/recharges/{id}/refund
      *
@@ -109,6 +115,116 @@ class AdminRechargeController extends Controller
             return response()->json(['message' => 'Transaction not found.'], 404);
         }
 
-        return response()->json(['data' => $txn]);
+        $attempts = DB::table('recharge_attempts as ra')
+            ->leftJoin('operator_routes as orr', 'orr.id', '=', 'ra.operator_route_id')
+            ->where('ra.recharge_transaction_id', $id)
+            ->orderBy('ra.attempt_number')
+            ->get([
+                'ra.id',
+                'ra.attempt_number',
+                'ra.status',
+                'ra.request_url',
+                'ra.request_payload',
+                'ra.response_payload',
+                'ra.response_code',
+                'ra.duration_ms',
+                'ra.error_message',
+                'ra.created_at',
+                'orr.operator_code',
+                'orr.api_endpoint',
+            ]);
+
+        $referenceValues = array_values(array_filter(array_unique([
+            (string) $txn->id,
+            $txn->idempotency_key ?? null,
+            $txn->api_ref ?? null,
+            $txn->operator_ref ?? null,
+        ])));
+
+        $apiLogsQuery = DB::table('api_request_logs')
+            ->where(function ($q) use ($referenceValues, $txn) {
+                if (ApiRequestLogSchema::has('reference_id') && ! empty($referenceValues)) {
+                    foreach ($referenceValues as $ref) {
+                        $q->orWhere('reference_id', $ref);
+                    }
+                }
+
+                $q->orWhere(function ($sub) use ($txn) {
+                    $sub->where('path', 'like', '%recharge%')
+                        ->where('user_id', $txn->user_id)
+                        ->where('created_at', '>=', now()->subDays(7));
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(20);
+
+        $apiLogColumns = [
+            'id',
+            'method',
+            'path',
+            ApiRequestLogSchema::has('reference_id')
+                ? 'reference_id'
+                : DB::raw('NULL as reference_id'),
+            'status_code',
+            'response_time_ms',
+            'ip_address',
+            ApiRequestLogSchema::has('request_payload')
+                ? 'request_payload'
+                : DB::raw('NULL as request_payload'),
+            'error_message',
+            'created_at',
+        ];
+
+        $apiLogs = $apiLogsQuery->get($apiLogColumns);
+
+        return response()->json([
+            'data' => [
+                'transaction' => $txn,
+                'attempts'    => $attempts,
+                'api_logs'    => $apiLogs,
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/v1/employee/recharges/{id}/resend
+     *
+     * Admin manual retry / resend for non-successful transactions.
+     */
+    public function resend(Request $request, int $id): JsonResponse
+    {
+        $transaction = RechargeTransaction::findOrFail($id);
+
+        if (in_array($transaction->status, ['success', 'refunded'], true)) {
+            return response()->json([
+                'message' => "Transaction #{$id} is already '{$transaction->status}' and cannot be resent.",
+            ], 422);
+        }
+
+        if (in_array($transaction->status, ['failed', 'partial'], true)) {
+            $transaction->update([
+                'status'         => 'pending',
+                'failure_reason' => null,
+                'processed_at'   => null,
+            ]);
+            $transaction->refresh();
+        }
+
+        $this->rechargeService->process($transaction);
+        $transaction->refresh();
+
+        ActivityLogger::log(
+            'admin.recharge_resent',
+            "Admin resent recharge #{$id} for mobile {$transaction->mobile}",
+            null,
+            ['txn_id' => $id, 'status' => $transaction->status],
+            null,
+            $request
+        );
+
+        return response()->json([
+            'message' => "Transaction #{$id} resent successfully.",
+            'status'  => $transaction->status,
+        ]);
     }
 }

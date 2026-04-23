@@ -166,7 +166,7 @@ async function loadUsers() {
     document.getElementById('users-table-wrap').style.display = 'none';
 
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/users?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/users?' + q);
     if (!res) return;
     const json = await res.json();
 
@@ -222,6 +222,12 @@ async function loadUsers() {
                     <button class="btn btn-outline btn-sm" onclick="viewUser(${u.id})" title="View">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </button>
+                    <button class="btn btn-sm" onclick="loginAsUser(${u.id},'${(u.name||'').replace(/'/g,"\\'")}')"
+                        title="Login as this user in user portal"
+                        style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;font-size:11px;padding:5px 9px">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                        Login As
+                    </button>
                 </div>
             </td>
         </tr>`;
@@ -229,8 +235,34 @@ async function loadUsers() {
 }
 
 function viewUser(id) {
-    // Navigate to user detail page if it exists
     window.location.href = '/admin/users/' + id;
+}
+
+function loginAsUser(id, name) {
+    if (!confirm('Open user portal as "' + name + '" in a new tab?\n\nThis creates a temporary 2-hour session token.')) return;
+
+    apiFetch('/api/v1/employee/users/' + id + '/login-as', { method: 'POST' })
+        .then(async res => {
+            if (!res || !res.ok) {
+                const err = res ? await res.json() : {};
+                alert(err.message || 'Failed to generate impersonation token.');
+                return;
+            }
+            const data = await res.json();
+            if (!data.token) { alert('No token returned.'); return; }
+
+            // Open user portal in a new tab and inject the token
+            const tab = window.open('/user/dashboard', '_blank');
+            if (tab) {
+                // Wait for new tab to load, then inject token via postMessage
+                tab.addEventListener('load', () => {
+                    tab.postMessage({ type: 'rh_impersonate', token: data.token, user: data.user }, window.location.origin);
+                }, { once: true });
+                // Fallback: write token to a shared localStorage key the new tab can read on load
+                localStorage.setItem('rh_impersonate_token', JSON.stringify({ token: data.token, user: data.user, exp: Date.now() + 7200000 }));
+            }
+        })
+        .catch(e => alert(e.message || 'Error'));
 }
 
 document.addEventListener('DOMContentLoaded', loadUsers);

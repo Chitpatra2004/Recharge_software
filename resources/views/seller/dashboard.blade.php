@@ -80,7 +80,7 @@
 </div>
 
 <script>
-(function(){
+document.addEventListener('DOMContentLoaded', function(){
     apiFetch('/api/v1/seller/dashboard').then(d=>{
         const data = d.data?.stats || {};
 
@@ -150,6 +150,6 @@
         document.getElementById('integration-card-body').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;font-size:13px">Failed to load data</div>';
         document.getElementById('recent-txns').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;font-size:13px">Failed to load</div>';
     });
-})();
+});
 </script>
 @endsection

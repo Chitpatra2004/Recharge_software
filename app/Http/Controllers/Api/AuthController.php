@@ -94,7 +94,13 @@ class AuthController extends Controller
         }
 
         // Wrong password
-        if (! Hash::check($request->password, $user->password)) {
+        try {
+            $passwordValid = Hash::check($request->password, $user->password);
+        } catch (\RuntimeException) {
+            $passwordValid = false;
+        }
+
+        if (! $passwordValid) {
             ActivityLogger::log('auth.login_failed', "Wrong password: {$request->login}");
             return response()->json(['message' => 'Incorrect password.'], 401);
         }
@@ -131,8 +137,6 @@ class AuthController extends Controller
                     'method'        => 'otp',
                     'pending_token' => $result['pending_token'],
                     'message'       => 'OTP sent to your registered mobile number.',
-                    // DEV ONLY — remove in production
-                    'debug_otp'     => config('app.debug') ? $result['otp'] : null,
                 ]);
             }
 

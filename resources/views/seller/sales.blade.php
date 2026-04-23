@@ -57,9 +57,19 @@
 <script>
 let currentPage = 1;
 
+function syncFiltersFromQuery(){
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('f-from').value = params.get('date_from') || '';
+    document.getElementById('f-to').value = params.get('date_to') || '';
+    document.getElementById('f-operator').value = params.get('operator') || '';
+    document.getElementById('f-status').value = params.get('status') || '';
+    document.getElementById('f-mobile').value = params.get('mobile') || '';
+}
+
 function resetFilters(){
     ['f-from','f-to','f-operator','f-mobile'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-status').value='';
+    window.history.replaceState({}, '', '/seller/sales');
     loadSales(1);
 }
 
@@ -76,6 +86,8 @@ function loadSales(page){
     if(op)   params.set('operator',  op);
     if(st)   params.set('status',    st);
     if(mob)  params.set('mobile',    mob);
+    const query = params.toString();
+    window.history.replaceState({}, '', query ? `/seller/sales?${query}` : '/seller/sales');
 
     document.getElementById('table-wrap').innerHTML = '<div style="text-align:center;padding:40px;color:#64748b">Loading…</div>';
     document.getElementById('pagination').innerHTML = '';
@@ -126,6 +138,9 @@ function renderTable(data){
     document.getElementById('pagination').innerHTML = pag;
 }
 
-loadSales(1);
+document.addEventListener('DOMContentLoaded', function(){
+    syncFiltersFromQuery();
+    loadSales(1);
+});
 </script>
 @endsection

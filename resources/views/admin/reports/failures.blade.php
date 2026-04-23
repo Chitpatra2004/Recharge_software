@@ -155,7 +155,7 @@ function clearFilters() {
 
 async function loadReport() {
     const q = buildQuery(getFilters());
-    const res = await apiFetch('/api/v1/admin/reports/failures?' + q);
+    const res = await apiFetch('/api/v1/employee/reports/failures?' + q);
     if (!res) return;
     const json = await res.json();
     const d = json.data || {};

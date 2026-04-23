@@ -726,7 +726,12 @@
 
         if (result.status >= 200 && result.status < 300) {
           if (data.qr_url) {
-            document.getElementById('qrImage').src = data.qr_url;
+            var qrImage = document.getElementById('qrImage');
+            qrImage.onerror = function () {
+              document.getElementById('qrWrap').style.display = 'none';
+              showAlert('totpError', 'totpErrorText', 'QR image could not be loaded. Use the manual secret below or try again.');
+            };
+            qrImage.src = data.qr_url;
             document.getElementById('qrWrap').style.display = 'block';
           }
           if (data.secret) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiKey;
+use App\Models\SellerIntegrationRequest;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +50,11 @@ class ApiKeyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $keys = ApiKey::with('user:id,name,email,role,status')
+        $keys = ApiKey::with([
+                'user:id,name,email,role,status',
+                'user.latestIntegration:id,user_id,status,api_status,admin_status',
+            ])
+            ->whereHas('user', fn ($query) => $query->whereIn('role', ['api_user', 'retailer']))
             ->latest()
             ->paginate($request->integer('per_page', 25));
 
@@ -71,6 +76,10 @@ class ApiKeyController extends Controller
 
         $user   = User::findOrFail($validated['user_id']);
         $scopes = $validated['scopes'] ?? ['recharge:write', 'recharge:read', 'wallet:read'];
+        $integration = SellerIntegrationRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->latest()
+            ->first();
 
         $rawKey = 'rk_' . Str::random(60);
 
@@ -85,6 +94,7 @@ class ApiKeyController extends Controller
             'key_prefix' => substr($rawKey, 0, 12),
             'key_hash'   => hash('sha256', $rawKey),
             'scopes'     => $scopes,
+            'ip_whitelist' => $this->parseAllowedIps($integration?->allowed_ips),
             'is_active'  => true,
         ]);
 
@@ -127,5 +137,17 @@ class ApiKeyController extends Controller
         );
 
         return response()->json(['message' => 'API key revoked successfully.']);
+    }
+
+    private function parseAllowedIps(?string $raw): ?array
+    {
+        if (! $raw) {
+            return null;
+        }
+
+        $ips = preg_split('/[\r\n,]+/', $raw) ?: [];
+        $ips = array_values(array_filter(array_map('trim', $ips)));
+
+        return $ips === [] ? null : $ips;
     }
 }

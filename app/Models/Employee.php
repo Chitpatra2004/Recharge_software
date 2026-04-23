@@ -18,6 +18,8 @@ class Employee extends Authenticatable
         'department', 'designation', 'role', 'status', 'permissions',
         'last_login_at', 'last_login_ip', 'failed_login_count',
         'locked_until', 'max_open_complaints',
+        'dob', 'city', 'state', 'pan',
+        'two_factor_enabled', 'backup_codes', 'preferences',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -25,10 +27,14 @@ class Employee extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'       => 'hashed',
-            'permissions'    => 'array',
-            'last_login_at'  => 'datetime',
-            'locked_until'   => 'datetime',
+            'password'           => 'hashed',
+            'permissions'        => 'array',
+            'backup_codes'       => 'array',
+            'preferences'        => 'array',
+            'two_factor_enabled' => 'boolean',
+            'dob'                => 'date',
+            'last_login_at'      => 'datetime',
+            'locked_until'       => 'datetime',
         ];
     }
 

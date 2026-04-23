@@ -88,7 +88,11 @@ class EmployeeAuthController extends Controller
         // ── Constant-time credential validation ───────────────────────────
         // Always run Hash::check() even if employee not found (prevents timing attack)
         $dummyHash   = '$2y$12$invalidhashtopreventtimingattacks00000000000000000000000';
-        $validCreds  = $employee && Hash::check($password, $employee->password ?? $dummyHash);
+        try {
+            $validCreds = $employee && Hash::check($password, $employee->password ?? $dummyHash);
+        } catch (\RuntimeException) {
+            $validCreds = false;
+        }
 
         if (! $validCreds) {
             $this->recordFailedAttempt($employee, $email, $ip, $request);

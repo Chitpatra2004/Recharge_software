@@ -215,15 +215,20 @@
         </a>
 
         <div class="nav-section">API Setup</div>
-        <a href="/seller/api-config" class="nav-item {{ request()->is('seller/api-config') ? 'active' : '' }}">
+        <a href="/seller/api-setting" class="nav-item {{ request()->is('seller/api-config') || request()->is('seller/api-setting') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            API Configuration
+            API Setting
         </a>
 
         <div class="nav-section">Transactions</div>
         <a href="/seller/sales" class="nav-item {{ request()->is('seller/sales') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Sales Transactions
+        </a>
+        <a href="/seller/sales?status=pending" class="nav-item {{ request()->is('seller/sales') && request('status') === 'pending' ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Pending Recharges
+            <span class="nav-badge blue" id="sb-pending-recharges" style="display:none">0</span>
         </a>
 
         <div class="nav-section">Reports</div>
@@ -285,12 +290,63 @@
 <script>
 const SELLER_TOKEN_KEY = 'seller_token';
 const SELLER_USER_KEY  = 'seller_user';
+const SELLER_USER_FALLBACK_KEY = 'seller_data';
+const SELLER_IMPERSONATE_KEY = 'rh_seller_impersonate_token';
 
 /* ── Shortcuts ── */
 const el = id => document.getElementById(id);
 function getToken() { return localStorage.getItem(SELLER_TOKEN_KEY); }
-function getUser()  { try { return JSON.parse(localStorage.getItem(SELLER_USER_KEY)||'{}'); } catch { return {}; } }
+function getUser()  {
+    try {
+        const primary = localStorage.getItem(SELLER_USER_KEY);
+        if (primary) return JSON.parse(primary);
+
+        const fallback = localStorage.getItem(SELLER_USER_FALLBACK_KEY);
+        return fallback ? JSON.parse(fallback) : {};
+    } catch {
+        return {};
+    }
+}
 function requireAuth() { if (!getToken()) { window.location.href = '/seller/login'; return false; } return true; }
+
+/* ── Admin impersonation: consume token sent from admin panel ── */
+(function () {
+    function applySellerImpersonation(payload) {
+        if (!payload || !payload.token) return;
+        localStorage.setItem(SELLER_TOKEN_KEY, payload.token);
+        if (payload.user) {
+            const userJson = JSON.stringify(payload.user);
+            localStorage.setItem(SELLER_USER_KEY, userJson);
+            localStorage.setItem(SELLER_USER_FALLBACK_KEY, userJson);
+        }
+        window.location.reload();
+    }
+
+    try {
+        window.addEventListener('message', function (e) {
+            if (e.origin !== window.location.origin) return;
+            if (e.data && e.data.type === 'rh_seller_impersonate' && e.data.token) {
+                applySellerImpersonation(e.data);
+            }
+        });
+
+        const raw = localStorage.getItem(SELLER_IMPERSONATE_KEY);
+        if (!raw) return;
+
+        const payload = JSON.parse(raw);
+        if (payload && payload.token && payload.exp > Date.now()) {
+            localStorage.removeItem(SELLER_IMPERSONATE_KEY);
+            localStorage.setItem(SELLER_TOKEN_KEY, payload.token);
+            if (payload.user) {
+                const userJson = JSON.stringify(payload.user);
+                localStorage.setItem(SELLER_USER_KEY, userJson);
+                localStorage.setItem(SELLER_USER_FALLBACK_KEY, userJson);
+            }
+        } else {
+            localStorage.removeItem(SELLER_IMPERSONATE_KEY);
+        }
+    } catch (_) {}
+})();
 
 /* ── apiFetch — returns parsed JSON or throws ── */
 async function apiFetch(url, options = {}) {
@@ -337,6 +393,7 @@ function doLogout() {
     apiFetch('/api/v1/seller/auth/logout', { method:'POST' }).catch(()=>{}).finally(() => {
         localStorage.removeItem(SELLER_TOKEN_KEY);
         localStorage.removeItem(SELLER_USER_KEY);
+        localStorage.removeItem(SELLER_USER_FALLBACK_KEY);
         window.location.href = '/seller/login';
     });
 }
@@ -367,7 +424,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const d = await apiFetch('/api/v1/seller/dashboard');
         const stats = d.data?.stats || {};
         const balEl = el('sb-balance');
+        const pendingRechargeEl = el('sb-pending-recharges');
         if (balEl) balEl.textContent = '₹' + fmtMoney(stats.wallet_balance);
+        if (stats.pending_recharges > 0 && pendingRechargeEl) {
+            pendingRechargeEl.textContent = stats.pending_recharges;
+            pendingRechargeEl.style.display = 'inline-flex';
+        }
         if (stats.pending_payments > 0) {
             const pbEl = el('sb-pending-payments');
             if (pbEl) { pbEl.textContent = stats.pending_payments; pbEl.style.display = 'inline-flex'; }

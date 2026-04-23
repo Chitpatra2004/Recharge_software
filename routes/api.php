@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeAuthController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeeProfileController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\AdminRechargeController;
 use App\Http\Controllers\Admin\AdminWalletController;
@@ -83,6 +84,7 @@ Route::prefix('v1/employee')
     // Activity logs (admin-only)
     Route::get('/activity',                   [ActivityLogController::class, 'index']);
     Route::get('/activity/employees-list',    [ActivityLogController::class, 'employeesList']);
+    Route::get('/api-logs',                   [ActivityLogController::class, 'apiLogs']);
 
     // Employee management (admin-only)
     Route::get('/employees',          [EmployeeController::class, 'index']);
@@ -98,9 +100,12 @@ Route::prefix('v1/employee')
     Route::get('/users/search',          [ApiKeyController::class, 'searchUsers']);
 
     // Reports (accessible by employees/admins)
-    Route::get('/reports/pending',       [ReportController::class, 'pending']);
+    Route::put('/wallet-transactions/{id}',  [ReportController::class, 'updateWalletTransaction']);
+    Route::get('/account-ledger',            [ReportController::class, 'accountLedger']);
+    Route::get('/reports/pending',           [ReportController::class, 'pending']);
     Route::get('/reports/recharges',     [ReportController::class, 'recharges']);
     Route::get('/reports/users',         [ReportController::class, 'users']);
+    Route::get('/users/{id}',            [ReportController::class, 'showUser']);
     Route::get('/reports/operators',     [ReportController::class, 'operators']);
     Route::get('/reports/failures',      [ReportController::class, 'failures']);
     Route::get('/reports/payments',      [ReportController::class, 'payments']);
@@ -109,7 +114,25 @@ Route::prefix('v1/employee')
 
     // Recharge management
     Route::get('/recharges/{id}',        [AdminRechargeController::class, 'show']);
+    Route::post('/recharges/{id}/resend',[AdminRechargeController::class, 'resend']);
     Route::post('/recharges/{id}/refund',[AdminRechargeController::class, 'refund']);
+
+    // Employee profile (self)
+    Route::get('/profile',               [EmployeeProfileController::class, 'show']);
+    Route::put('/profile',               [EmployeeProfileController::class, 'update']);
+    Route::put('/auth/password',         [EmployeeProfileController::class, 'changePassword']);
+
+    // Employee 2FA setup
+    Route::post('/2fa/send-otp',         [EmployeeProfileController::class, 'sendTfaOtp']);
+    Route::post('/2fa/verify',           [EmployeeProfileController::class, 'verifyTfaOtp']);
+    Route::delete('/2fa/disable',        [EmployeeProfileController::class, 'disableTfa']);
+
+    // Employee sessions & activity (self)
+    Route::get('/sessions',              [EmployeeProfileController::class, 'sessions']);
+    Route::delete('/sessions/{id}',      [EmployeeProfileController::class, 'revokeSession']);
+    Route::get('/login-history',         [EmployeeProfileController::class, 'loginHistory']);
+    Route::get('/my-activity',           [EmployeeProfileController::class, 'activity']);
+    Route::put('/preferences',           [EmployeeProfileController::class, 'savePreferences']);
 
 });
 
@@ -128,6 +151,8 @@ Route::prefix('v1')->middleware('log.api')->group(function () {
          ->middleware('throttle:10,1');
     Route::post('/auth/2fa/verify-totp', [TwoFactorController::class, 'verifyTotp'])
          ->middleware('throttle:10,1');
+    Route::post('/auth/2fa/resend-otp',  [TwoFactorController::class, 'resendOtp'])
+         ->middleware('throttle:3,1');   // max 3 resends per minute
 
     // Forgot / Reset password
     Route::post('/auth/forgot-password',            [ForgotPasswordController::class, 'sendOtp'])
@@ -212,8 +237,12 @@ Route::prefix('v1/buyer')
     ->middleware(['api.key', 'throttle:api', 'log.api'])
     ->group(function () {
 
-    // POST /api/v1/buyer/recharge
+    // POST|GET /api/v1/buyer/recharge
     // Scope: recharge:write — initiate a recharge
+    Route::get('/recharge',
+        [BuyerRechargeController::class, 'recharge']
+    )->middleware(['api.key:recharge:write', 'throttle:recharge']);
+
     Route::post('/recharge',
         [BuyerRechargeController::class, 'recharge']
     )->middleware(['api.key:recharge:write', 'throttle:recharge']);
@@ -303,6 +332,7 @@ Route::prefix('v1/seller')
 
     Route::get('/api-config',              [SellerApiConfigController::class, 'config']);
     Route::post('/api-config/integration', [SellerApiConfigController::class, 'submitIntegration']);
+    Route::patch('/api-config/toggle-api', [SellerApiConfigController::class, 'toggleApiStatus']);
 
     Route::get('/sales', [SellerSalesController::class, 'index']);
 
@@ -336,11 +366,19 @@ Route::prefix('v1/employee/sellers')
     Route::get('/{id}',                [AdminSellerController::class, 'show']);
     Route::post('/{id}/approve',       [AdminSellerController::class, 'approve']);
     Route::post('/{id}/reject',        [AdminSellerController::class, 'reject']);
+    Route::post('/{id}/api-setting',   [AdminSellerController::class, 'updateApiSetting']);
     Route::post('/{id}/login-as',      [AdminSellerController::class, 'loginAs']);
 
     // Wallet management
     Route::post('/{id}/wallet/adjust',       [AdminWalletController::class, 'adjust']);
     Route::get('/{id}/wallet/transactions',  [AdminWalletController::class, 'transactions']);
+});
+
+// ── Admin: User Impersonation ───────────────────────────────────────────────
+Route::prefix('v1/employee/users')
+    ->middleware(['auth:employee', 'throttle:api', 'log.api', 'log.employee'])
+    ->group(function () {
+    Route::post('/{id}/login-as', [AdminWalletController::class, 'loginAsUser']);
 });
 
 // ── Admin: User Payment Requests (Add Money) ────────────────────────────────

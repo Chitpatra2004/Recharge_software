@@ -137,11 +137,12 @@ class ReportService
         // ── Daily breakdown — uses idx_rt_status_date (status, created_at) ───
         $daily = DB::table('recharge_transactions')
             ->selectRaw("
-                DATE(created_at)                                        AS date,
-                COUNT(*)                                                AS total,
-                SUM(amount)                                             AS total_amount,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END)    AS success,
-                SUM(CASE WHEN status = 'failed'  THEN 1 ELSE 0 END)    AS failed,
+                DATE(created_at)                                                               AS date,
+                COUNT(*)                                                                       AS total,
+                SUM(amount)                                                                    AS total_amount,
+                SUM(CASE WHEN status = 'success'                          THEN 1 ELSE 0 END)  AS success,
+                SUM(CASE WHEN status = 'failed'                           THEN 1 ELSE 0 END)  AS failed,
+                SUM(CASE WHEN status IN ('pending','queued','processing')  THEN 1 ELSE 0 END) AS pending,
                 ROUND(100.0 * SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) / COUNT(*), 2) AS success_rate
             ")
             ->whereBetween('created_at', [$dateFrom, $dateTo])
@@ -161,7 +162,7 @@ class ReportService
                 'rt.retry_count', 'rt.failure_reason', 'rt.processed_at', 'rt.created_at',
                 'u.name as user_name', 'u.email as user_email',
             ])
-            ->join('users as u', 'u.id', '=', 'rt.user_id')
+            ->leftJoin('users as u', 'u.id', '=', 'rt.user_id')
             ->whereBetween('rt.created_at', [$dateFrom, $dateTo])
             ->whereNull('rt.deleted_at')
             ->when(isset($filters['operator_code']), fn ($q) => $q->where('rt.operator_code', $filters['operator_code']))

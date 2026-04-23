@@ -111,7 +111,7 @@ async function loadComplaints(page = 1) {
     if (from)     p.set('date_from', from);
     if (to)       p.set('date_to', to);
 
-    const res = await apiFetch('/api/v1/admin/reports/complaints?' + p.toString());
+    const res = await apiFetch('/api/v1/employee/reports/complaints?' + p.toString());
     if (!res) return;
     const data = await res.json();
 

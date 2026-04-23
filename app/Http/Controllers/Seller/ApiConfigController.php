@@ -40,9 +40,41 @@ class ApiConfigController extends Controller
                     'created_at' => $apiKey->created_at,
                 ] : null,
                 'integration'  => $integration,
+                'sale_access'  => [
+                    'allowed'      => $integration
+                        && $integration->status === 'approved'
+                        && $integration->api_status === 'enabled'
+                        && $integration->admin_status === 'enabled',
+                    'api_status'   => $integration?->api_status ?? 'disabled',
+                    'admin_status' => $integration?->admin_status ?? 'disabled',
+                ],
                 'api_endpoint' => url('/api/v1/buyer/recharge'),
                 'api_docs_url' => url('/seller/api-docs'),
             ],
+        ]);
+    }
+
+    /**
+     * PATCH /api/v1/seller/api-config/toggle-api
+     */
+    public function toggleApiStatus(Request $request): JsonResponse
+    {
+        $user        = $request->user();
+        $integration = SellerIntegrationRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->latest()
+            ->first();
+
+        if (! $integration) {
+            return response()->json(['message' => 'Integration must be approved before toggling API status.'], 422);
+        }
+
+        $newStatus = $integration->api_status === 'enabled' ? 'disabled' : 'enabled';
+        $integration->update(['api_status' => $newStatus]);
+
+        return response()->json([
+            'message'    => 'API status set to ' . $newStatus . '.',
+            'api_status' => $newStatus,
         ]);
     }
 
@@ -54,6 +86,9 @@ class ApiConfigController extends Controller
         $data = $request->validate([
             'website_url'       => ['required', 'url', 'max:255'],
             'callback_url'      => ['required', 'url', 'max:255'],
+            'status_check_url'  => ['required', 'url', 'max:255'],
+            'dispute_url'       => ['required', 'url', 'max:255'],
+            'allowed_ips'       => ['required', 'string', 'max:1000'],
             'site_username'     => ['sometimes', 'nullable', 'string', 'max:100'],
             'site_password_hint'=> ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
@@ -75,13 +110,26 @@ class ApiConfigController extends Controller
             'user_id'           => $user->id,
             'website_url'       => $data['website_url'],
             'callback_url'      => $data['callback_url'],
+            'status_check_url'  => $data['status_check_url'],
+            'dispute_url'       => $data['dispute_url'],
             'site_username'     => $data['site_username'] ?? null,
             'site_password_hint'=> $data['site_password_hint'] ?? null,
+            'allowed_ips'       => $this->normalizeAllowedIps($data['allowed_ips']),
             'status'            => 'pending',
+            'api_status'        => 'disabled',
+            'admin_status'      => 'disabled',
         ]);
 
         return response()->json([
             'message' => 'Integration request submitted. Admin will review within 24 hours.',
         ], 201);
+    }
+
+    private function normalizeAllowedIps(string $value): string
+    {
+        $ips = preg_split('/[\r\n,]+/', $value) ?: [];
+        $ips = array_values(array_filter(array_map('trim', $ips)));
+
+        return implode("\n", $ips);
     }
 }

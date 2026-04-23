@@ -698,7 +698,7 @@ function loadPermissions(granted) {
 /* Activity feed */
 async function loadActivity() {
     try {
-        const res  = await apiFetch('/api/v1/employee/activity?limit=10');
+        const res  = await apiFetch('/api/v1/employee/my-activity?limit=10');
         if (!res) return;
         const data = await res.json();
         const feed = document.getElementById('activity-feed');

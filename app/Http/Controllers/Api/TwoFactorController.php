@@ -99,13 +99,14 @@ class TwoFactorController extends Controller
         $user   = $request->user();
         $secret = $this->totpService->generateSecret();
         $label  = $user->email ?: $user->mobile;
+        $qrDataUri = $this->totpService->getQrImageDataUri($secret, $label);
 
         // Temporarily store secret (user must confirm with a code before it's activated)
         $user->update(['totp_secret' => $secret]);
 
         return response()->json([
             'secret'   => $secret,
-            'qr_url'   => $this->totpService->getQrImageUrl($secret, $label),
+            'qr_url'   => $qrDataUri ?: $this->totpService->getQrImageUrl($secret, $label),
             'otp_uri'  => $this->totpService->getQrCodeUri($secret, $label),
             'message'  => 'Scan the QR code with your Authenticator app, then confirm with a code.',
         ]);
@@ -150,6 +151,39 @@ class TwoFactorController extends Controller
         ActivityLogger::log('auth.otp_enabled', 'SMS OTP 2FA enabled.', $user, [], $user->id, $request);
 
         return response()->json(['message' => 'SMS OTP 2FA enabled.']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/2fa/resend-otp  (public — uses pending_token)
+    // Resend SMS OTP and return a fresh pending_token
+    // ─────────────────────────────────────────────────────────────────────────
+    public function resendOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'pending_token' => ['required', 'string'],
+        ]);
+
+        $otpRecord = $this->otpService->findPendingToken($request->pending_token);
+        if (! $otpRecord) {
+            return response()->json(['message' => 'Session expired. Please login again.'], 401);
+        }
+
+        $user = User::findOrFail($otpRecord->user_id);
+
+        // Generate a fresh OTP — invalidates the old one and creates a new pending_token
+        $result = $this->otpService->generate(
+            $user->mobile,
+            'login_2fa',
+            $user->id,
+            $request->ip()
+        );
+
+        ActivityLogger::log('auth.otp_resent', 'Login OTP resent.', $user, [], $user->id, $request);
+
+        return response()->json([
+            'message'       => 'A new OTP has been sent to your registered mobile number.',
+            'pending_token' => $result['pending_token'],
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

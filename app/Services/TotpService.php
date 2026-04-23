@@ -68,6 +68,33 @@ class TotpService
         return 'https://quickchart.io/qr?size=200&text=' . rawurlencode($uri);
     }
 
+    /**
+     * Generate a data URI for the QR image by fetching QuickChart server-side.
+     * This avoids browser-side CSP/network issues when loading the QR image.
+     */
+    public function getQrImageDataUri(string $secret, string $label, string $issuer = ''): ?string
+    {
+        $url = $this->getQrImageUrl($secret, $label, $issuer);
+
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'method'  => 'GET',
+                    'timeout' => 8,
+                ],
+            ]);
+
+            $image = @file_get_contents($url, false, $context);
+            if ($image === false || $image === '') {
+                return null;
+            }
+
+            return 'data:image/png;base64,' . base64_encode($image);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────
 
     private function generateCode(string $key, int $counter): string

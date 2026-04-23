@@ -86,7 +86,7 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src {$scriptSrc}",
             "style-src {$styleSrc}",
-            "img-src 'self' data:",
+            "img-src 'self' data: https://quickchart.io",
             "font-src {$fontSrc}",
             "connect-src 'self'",
             "frame-ancestors 'none'",

@@ -73,7 +73,7 @@ async function loadHistory(page = 1) {
     if (op) p.set('operator_code', op);
     p.set('status', 'success');
 
-    const res = await apiFetch('/api/v1/admin/reports/recharges?' + p.toString());
+    const res = await apiFetch('/api/v1/employee/reports/recharges?' + p.toString());
     if (!res) return;
     const data = await res.json();
 

@@ -518,6 +518,7 @@
       resendBtn.disabled = true;
       countdownEl.textContent = '';
       document.getElementById('alertError').classList.remove('show');
+      document.getElementById('alertSuccess').classList.remove('show');
 
       fetch('/api/v1/auth/2fa/resend-otp', {
         method: 'POST',
@@ -528,16 +529,32 @@
         },
         body: JSON.stringify({ pending_token: pendingToken }),
       })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data.message) {
-          document.getElementById('alertSuccessText').textContent = data.message || 'OTP resent.';
-          document.getElementById('alertSuccess').classList.add('show');
+      .then(function (res) {
+        return res.json().then(function (data) { return { status: res.status, data: data }; });
+      })
+      .then(function (result) {
+        var data = result.data;
+        if (result.status === 401) {
+          // Session expired — send back to login
+          sessionStorage.removeItem('pending_2fa_token');
+          sessionStorage.removeItem('pending_2fa_method');
+          window.location.replace('/user/login');
+          return;
         }
+        if (result.status >= 200 && result.status < 300 && data.pending_token) {
+          // Update the pending token — the old one was invalidated when new OTP was issued
+          pendingToken = data.pending_token;
+          sessionStorage.setItem('pending_2fa_token', pendingToken);
+        }
+        document.getElementById('alertSuccessText').textContent = data.message || 'OTP resent.';
+        document.getElementById('alertSuccess').classList.add('show');
+        // Clear any previous OTP input
+        boxes.forEach(function (b) { b.value = ''; b.classList.remove('is-error'); });
+        boxes[0].focus();
         startCountdown();
       })
       .catch(function () {
-        document.getElementById('alertErrorText').textContent = 'Failed to resend OTP.';
+        document.getElementById('alertErrorText').textContent = 'Failed to resend OTP. Please try again.';
         document.getElementById('alertError').classList.add('show');
         resendBtn.disabled = false;
       });

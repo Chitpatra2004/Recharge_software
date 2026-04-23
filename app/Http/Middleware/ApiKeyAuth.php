@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\ApiKey;
+use App\Models\SellerIntegrationRequest;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -79,6 +80,22 @@ class ApiKeyAuth
 
         if (! $user || $user->status !== 'active') {
             return $this->reject($request, 'Associated user account is inactive.', 403);
+        }
+
+        if (in_array($user->role, ['api_user', 'retailer'], true)) {
+            $integration = SellerIntegrationRequest::where('user_id', $user->id)
+                ->latest()
+                ->first();
+
+            if (! $integration || $integration->status !== 'approved') {
+                return $this->reject($request, 'Seller API setting is not approved yet.', 403);
+            }
+            if ($integration->admin_status !== 'enabled') {
+                return $this->reject($request, 'Seller admin status is disabled. Contact admin.', 403);
+            }
+            if ($integration->api_status !== 'enabled') {
+                return $this->reject($request, 'Seller API status is disabled. Sales are blocked until API is enabled.', 403);
+            }
         }
 
         auth()->setUser($user);

@@ -16,7 +16,7 @@ class LoginRequest extends FormRequest
         return [
             // Accept either email or mobile (10-digit number)
             'login'       => ['required', 'string', 'max:255'],
-            'password'    => ['required', 'string', 'min:1'],
+            'password'    => ['required', 'string', 'min:6'],
             'device_name' => ['sometimes', 'string', 'max:100'],
         ];
     }

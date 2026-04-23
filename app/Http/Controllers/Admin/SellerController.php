@@ -18,7 +18,12 @@ class SellerController extends Controller
     /** GET /api/v1/employee/sellers */
     public function index(Request $request): JsonResponse
     {
-        $query = User::whereIn('role', ['api_user', 'retailer'])
+        $allowedRoles = ['api_user', 'retailer'];
+        $role = $request->filled('role') && in_array($request->role, $allowedRoles)
+            ? [$request->role]
+            : $allowedRoles;
+
+        $query = User::whereIn('role', $role)
             ->with(['latestIntegration'])
             ->withCount([
                 'rechargeTransactions',
@@ -48,6 +53,9 @@ class SellerController extends Controller
             $u->api_key_hint = $apiKey ? $apiKey->key_prefix : null;
 
             $u->integration_status = $u->latestIntegration ? $u->latestIntegration->status : 'none';
+            $u->integration_id = $u->latestIntegration?->id;
+            $u->api_status = $u->latestIntegration?->api_status ?? 'disabled';
+            $u->admin_status = $u->latestIntegration?->admin_status ?? 'disabled';
 
             // Document flags for admin review
             $u->has_pan         = ! empty($u->pan_image_path);
@@ -57,16 +65,19 @@ class SellerController extends Controller
             return $u;
         });
 
-        // Summary stats
-        $stats = DB::table('users')
-            ->whereIn('role', ['api_user', 'retailer'])
-            ->selectRaw("
-                COUNT(*) as total,
-                SUM(CASE WHEN approval_status = 'pending'  THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'active'            THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'suspended'         THEN 1 ELSE 0 END) as suspended
-            ")
-            ->first();
+        // Summary stats — per role
+        $statsQuery = DB::table('users')->selectRaw("
+            role,
+            COUNT(*) as total,
+            SUM(CASE WHEN approval_status = 'pending'  THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status = 'active'            THEN 1 ELSE 0 END) as active,
+            SUM(CASE WHEN status = 'suspended'         THEN 1 ELSE 0 END) as suspended
+        ")->whereIn('role', $allowedRoles)->groupBy('role')->get()->keyBy('role');
+
+        $stats = [
+            'api_user' => $statsQuery->get('api_user', (object)['total'=>0,'pending'=>0,'active'=>0,'suspended'=>0]),
+            'retailer' => $statsQuery->get('retailer', (object)['total'=>0,'pending'=>0,'active'=>0,'suspended'=>0]),
+        ];
 
         return response()->json(['data' => $sellers, 'stats' => $stats]);
     }
@@ -155,6 +166,8 @@ class SellerController extends Controller
         if ($request->action === 'approve') {
             $ir->update([
                 'status'      => 'approved',
+                'api_status'  => 'enabled',
+                'admin_status'=> 'enabled',
                 'admin_notes' => $request->notes,
                 'approved_at' => now(),
             ]);
@@ -168,6 +181,7 @@ class SellerController extends Controller
                     'key_prefix' => substr($rawKey, 0, 12),
                     'key_hash'   => hash('sha256', $rawKey),
                     'scopes'     => ['recharge:read', 'recharge:write', 'wallet:read'],
+                    'ip_whitelist' => $this->parseAllowedIps($ir->allowed_ips),
                     'is_active'  => true,
                 ]);
                 // Note: raw key is NOT returned here — admin generates keys via API Keys page
@@ -191,17 +205,78 @@ class SellerController extends Controller
         return response()->json(['message' => 'Integration request rejected.']);
     }
 
+    /** POST /api/v1/employee/sellers/{id}/api-setting */
+    public function updateApiSetting(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'field' => ['required', 'in:api_status,admin_status'],
+            'value' => ['required', 'in:enabled,disabled'],
+        ]);
+
+        $seller = User::whereIn('role', ['api_user', 'retailer'])->findOrFail($id);
+        $integration = SellerIntegrationRequest::where('user_id', $seller->id)->latest()->first();
+
+        if (! $integration) {
+            return response()->json(['message' => 'No API setting found for this seller yet.'], 422);
+        }
+
+        if ($integration->status !== 'approved') {
+            return response()->json(['message' => 'API setting can be changed only after integration approval.'], 422);
+        }
+
+        $field = $request->string('field')->toString();
+        $value = $request->string('value')->toString();
+
+        $integration->update([$field => $value]);
+
+        ActivityLogger::log(
+            'admin.seller_api_setting_updated',
+            "Seller #{$id} {$field} changed to {$value}",
+            null,
+            ['seller_id' => $id, 'field' => $field, 'value' => $value],
+            null,
+            $request
+        );
+
+        return response()->json([
+            'message' => ucfirst(str_replace('_', ' ', $field)) . " updated to {$value}.",
+            'data' => [
+                'integration_id' => $integration->id,
+                'api_status' => $integration->api_status,
+                'admin_status' => $integration->admin_status,
+            ],
+        ]);
+    }
+
+    private function parseAllowedIps(?string $raw): ?array
+    {
+        if (! $raw) {
+            return null;
+        }
+
+        $ips = preg_split('/[\r\n,]+/', $raw) ?: [];
+        $ips = array_values(array_filter(array_map('trim', $ips)));
+
+        return $ips === [] ? null : $ips;
+    }
+
     /**
      * POST /api/v1/employee/sellers/{id}/login-as
      * Create an impersonation token for the seller — admin opens seller portal as them.
      */
     public function loginAs(Request $request, int $id): JsonResponse
     {
-        $seller = User::where('role', 'api_user')->findOrFail($id);
+        $seller = User::where('role', 'api_user')
+            ->where('status', 'active')
+            ->findOrFail($id);
 
         // Revoke existing impersonation tokens
         $seller->tokens()->where('name', 'admin-impersonate')->delete();
-        $token = $seller->createToken('admin-impersonate')->plainTextToken;
+        $token = $seller->createToken(
+            'admin-impersonate',
+            ['*'],
+            now()->addHours(2)
+        )->plainTextToken;
 
         ActivityLogger::log('admin.login_as_seller', "Admin impersonating seller #{$id} ({$seller->email})", null,
             ['seller_id' => $id], null, $request);
@@ -210,7 +285,13 @@ class SellerController extends Controller
             'message'       => 'Impersonation token created.',
             'token'         => $token,
             'seller_portal' => url('/seller/dashboard'),
-            'user'          => ['id' => $seller->id, 'name' => $seller->name, 'email' => $seller->email],
+            'user'          => [
+                'id'    => $seller->id,
+                'name'  => $seller->name,
+                'email' => $seller->email,
+                'role'  => $seller->role,
+                'status'=> $seller->status,
+            ],
         ]);
     }
 }

@@ -168,7 +168,11 @@ function loadPayments(page){
 }
 
 // Load wallet balance for stats
-apiFetch('/api/v1/seller/dashboard').then(d=>{ el('s-wallet').textContent='₹'+fmtMoney(d.wallet_balance||0); el('s-pending').textContent=d.pending_payments||0; }).catch(()=>{});
+apiFetch('/api/v1/seller/dashboard').then(d=>{
+    const stats = d.data?.stats || {};
+    el('s-wallet').textContent='₹'+fmtMoney(stats.wallet_balance||0);
+    el('s-pending').textContent=stats.pending_payments||0;
+}).catch(()=>{});
 loadPayments(1);
 </script>
 @endsection

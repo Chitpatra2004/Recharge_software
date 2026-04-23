@@ -40,6 +40,11 @@ class DashboardController extends Controller
             ->where('status', 'success')
             ->count();
 
+        $pendingRecharges = DB::table('recharge_transactions')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'queued', 'processing'])
+            ->count();
+
         // Wallet balance
         $wallet = DB::table('wallets')->where('user_id', $user->id)->first();
         $balance = $wallet ? (float) $wallet->balance : 0.0;
@@ -59,19 +64,28 @@ class DashboardController extends Controller
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(5)
-            ->get(['id', 'mobile', 'operator_code', 'type', 'amount', 'status', 'created_at']);
+            ->get([
+                'id',
+                'mobile',
+                'operator_code',
+                'recharge_type as type',
+                'amount',
+                'status',
+                'created_at',
+            ]);
 
         return response()->json([
             'data' => [
                 'stats' => [
-                    'total_sales'      => $totalSales,
-                    'total_amount'     => (float) $totalAmount,
-                    'today_sales'      => $todaySales,
-                    'today_amount'     => (float) $todayAmount,
-                    'success_count'    => $successCount,
-                    'success_rate'     => $totalSales > 0 ? round($successCount / $totalSales * 100, 1) : 0,
-                    'wallet_balance'   => $balance,
-                    'pending_payments' => $pendingPayments,
+                    'total_sales'       => $totalSales,
+                    'total_amount'      => (float) $totalAmount,
+                    'today_sales'       => $todaySales,
+                    'today_amount'      => (float) $todayAmount,
+                    'success_count'     => $successCount,
+                    'success_rate'      => $totalSales > 0 ? round($successCount / $totalSales * 100, 1) : 0,
+                    'wallet_balance'    => $balance,
+                    'pending_payments'  => $pendingPayments,
+                    'pending_recharges' => $pendingRecharges,
                 ],
                 'integration' => $integration ? [
                     'status'     => $integration->status,

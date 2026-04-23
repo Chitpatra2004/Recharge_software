@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ApiKey;
+use App\Models\SellerIntegrationRequest;
 use App\Models\User;
 use Illuminate\Support\Str;
 
@@ -38,12 +39,18 @@ class ApiAuthService
             ->where('name', $name)
             ->update(['is_active' => false]);
 
+        $integration = SellerIntegrationRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->latest()
+            ->first();
+
         ApiKey::create([
             'user_id'    => $user->id,
             'name'       => $name,
             'key_prefix' => substr($rawKey, 0, 12),
             'key_hash'   => hash('sha256', $rawKey),
             'scopes'     => $scopes,
+            'ip_whitelist' => $this->parseAllowedIps($integration?->allowed_ips),
             'is_active'  => true,
         ]);
 
@@ -73,5 +80,17 @@ class ApiAuthService
         $allowed = $user->allowedIps();
 
         return empty($allowed) || in_array($ip, $allowed);
+    }
+
+    private function parseAllowedIps(?string $raw): ?array
+    {
+        if (! $raw) {
+            return null;
+        }
+
+        $ips = preg_split('/[\r\n,]+/', $raw) ?: [];
+        $ips = array_values(array_filter(array_map('trim', $ips)));
+
+        return $ips === [] ? null : $ips;
     }
 }

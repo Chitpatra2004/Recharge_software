@@ -126,7 +126,7 @@ async function doExport(type, label) {
     if (from) p.set('date_from', from);
     if (to)   p.set('date_to',   to);
 
-    const res = await apiFetch(`/api/v1/admin/reports/${type}?` + p.toString());
+    const res = await apiFetch(`/api/v1/employee/reports/${type}?` + p.toString());
     if (!res) return;
     const data = await res.json();
 

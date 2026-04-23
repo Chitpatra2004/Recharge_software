@@ -64,7 +64,13 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+        try {
+            $attempted = Auth::attempt(['email' => $request->email, 'password' => $request->password]);
+        } catch (\RuntimeException) {
+            $attempted = false;
+        }
+
+        if (! $attempted) {
             ActivityLogger::log('seller.login_failed', "Failed seller login: {$request->email}");
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],

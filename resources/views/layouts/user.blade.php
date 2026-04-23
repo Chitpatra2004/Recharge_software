@@ -301,6 +301,32 @@ const U_DATA  = 'user_data';
 function getToken()   { return localStorage.getItem(U_TOKEN); }
 function getUserData(){ try { return JSON.parse(localStorage.getItem(U_DATA)||'{}'); } catch { return {}; } }
 
+// ── Admin impersonation: auto-login when admin opens portal via "Login As" ──
+(function() {
+    try {
+        // Check postMessage first (if tab was opened by admin panel same-origin)
+        window.addEventListener('message', function(e) {
+            if (e.origin !== window.location.origin) return;
+            if (e.data && e.data.type === 'rh_impersonate' && e.data.token) {
+                localStorage.setItem(U_TOKEN, e.data.token);
+                if (e.data.user) localStorage.setItem(U_DATA, JSON.stringify(e.data.user));
+                window.location.reload();
+            }
+        });
+        // Check shared impersonate key (fallback for cases where postMessage fires before load)
+        var imp = localStorage.getItem('rh_impersonate_token');
+        if (imp) {
+            var d = JSON.parse(imp);
+            if (d && d.token && d.exp > Date.now()) {
+                localStorage.removeItem('rh_impersonate_token'); // consume once
+                localStorage.setItem(U_TOKEN, d.token);
+                if (d.user) localStorage.setItem(U_DATA, JSON.stringify(d.user));
+                // Don't redirect — page will boot normally with the token now set
+            }
+        }
+    } catch(e) {}
+})();
+
 function requireAuth() {
     if (!getToken()) { window.location.href = '/user/login'; return false; }
     return true;

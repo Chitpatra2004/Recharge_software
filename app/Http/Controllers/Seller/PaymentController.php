@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SellerPaymentRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
@@ -22,7 +23,24 @@ class PaymentController extends Controller
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
-        return response()->json($requests);
+        $wallet = DB::table('wallets')->where('user_id', $user->id)->first();
+        $monthStart = now()->startOfMonth();
+
+        $summary = [
+            'wallet_balance' => $wallet ? (float) $wallet->balance : 0.0,
+            'approved_month' => (float) SellerPaymentRequest::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereDate('processed_at', '>=', $monthStart)
+                ->sum('amount'),
+            'pending_count' => SellerPaymentRequest::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->count(),
+        ];
+
+        $arr = $requests->toArray();
+        $arr['summary'] = $summary;
+
+        return response()->json($arr);
     }
 
     /** POST /api/v1/seller/payments */

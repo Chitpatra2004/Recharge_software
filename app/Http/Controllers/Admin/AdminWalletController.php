@@ -70,6 +70,47 @@ class AdminWalletController extends Controller
     }
 
     /**
+     * POST /api/v1/employee/users/{id}/login-as
+     * Generates an impersonation token so admin can open the user portal
+     * as this user without needing their password.
+     */
+    public function loginAsUser(Request $request, int $id): JsonResponse
+    {
+        $user = User::findOrFail($id);
+
+        // Revoke any existing impersonation tokens for this user
+        $user->tokens()->where('name', 'admin-impersonate')->delete();
+
+        // Create a short-lived impersonation token (2 hours)
+        $token = $user->createToken(
+            'admin-impersonate',
+            ['*'],
+            now()->addHours(2)
+        )->plainTextToken;
+
+        ActivityLogger::log(
+            'admin.login_as_user',
+            "Admin impersonating user #{$id} ({$user->email})",
+            $user,
+            ['user_id' => $id, 'role' => $user->role],
+            null,
+            $request
+        );
+
+        return response()->json([
+            'message'      => 'Impersonation token created.',
+            'token'        => $token,
+            'user_portal'  => url('/user/dashboard'),
+            'user'         => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
+            ],
+        ]);
+    }
+
+    /**
      * GET /api/v1/employee/sellers/{id}/wallet/transactions
      */
     public function transactions(Request $request, int $id): JsonResponse
