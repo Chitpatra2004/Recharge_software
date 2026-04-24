@@ -59,6 +59,8 @@
 .activity-text { font-size: 12.5px; color: var(--text-primary); line-height: 1.4; }
 .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Toggle */
 .toggle-wrap { display: flex; align-items: center; gap: 10px; }
 .toggle { position: relative; width: 40px; height: 22px; }
@@ -254,8 +256,8 @@
                 <div class="tfa-card" id="tfa-status-card">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
                         <div>
-                            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Secure your account with OTP</div>
-                            <div style="font-size:12.5px;color:var(--text-secondary)">Every login will require a one-time password sent to your registered mobile number.</div>
+                            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Secure your account with 2FA</div>
+                            <div style="font-size:12.5px;color:var(--text-secondary)">Every login will require a second verification step.</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:12px">
                             <span class="tfa-status off" id="tfa-badge-main">Not Active</span>
@@ -265,7 +267,29 @@
                     </div>
                 </div>
 
-                <!-- 2FA Setup Steps -->
+                <!-- 2FA Method Selection -->
+                <div id="tfa-method-select" style="display:none">
+                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Choose your 2FA method:</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+                        <div onclick="chooseTfaMethod('otp')" id="method-otp-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                            <div style="width:40px;height:40px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#2563eb" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18h3"/></svg>
+                            </div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">SMS OTP</div>
+                            <div style="font-size:11.5px;color:var(--text-muted)">Code sent to your mobile number</div>
+                        </div>
+                        <div onclick="chooseTfaMethod('totp')" id="method-totp-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                            <div style="width:40px;height:40px;background:#d1fae5;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
+                            </div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Authenticator App</div>
+                            <div style="font-size:11.5px;color:var(--text-muted)">Google Authenticator, Authy, etc.</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="cancelTfaSetup()">Cancel</button>
+                </div>
+
+                <!-- 2FA Setup Steps — SMS OTP -->
                 <div id="tfa-setup-flow" style="display:none">
                     <!-- Step 1 -->
                     <div id="tfa-step1" class="tfa-card" style="border-color:var(--accent-blue)">
@@ -303,7 +327,7 @@
                         <div id="tfa-verify-error" style="display:none;font-size:12.5px;color:var(--accent-red);margin-top:8px"></div>
                     </div>
 
-                    <!-- Step 3: Success -->
+                    <!-- Step 3: Success (SMS) -->
                     <div id="tfa-step3" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:var(--radius);padding:20px">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
                             <div style="width:36px;height:36px;background:#d1fae5;border-radius:50%;display:flex;align-items:center;justify-content:center">
@@ -317,6 +341,58 @@
                         <div style="font-size:12.5px;font-weight:600;color:#052e16;margin-bottom:8px">Backup Codes — Save these safely:</div>
                         <div class="backup-codes" id="backup-codes-grid"></div>
                         <div style="font-size:11.5px;color:#166534;margin-top:10px">⚠️ These codes can be used to access your account if you lose your mobile. Each code can only be used once.</div>
+                    </div>
+                </div>
+
+                <!-- 2FA Setup — TOTP / Authenticator App -->
+                <div id="totp-setup-flow" style="display:none">
+                    <div class="tfa-card" style="border-color:var(--accent-blue)">
+                        <div id="totp-loading" style="text-align:center;padding:16px 0">
+                            <div style="width:26px;height:26px;border:3px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px"></div>
+                            <div style="font-size:12.5px;color:var(--text-muted)">Generating QR code…</div>
+                        </div>
+
+                        <div id="totp-content" style="display:none">
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px">Step 1 — Scan this QR code</div>
+                            <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:14px">Open <strong>Google Authenticator</strong>, <strong>Authy</strong> or any TOTP app, tap "Add Account" and scan the QR code below.</div>
+
+                            <div id="totp-qr-wrap" style="text-align:center;margin-bottom:14px;display:none">
+                                <img id="totp-qr-img" src="" alt="QR Code" style="width:160px;height:160px;border-radius:8px;border:2px solid var(--border);background:#fff;padding:6px">
+                            </div>
+
+                            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Or enter this key manually:</div>
+                            <div id="totp-secret-box" style="font-family:monospace;font-size:13px;background:var(--bg-page);border:1px solid var(--border);border-radius:6px;padding:10px 14px;letter-spacing:2px;word-break:break-all;color:var(--text-primary);margin-bottom:16px;text-align:center"></div>
+
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px">Step 2 — Enter the 6-digit code from your app</div>
+                            <div class="otp-inputs" id="totp-boxes">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" id="totp-b0">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                                <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                            </div>
+                            <div id="totp-verify-error" style="display:none;font-size:12.5px;color:var(--accent-red);margin-bottom:10px"></div>
+                            <div style="display:flex;gap:10px">
+                                <button class="btn btn-primary" onclick="confirmTotp()">Confirm & Enable</button>
+                                <button class="btn btn-outline btn-sm" onclick="cancelTfaSetup()">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div id="totp-error-msg" style="display:none;font-size:12.5px;color:var(--accent-red);margin-top:8px"></div>
+                    </div>
+
+                    <!-- TOTP Success -->
+                    <div id="totp-step-success" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:var(--radius);padding:20px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:36px;height:36px;background:#d1fae5;border-radius:50%;display:flex;align-items:center;justify-content:center">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="2.5" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-size:14px;font-weight:700;color:#052e16">Authenticator App 2FA Enabled!</div>
+                                <div style="font-size:12.5px;color:#166534">Your account is now protected with TOTP two-factor authentication.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -577,14 +653,82 @@ function togglePwdVis(id, btn) {
 
 /* 2FA */
 function startTfaSetup() {
-    document.getElementById('tfa-setup-flow').style.display = 'block';
-    document.getElementById('tfa-step1').style.display = '';
-    document.getElementById('tfa-step2').style.display = 'none';
-    document.getElementById('tfa-step3').style.display = 'none';
-}
-function cancelTfaSetup() {
+    document.getElementById('tfa-method-select').style.display = 'block';
     document.getElementById('tfa-setup-flow').style.display = 'none';
+    document.getElementById('totp-setup-flow').style.display = 'none';
+}
+
+function chooseTfaMethod(method) {
+    document.getElementById('tfa-method-select').style.display = 'none';
+    if (method === 'otp') {
+        document.getElementById('tfa-setup-flow').style.display = 'block';
+        document.getElementById('tfa-step1').style.display = '';
+        document.getElementById('tfa-step2').style.display = 'none';
+        document.getElementById('tfa-step3').style.display = 'none';
+    } else {
+        document.getElementById('totp-setup-flow').style.display = 'block';
+        document.getElementById('totp-loading').style.display = '';
+        document.getElementById('totp-content').style.display = 'none';
+        document.getElementById('totp-step-success').style.display = 'none';
+        document.getElementById('totp-error-msg').style.display = 'none';
+        loadTotpSetup();
+    }
+}
+
+function cancelTfaSetup() {
+    document.getElementById('tfa-method-select').style.display = 'none';
+    document.getElementById('tfa-setup-flow').style.display = 'none';
+    document.getElementById('totp-setup-flow').style.display = 'none';
     clearInterval(_otpTimer);
+}
+
+async function loadTotpSetup() {
+    try {
+        const res  = await apiFetch('/api/v1/employee/2fa/setup-totp', {method:'POST', body:JSON.stringify({})});
+        const data = await res.json();
+        document.getElementById('totp-loading').style.display = 'none';
+        if (res.ok) {
+            if (data.qr_url) {
+                const img = document.getElementById('totp-qr-img');
+                img.onerror = () => { document.getElementById('totp-qr-wrap').style.display = 'none'; };
+                img.src = data.qr_url;
+                document.getElementById('totp-qr-wrap').style.display = '';
+            }
+            document.getElementById('totp-secret-box').textContent = data.secret || '';
+            document.getElementById('totp-content').style.display = '';
+            document.getElementById('totp-b0').focus();
+        } else {
+            document.getElementById('totp-error-msg').textContent = data.message || 'Failed to generate QR code.';
+            document.getElementById('totp-error-msg').style.display = '';
+        }
+    } catch(e) {
+        document.getElementById('totp-loading').style.display = 'none';
+        document.getElementById('totp-error-msg').textContent = 'Network error. Please try again.';
+        document.getElementById('totp-error-msg').style.display = '';
+    }
+}
+
+async function confirmTotp() {
+    const boxes = document.querySelectorAll('#totp-boxes .otp-box');
+    const code  = Array.from(boxes).map(b => b.value).join('');
+    const errEl = document.getElementById('totp-verify-error');
+    if (code.length < 6) { errEl.textContent = 'Please enter all 6 digits.'; errEl.style.display=''; return; }
+    errEl.style.display = 'none';
+    try {
+        const res  = await apiFetch('/api/v1/employee/2fa/enable-totp', {method:'POST', body:JSON.stringify({code})});
+        const data = await res.json();
+        if (res.ok) {
+            document.getElementById('totp-content').style.display = 'none';
+            document.getElementById('totp-step-success').style.display = '';
+            _tfaEnabled = true;
+            updateTfaBadge();
+        } else {
+            Array.from(boxes).forEach(b => b.value = '');
+            boxes[0].focus();
+            errEl.textContent = data.message || 'Invalid code. Please try again.';
+            errEl.style.display = '';
+        }
+    } catch(e) { errEl.textContent = 'Network error.'; errEl.style.display=''; }
 }
 
 async function sendTfaOtp() {
@@ -647,8 +791,13 @@ async function disableTfa() {
     if (!confirm('Are you sure you want to disable 2FA? Your account will be less secure.')) return;
     try {
         const res = await apiFetch('/api/v1/employee/2fa/disable', {method:'DELETE'});
-        if (res.ok) { _tfaEnabled = false; updateTfaBadge(); document.getElementById('tfa-setup-flow').style.display='none'; }
-        else { const d = await res.json(); alert(d.message || 'Failed to disable 2FA.'); }
+        if (res.ok) {
+            _tfaEnabled = false;
+            updateTfaBadge();
+            document.getElementById('tfa-setup-flow').style.display = 'none';
+            document.getElementById('totp-setup-flow').style.display = 'none';
+            document.getElementById('tfa-method-select').style.display = 'none';
+        } else { const d = await res.json(); alert(d.message || 'Failed to disable 2FA.'); }
     } catch(e) { alert('Network error.'); }
 }
 

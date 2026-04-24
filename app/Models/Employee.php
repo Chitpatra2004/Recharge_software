@@ -20,9 +20,10 @@ class Employee extends Authenticatable
         'locked_until', 'max_open_complaints',
         'dob', 'city', 'state', 'pan',
         'two_factor_enabled', 'backup_codes', 'preferences',
+        'totp_secret', 'totp_enabled', 'two_factor_method',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'totp_secret'];
 
     protected function casts(): array
     {
@@ -32,6 +33,7 @@ class Employee extends Authenticatable
             'backup_codes'       => 'array',
             'preferences'        => 'array',
             'two_factor_enabled' => 'boolean',
+            'totp_enabled'       => 'boolean',
             'dob'                => 'date',
             'last_login_at'      => 'datetime',
             'locked_until'       => 'datetime',

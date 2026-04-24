@@ -655,8 +655,80 @@
         }
         input::placeholder, textarea::placeholder { color: var(--text-muted, #94a3b8) !important; }
         select option { background: var(--card-bg, #fff); color: var(--text-primary, #1e293b); }
+
+        /* ── DARK MODE OVERRIDES ──────────────────────────────────── */
+        /* Applied when data-dark="1" on <html> */
+
+        /* Table row hover */
+        html[data-dark="1"] tbody tr:hover td { background: rgba(255,255,255,.04) !important; }
+
+        /* Buttons */
+        html[data-dark="1"] .btn-outline { background: var(--card-bg) !important; color: var(--text-primary) !important; }
+
+        /* Transaction / inline status pills */
+        html[data-dark="1"] .txn-status.success  { background: rgba(16,185,129,.18) !important; color: #6ee7b7 !important; }
+        html[data-dark="1"] .txn-status.failure  { background: rgba(239,68,68,.18)  !important; color: #fca5a5 !important; }
+        html[data-dark="1"] .txn-status.pending  { background: rgba(245,158,11,.18) !important; color: #fcd34d !important; }
+
+        /* Live badge */
+        html[data-dark="1"] .live-badge { background: rgba(22,163,74,.18) !important; color: #4ade80 !important; }
+        html[data-dark="1"] .live-badge::before { background: #4ade80 !important; }
+
+        /* Stat card icons */
+        html[data-dark="1"] .stat-card.blue   .stat-icon { background: rgba(59,130,246,.2) !important; }
+        html[data-dark="1"] .stat-card.green  .stat-icon { background: rgba(16,185,129,.2) !important; }
+        html[data-dark="1"] .stat-card.orange .stat-icon { background: rgba(245,158,11,.2) !important; }
+        html[data-dark="1"] .stat-card.red    .stat-icon { background: rgba(239,68,68,.2)  !important; }
+
+        /* Complaint stat icons */
+        html[data-dark="1"] .complaint-stat.total  .complaint-stat-icon { background: rgba(124,58,237,.2) !important; }
+        html[data-dark="1"] .complaint-stat.solved .complaint-stat-icon { background: rgba(16,185,129,.2) !important; }
+
+        /* Note / info bars */
+        html[data-dark="1"] .note-bar { background: rgba(59,130,246,.1) !important; border-color: rgba(59,130,246,.2) !important; color: #93c5fd !important; }
+
+        /* 2FA status badges (profile page) */
+        html[data-dark="1"] .tfa-status.on  { background: rgba(16,185,129,.18) !important; color: #6ee7b7 !important; }
+        html[data-dark="1"] .tfa-status.off { background: rgba(239,68,68,.18)  !important; color: #fca5a5 !important; }
+
+        /* Permission badges (profile page) */
+        html[data-dark="1"] .perm-badge.granted { background: rgba(16,185,129,.18) !important; color: #6ee7b7 !important; }
+        html[data-dark="1"] .perm-badge.denied  { background: rgba(239,68,68,.18)  !important; color: #fca5a5 !important; }
+
+        /* Nav badge (sidebar) */
+        html[data-dark="1"] .nav-badge { opacity: .9; }
+
+        /* Generic inline-style hardcoded backgrounds often used in success/warning/error boxes */
+        html[data-dark="1"] [style*="background:#f0fdf4"],
+        html[data-dark="1"] [style*="background: #f0fdf4"] { background: rgba(16,185,129,.1) !important; }
+        html[data-dark="1"] [style*="background:#fff1f2"],
+        html[data-dark="1"] [style*="background: #fff1f2"] { background: rgba(239,68,68,.1)  !important; }
+        html[data-dark="1"] [style*="background:#eff6ff"],
+        html[data-dark="1"] [style*="background: #eff6ff"] { background: rgba(59,130,246,.1) !important; }
+        html[data-dark="1"] [style*="background:#fef3c7"],
+        html[data-dark="1"] [style*="background: #fef3c7"] { background: rgba(245,158,11,.1) !important; }
+        html[data-dark="1"] [style*="background:#f5f3ff"],
+        html[data-dark="1"] [style*="background: #f5f3ff"] { background: rgba(124,58,237,.1) !important; }
+
+        /* Hardcoded text colors in inline styles */
+        html[data-dark="1"] [style*="color:#052e16"],
+        html[data-dark="1"] [style*="color:#166534"],
+        html[data-dark="1"] [style*="color:#1e40af"],
+        html[data-dark="1"] [style*="color:#1e293b"] { color: var(--text-primary) !important; }
+
+        /* Hardcoded card/panel backgrounds (white boxes inside dark bg) */
+        html[data-dark="1"] [style*="background:#fff"],
+        html[data-dark="1"] [style*="background: #fff"],
+        html[data-dark="1"] [style*="background:#ffffff"],
+        html[data-dark="1"] [style*="background: #ffffff"] { background: var(--card-bg) !important; }
+
+        /* Hardcoded border colors in inline styles */
+        html[data-dark="1"] [style*="border:1.5px solid #bbf7d0"],
+        html[data-dark="1"] [style*="border: 1.5px solid #bbf7d0"] { border-color: rgba(16,185,129,.3) !important; }
+        html[data-dark="1"] [style*="border:1px solid #bfdbfe"],
+        html[data-dark="1"] [style*="border: 1px solid #bfdbfe"] { border-color: rgba(59,130,246,.2) !important; }
     </style>
-    <script>(function(){try{var s=localStorage.getItem('rh_admin_theme');if(s){var d=JSON.parse(s);Object.entries(d.vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});return;}var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--sidebar-bg':'#1a2035','--sidebar-hover':'#252d47','--sidebar-active':'#2563eb','--accent-blue':'#2563eb','--bg-page':'#f0f4f8','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e293b','--text-secondary':'#64748b','--border':'#e2e8f0'},'Midnight':{'--sidebar-bg':'#111827','--sidebar-hover':'#1f2937','--sidebar-active':'#3b82f6','--accent-blue':'#3b82f6','--bg-page':'#1a2535','--card-bg':'#111827','--topbar-bg':'#0f172a','--text-primary':'#e2e8f0','--text-secondary':'#94a3b8','--border':'#2d3748'},'Violet':{'--sidebar-bg':'#1e1b4b','--sidebar-hover':'#2d2a6b','--sidebar-active':'#7c3aed','--accent-blue':'#7c3aed','--bg-page':'#f5f3ff','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e1b4b','--text-secondary':'#6d6a9a','--border':'#ddd6fe'},'Forest':{'--sidebar-bg':'#052e16','--sidebar-hover':'#14532d','--sidebar-active':'#16a34a','--accent-blue':'#16a34a','--bg-page':'#f0fdf4','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#052e16','--text-secondary':'#166534','--border':'#bbf7d0'},'Ocean':{'--sidebar-bg':'#042f2e','--sidebar-hover':'#134e4a','--sidebar-active':'#0d9488','--accent-blue':'#0d9488','--bg-page':'#f0fdfa','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#042f2e','--text-secondary':'#0f766e','--border':'#99f6e4'},'Ember':{'--sidebar-bg':'#431407','--sidebar-hover':'#7c2d12','--sidebar-active':'#ea580c','--accent-blue':'#ea580c','--bg-page':'#fff7ed','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#431407','--text-secondary':'#9a3412','--border':'#fed7aa'}};if(u&&m[u]){Object.entries(m[u]).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});}}catch(e){}})();</script>
+    <script>(function(){function _dark(v){var r=parseInt((v||'').slice(1,3),16)||255,g=parseInt((v||'').slice(3,5),16)||255,b=parseInt((v||'').slice(5,7),16)||255;return(r*299+g*587+b*114)/1000<100;}function _applyVars(vars){Object.entries(vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});document.documentElement.dataset.dark=_dark(vars['--card-bg']||vars['--bg-page'])?'1':'0';}try{var s=localStorage.getItem('rh_admin_theme');if(s){var d=JSON.parse(s);_applyVars(d.vars);return;}var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--sidebar-bg':'#1a2035','--sidebar-hover':'#252d47','--sidebar-active':'#2563eb','--accent-blue':'#2563eb','--bg-page':'#f0f4f8','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e293b','--text-secondary':'#64748b','--border':'#e2e8f0'},'Midnight':{'--sidebar-bg':'#111827','--sidebar-hover':'#1f2937','--sidebar-active':'#3b82f6','--accent-blue':'#3b82f6','--bg-page':'#1a2535','--card-bg':'#111827','--topbar-bg':'#0f172a','--text-primary':'#e2e8f0','--text-secondary':'#94a3b8','--border':'#2d3748'},'Violet':{'--sidebar-bg':'#1e1b4b','--sidebar-hover':'#2d2a6b','--sidebar-active':'#7c3aed','--accent-blue':'#7c3aed','--bg-page':'#f5f3ff','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e1b4b','--text-secondary':'#6d6a9a','--border':'#ddd6fe'},'Forest':{'--sidebar-bg':'#052e16','--sidebar-hover':'#14532d','--sidebar-active':'#16a34a','--accent-blue':'#16a34a','--bg-page':'#f0fdf4','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#052e16','--text-secondary':'#166534','--border':'#bbf7d0'},'Ocean':{'--sidebar-bg':'#042f2e','--sidebar-hover':'#134e4a','--sidebar-active':'#0d9488','--accent-blue':'#0d9488','--bg-page':'#f0fdfa','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#042f2e','--text-secondary':'#0f766e','--border':'#99f6e4'},'Ember':{'--sidebar-bg':'#431407','--sidebar-hover':'#7c2d12','--sidebar-active':'#ea580c','--accent-blue':'#ea580c','--bg-page':'#fff7ed','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#431407','--text-secondary':'#9a3412','--border':'#fed7aa'}};if(u&&m[u]){_applyVars(m[u]);}}catch(e){}})();</script>
     @stack('head')
 </head>
 <body>
@@ -751,10 +823,11 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
-        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') ? 'open' : '' }}" id="manage-sub">
+        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/operator-api-settings') ? 'open' : '' }}" id="manage-sub">
             <a href="/admin/operators" class="nav-item {{ request()->is('admin/operators') ? 'active' : '' }}">Operators</a>
             <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees') ? 'active' : '' }}">Employees</a>
             <a href="/admin/api-keys" class="nav-item {{ request()->is('admin/api-keys') ? 'active' : '' }}">API Keys</a>
+            <a href="/admin/operator-api-settings" class="nav-item {{ request()->is('admin/operator-api-settings') ? 'active' : '' }}">API Configuration</a>
         </div>
 
         <div class="nav-section">Commission</div>
@@ -1245,8 +1318,14 @@ const _THEMES_A = {
 function openThemePanel()  { document.getElementById('tp-panel').classList.add('open');  document.getElementById('tp-overlay').classList.add('open');  }
 function closeThemePanel() { document.getElementById('tp-panel').classList.remove('open'); document.getElementById('tp-overlay').classList.remove('open'); }
 
+function _isDarkBg(hex) {
+    if (!hex || hex[0] !== '#') return false;
+    const r = parseInt(hex.slice(1,3),16)||255, g = parseInt(hex.slice(3,5),16)||255, b = parseInt(hex.slice(5,7),16)||255;
+    return (r*299 + g*587 + b*114) / 1000 < 100;
+}
 function _applyAdminVars(vars) {
     Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+    document.documentElement.dataset.dark = _isDarkBg(vars['--card-bg'] || vars['--bg-page']) ? '1' : '0';
 }
 // Reverse map: admin preset name → unified theme name (for cross-layout sync)
 const _A_TO_UNIFIED = {'Blue Classic':'Cosmic','Dark Mode':'Midnight','Purple Night':'Violet','Forest Green':'Forest','Ocean Teal':'Ocean','Sunset':'Ember'};
@@ -1280,6 +1359,7 @@ function _applyCustomAdmin() {
 function _resetAdminTheme() {
     localStorage.removeItem('rh_admin_theme');
     Object.keys(_THEMES_A['Blue Classic'].vars).forEach(k => document.documentElement.style.removeProperty(k));
+    document.documentElement.dataset.dark = '0';
     document.querySelectorAll('#tp-presets-grid .tp-preset').forEach(b => b.classList.toggle('active', b.dataset.t === 'Blue Classic'));
     document.getElementById('tc-sb').value = '#1a2035';
     document.getElementById('tc-ac').value = '#2563eb';

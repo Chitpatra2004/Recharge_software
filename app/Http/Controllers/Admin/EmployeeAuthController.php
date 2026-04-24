@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Services\OtpService;
+use App\Services\TotpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 /**
  * EmployeeAuthController — secure login/logout for internal staff.
@@ -42,10 +45,16 @@ use Illuminate\Support\Facades\Validator;
  */
 class EmployeeAuthController extends Controller
 {
-    private const MAX_ATTEMPTS     = 5;
-    private const LOCKOUT_MINUTES  = 30;
-    private const TOKEN_TTL_HOURS  = 8;
-    private const ATTEMPT_WINDOW   = 15; // minutes to count failed attempts
+    private const MAX_ATTEMPTS      = 5;
+    private const LOCKOUT_MINUTES   = 30;
+    private const TOKEN_TTL_HOURS   = 8;
+    private const ATTEMPT_WINDOW    = 15;  // minutes to count failed attempts
+    private const PENDING_2FA_TTL   = 10;  // minutes a pending_token stays valid
+
+    public function __construct(
+        private readonly OtpService  $otpService,
+        private readonly TotpService $totpService,
+    ) {}
 
     // ─────────────────────────────────────────────────────────────────────
     // POST /api/v1/employee/auth/login
@@ -111,39 +120,38 @@ class EmployeeAuthController extends Controller
             ], 403);
         }
 
-        // ── Success: reset failure counter, issue token ───────────────────
+        // ── Success: reset failure counter ────────────────────────────────
         $this->clearFailureCounter($email);
 
-        // Revoke old tokens for this device (single active session)
-        $employee->tokens()->where('name', $device)->delete();
+        // ── 2FA gate ──────────────────────────────────────────────────────
+        if ($employee->two_factor_enabled) {
+            $pendingToken = Str::random(64);
+            Cache::put(
+                'emp_pending_2fa:' . $pendingToken,
+                ['employee_id' => $employee->id, 'device' => $device],
+                now()->addMinutes(self::PENDING_2FA_TTL)
+            );
 
-        // Issue new Sanctum token with role-based abilities
-        $abilities = $this->resolveAbilities($employee);
-        $token     = $employee->createToken($device, $abilities, now()->addHours(self::TOKEN_TTL_HOURS));
+            $method = $employee->two_factor_method ?? 'otp';
 
-        // Update login audit fields
-        DB::table('employees')->where('id', $employee->id)->update([
-            'last_login_at'       => now(),
-            'last_login_ip'       => $ip,
-            'failed_login_count'  => 0,
-            'locked_until'        => null,
-        ]);
+            if ($method === 'otp') {
+                $this->otpService->generate($employee->mobile, 'login_2fa', $employee->id, $ip);
+            }
 
-        $this->logAttempt($employee->id, $email, 'auth.employee_login', $ip, $request, 'success');
+            $this->logAttempt($employee->id, $email, 'auth.employee_2fa_required', $ip, $request, 'pending');
 
-        return response()->json([
-            'token'      => $token->plainTextToken,
-            'expires_at' => $token->accessToken->expires_at?->toIso8601String(),
-            'employee'   => [
-                'id'          => $employee->id,
-                'name'        => $employee->name,
-                'email'       => $employee->email,
-                'role'        => $employee->role,
-                'department'  => $employee->department,
-                'designation' => $employee->designation,
-                'abilities'   => $abilities,
-            ],
-        ]);
+            return response()->json([
+                'requires_2fa'  => true,
+                'method'        => $method,
+                'pending_token' => $pendingToken,
+                'message'       => $method === 'totp'
+                    ? 'Enter the 6-digit code from your authenticator app.'
+                    : 'A verification code has been sent to your registered mobile.',
+            ]);
+        }
+
+        // ── No 2FA — issue token directly ────────────────────────────────
+        return $this->issueTokenResponse($employee, $device, $ip, $request);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -203,8 +211,112 @@ class EmployeeAuthController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // POST /api/v1/employee/auth/2fa/verify-otp
+    // ─────────────────────────────────────────────────────────────────────
+    public function verify2faOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'pending_token' => ['required', 'string'],
+            'otp'           => ['required', 'digits:6'],
+        ]);
+
+        $pending = $this->resolvePendingToken($request->pending_token);
+        if (! $pending) {
+            return response()->json(['message' => 'Session expired. Please login again.'], 401);
+        }
+
+        $employee = Employee::findOrFail($pending['employee_id']);
+
+        if (! $this->otpService->verify($employee->mobile, 'login_2fa', $request->otp)) {
+            return response()->json(['message' => 'Invalid OTP. Please try again.'], 422);
+        }
+
+        Cache::forget('emp_pending_2fa:' . $request->pending_token);
+        return $this->issueTokenResponse($employee, $pending['device'], $request->ip(), $request);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // POST /api/v1/employee/auth/2fa/verify-totp
+    // ─────────────────────────────────────────────────────────────────────
+    public function verify2faTotp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'pending_token' => ['required', 'string'],
+            'code'          => ['required', 'digits:6'],
+        ]);
+
+        $pending = $this->resolvePendingToken($request->pending_token);
+        if (! $pending) {
+            return response()->json(['message' => 'Session expired. Please login again.'], 401);
+        }
+
+        $employee = Employee::findOrFail($pending['employee_id']);
+
+        if (! $employee->totp_secret || ! $this->totpService->verify($employee->totp_secret, $request->code)) {
+            return response()->json(['message' => 'Invalid code. Please try again.'], 422);
+        }
+
+        Cache::forget('emp_pending_2fa:' . $request->pending_token);
+        return $this->issueTokenResponse($employee, $pending['device'], $request->ip(), $request);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // POST /api/v1/employee/auth/2fa/resend-otp
+    // ─────────────────────────────────────────────────────────────────────
+    public function resend2faOtp(Request $request): JsonResponse
+    {
+        $request->validate(['pending_token' => ['required', 'string']]);
+
+        $pending = $this->resolvePendingToken($request->pending_token);
+        if (! $pending) {
+            return response()->json(['message' => 'Session expired. Please login again.'], 401);
+        }
+
+        $employee = Employee::findOrFail($pending['employee_id']);
+        $this->otpService->generate($employee->mobile, 'login_2fa', $employee->id, $request->ip());
+
+        return response()->json(['message' => 'A new OTP has been sent to your registered mobile.']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────
+
+    private function resolvePendingToken(string $token): ?array
+    {
+        return Cache::get('emp_pending_2fa:' . $token);
+    }
+
+    private function issueTokenResponse(Employee $employee, string $device, string $ip, Request $request): JsonResponse
+    {
+        $employee->tokens()->where('name', $device)->delete();
+
+        $abilities = $this->resolveAbilities($employee);
+        $token     = $employee->createToken($device, $abilities, now()->addHours(self::TOKEN_TTL_HOURS));
+
+        DB::table('employees')->where('id', $employee->id)->update([
+            'last_login_at'      => now(),
+            'last_login_ip'      => $ip,
+            'failed_login_count' => 0,
+            'locked_until'       => null,
+        ]);
+
+        $this->logAttempt($employee->id, $employee->email, 'auth.employee_login', $ip, $request, 'success');
+
+        return response()->json([
+            'token'      => $token->plainTextToken,
+            'expires_at' => $token->accessToken->expires_at?->toIso8601String(),
+            'employee'   => [
+                'id'          => $employee->id,
+                'name'        => $employee->name,
+                'email'       => $employee->email,
+                'role'        => $employee->role,
+                'department'  => $employee->department,
+                'designation' => $employee->designation,
+                'abilities'   => $abilities,
+            ],
+        ]);
+    }
 
     /**
      * Record a failed login attempt.

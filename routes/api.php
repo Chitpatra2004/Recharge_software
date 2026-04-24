@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
 use App\Http\Controllers\Admin\UserPaymentRequestController as AdminUserPaymentRequestController;
+use App\Http\Controllers\Admin\OperatorApiSettingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\TwoFactorController;
@@ -59,7 +60,10 @@ Route::prefix('v1/employee/auth')
     ->middleware(['brute.force:20,15', 'log.api'])
     ->group(function () {
 
-    Route::post('/login',  [EmployeeAuthController::class, 'login']);
+    Route::post('/login',           [EmployeeAuthController::class, 'login']);
+    Route::post('/2fa/verify-otp',  [EmployeeAuthController::class, 'verify2faOtp']);
+    Route::post('/2fa/verify-totp', [EmployeeAuthController::class, 'verify2faTotp']);
+    Route::post('/2fa/resend-otp',  [EmployeeAuthController::class, 'resend2faOtp']);
 
 });
 
@@ -125,6 +129,8 @@ Route::prefix('v1/employee')
     // Employee 2FA setup
     Route::post('/2fa/send-otp',         [EmployeeProfileController::class, 'sendTfaOtp']);
     Route::post('/2fa/verify',           [EmployeeProfileController::class, 'verifyTfaOtp']);
+    Route::post('/2fa/setup-totp',       [EmployeeProfileController::class, 'setupTotp']);
+    Route::post('/2fa/enable-totp',      [EmployeeProfileController::class, 'enableTotp']);
     Route::delete('/2fa/disable',        [EmployeeProfileController::class, 'disableTfa']);
 
     // Employee sessions & activity (self)
@@ -133,6 +139,16 @@ Route::prefix('v1/employee')
     Route::get('/login-history',         [EmployeeProfileController::class, 'loginHistory']);
     Route::get('/my-activity',           [EmployeeProfileController::class, 'activity']);
     Route::put('/preferences',           [EmployeeProfileController::class, 'savePreferences']);
+
+    // Operator API provider management
+    Route::get('/api-providers',                              [OperatorApiSettingController::class, 'listRoutes']);
+    Route::post('/api-providers',                             [OperatorApiSettingController::class, 'storeRoute']);
+    Route::put('/api-providers/{route}/basic',                [OperatorApiSettingController::class, 'updateBasic']);
+    Route::patch('/api-providers/{route}/toggle',             [OperatorApiSettingController::class, 'toggle']);
+    Route::delete('/api-providers/{route}',                   [OperatorApiSettingController::class, 'destroy']);
+    Route::get('/operator-routes/{route}/api-setting',        [OperatorApiSettingController::class, 'show']);
+    Route::put('/operator-routes/{route}/api-setting',        [OperatorApiSettingController::class, 'update']);
+    Route::put('/operator-routes/{route}/margin',             [OperatorApiSettingController::class, 'updateMargin']);
 
 });
 

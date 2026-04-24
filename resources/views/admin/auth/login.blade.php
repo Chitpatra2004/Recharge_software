@@ -199,6 +199,16 @@
         .security-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:#9ca3af;font-weight:500;}
         .security-badge svg{width:13px;height:13px;color:#10b981;}
 
+        /* 2FA step */
+        .tfa-panel{display:none;}
+        .tfa-panel.show{display:block;}
+        .otp-row{display:flex;gap:8px;justify-content:center;margin:18px 0;}
+        .otp-digit{width:44px;height:52px;border:1.5px solid #e5e7eb;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:var(--text);background:#f9fafb;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;}
+        .otp-digit:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff;}
+        .otp-digit.is-error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+        .tfa-back{background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:18px;}
+        .tfa-back:hover{color:var(--text);}
+
         /* Modal */
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
         .modal-overlay.show{opacity:1;pointer-events:all;}
@@ -350,6 +360,43 @@
                 </svg>
             </button>
         </form>
+
+        <!-- 2FA panel (hidden until credentials pass) -->
+        <div class="tfa-panel" id="tfa-panel">
+            <button class="tfa-back" onclick="backToLogin()">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                Back to login
+            </button>
+
+            <div class="form-head" style="margin-bottom:16px">
+                <h1 id="tfa-title">Verify your identity</h1>
+                <p id="tfa-subtitle">Enter the verification code to continue.</p>
+            </div>
+
+            <div class="alert alert-error" id="tfa-error-alert">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="tfa-error-msg"></span>
+            </div>
+
+            <div class="otp-row" id="tfa-otp-row">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+                <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
+            </div>
+
+            <button type="button" class="btn-submit" id="tfa-submit-btn" onclick="submitTfa()">
+                <div class="spinner" id="tfa-spinner"></div>
+                <span id="tfa-btn-text">Verify &amp; Sign In</span>
+            </button>
+
+            <div id="tfa-resend-wrap" style="display:none;text-align:center;margin-top:14px">
+                <span style="font-size:13px;color:var(--muted)">Didn't receive the code? </span>
+                <button onclick="resendOtp()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--blue)">Resend OTP</button>
+            </div>
+        </div>
 
         <div class="divider"><span>Security</span></div>
         <div class="security-badges">
@@ -508,6 +555,11 @@ el('password').addEventListener('input', function () {
     }
 });
 
+/* ── State ────────────────────────────────────────────────────── */
+let _pendingToken = null;
+let _tfaMethod    = null;
+let _rememberMe   = false;
+
 /* ── Loading state ────────────────────────────────────────────── */
 function setLoading(on) {
     el('submit-btn').disabled        = on;
@@ -523,9 +575,8 @@ el('login-form').addEventListener('submit', async (e) => {
 
     const email    = el('email').value.trim();
     const password = el('password').value;
-    const remember = el('remember-me').checked;
+    _rememberMe    = el('remember-me').checked;
 
-    // Client-side validation
     const emailErr = validateEmail(email);
     const pwdErr   = validatePassword(password);
     let hasError   = false;
@@ -548,16 +599,12 @@ el('login-form').addEventListener('submit', async (e) => {
         });
         const data = await res.json();
 
-        if (res.ok) {
-            remember
-                ? localStorage.setItem('emp_remember_email', email)
-                : localStorage.removeItem('emp_remember_email');
-
-            localStorage.setItem('emp_token', data.token);
-            localStorage.setItem('emp_data',  JSON.stringify(data.employee || {}));
-
-            showSuccess('Login successful! Redirecting…');
-            setTimeout(() => { window.location.href = '/admin/dashboard'; }, 800);
+        if (res.ok && data.requires_2fa) {
+            _pendingToken = data.pending_token;
+            _tfaMethod    = data.method;
+            showTfaPanel(data.method, data.message);
+        } else if (res.ok) {
+            handleLoginSuccess(data);
         } else if (res.status === 423) {
             showLockout(data.message + (data.retry_after ? ' Retry after: ' + data.retry_after + '.' : ''));
         } else {
@@ -571,6 +618,129 @@ el('login-form').addEventListener('submit', async (e) => {
     } finally {
         setLoading(false);
     }
+});
+
+/* ── 2FA panel ────────────────────────────────────────────────── */
+const tfaDigits = () => Array.from(document.querySelectorAll('#tfa-otp-row .otp-digit'));
+
+function showTfaPanel(method, message) {
+    el('login-form').style.display = 'none';
+    el('tfa-panel').classList.add('show');
+    clearAlerts();
+    hide('tfa-error-alert');
+
+    el('tfa-title').textContent    = method === 'totp' ? 'Authenticator App' : 'SMS Verification';
+    el('tfa-subtitle').textContent = message || 'Enter the 6-digit verification code.';
+    el('tfa-resend-wrap').style.display = method === 'otp' ? '' : 'none';
+
+    tfaDigits().forEach(d => { d.value = ''; d.classList.remove('is-error'); });
+    tfaDigits()[0].focus();
+}
+
+function backToLogin() {
+    el('login-form').style.display = '';
+    el('tfa-panel').classList.remove('show');
+    _pendingToken = null;
+    _tfaMethod    = null;
+    hide('tfa-error-alert');
+}
+
+function setTfaLoading(on) {
+    el('tfa-submit-btn').disabled   = on;
+    el('tfa-spinner').style.display = on ? 'block' : 'none';
+    el('tfa-btn-text').textContent  = on ? 'Verifying…' : 'Verify & Sign In';
+}
+
+async function submitTfa() {
+    const code = tfaDigits().map(d => d.value).join('');
+    if (code.length < 6) {
+        tfaDigits().forEach(d => d.classList.add('is-error'));
+        el('tfa-error-msg').textContent = 'Please enter all 6 digits.';
+        show('tfa-error-alert');
+        return;
+    }
+    tfaDigits().forEach(d => d.classList.remove('is-error'));
+    hide('tfa-error-alert');
+    setTfaLoading(true);
+
+    try {
+        const url  = _tfaMethod === 'totp'
+            ? '/api/v1/employee/auth/2fa/verify-totp'
+            : '/api/v1/employee/auth/2fa/verify-otp';
+        const body = _tfaMethod === 'totp'
+            ? { pending_token: _pendingToken, code }
+            : { pending_token: _pendingToken, otp: code };
+
+        const res  = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            handleLoginSuccess(data);
+        } else {
+            tfaDigits().forEach(d => { d.value = ''; d.classList.add('is-error'); });
+            tfaDigits()[0].focus();
+            el('tfa-error-msg').textContent = data.message || 'Invalid code. Please try again.';
+            show('tfa-error-alert');
+        }
+    } catch {
+        el('tfa-error-msg').textContent = 'Network error. Please try again.';
+        show('tfa-error-alert');
+    } finally {
+        setTfaLoading(false);
+    }
+}
+
+async function resendOtp() {
+    try {
+        await fetch('/api/v1/employee/auth/2fa/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ pending_token: _pendingToken }),
+        });
+        el('tfa-error-msg').textContent = 'A new OTP has been sent to your mobile.';
+        el('tfa-error-alert').className = 'alert alert-success show';
+    } catch {
+        el('tfa-error-msg').textContent = 'Failed to resend OTP.';
+        show('tfa-error-alert');
+    }
+}
+
+function handleLoginSuccess(data) {
+    _rememberMe
+        ? localStorage.setItem('emp_remember_email', el('email').value.trim())
+        : localStorage.removeItem('emp_remember_email');
+
+    localStorage.setItem('emp_token', data.token);
+    localStorage.setItem('emp_data',  JSON.stringify(data.employee || {}));
+
+    showSuccess('Login successful! Redirecting…');
+    setTimeout(() => { window.location.href = '/admin/dashboard'; }, 800);
+}
+
+/* ── OTP digit auto-advance (covers both SMS otp-boxes and tfa-otp-row) ── */
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.otp-digit').forEach((box, i, all) => {
+        box.addEventListener('input', () => {
+            box.value = box.value.replace(/\D/g, '').slice(-1);
+            if (box.value && i < all.length - 1) all[i + 1].focus();
+            if (i === all.length - 1 && box.value) submitTfa();
+        });
+        box.addEventListener('keydown', e => {
+            if (e.key === 'Backspace' && !box.value && i > 0) all[i - 1].focus();
+        });
+        box.addEventListener('paste', e => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+            text.split('').forEach((ch, j) => { if (all[i + j]) all[i + j].value = ch; });
+            const last = Math.min(i + text.length - 1, all.length - 1);
+            all[last].focus();
+            if (text.length === 6) submitTfa();
+        });
+    });
 });
 
 /* ── Forgot password modal ────────────────────────────────────── */

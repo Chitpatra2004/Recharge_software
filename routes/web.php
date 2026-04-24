@@ -124,9 +124,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users/{id}',   fn ($id) => view('admin.users.show', ['userId' => $id]))->name('users.show');
 
     // Manage
-    Route::get('/operators', fn () => view('admin.manage.operators'))->name('operators');
-    Route::get('/employees', fn () => view('admin.manage.employees'))->name('employees');
-    Route::get('/api-keys',  fn () => view('admin.manage.api-keys'))->name('api-keys');
+    Route::get('/operators',             fn () => view('admin.manage.operators'))->name('operators');
+    Route::get('/employees',             fn () => view('admin.manage.employees'))->name('employees');
+    Route::get('/api-keys',              fn () => view('admin.manage.api-keys'))->name('api-keys');
+    Route::get('/operator-api-settings', fn () => view('admin.manage.operator-api-settings'))->name('operator-api-settings');
 
     // Commission
     Route::get('/commission/slab',    fn () => view('admin.commission.slab'))->name('commission.slab');

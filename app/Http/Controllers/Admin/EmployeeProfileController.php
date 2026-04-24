@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Services\OtpService;
+use App\Services\TotpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,10 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class EmployeeProfileController extends Controller
 {
-    public function __construct(private readonly OtpService $otpService) {}
+    public function __construct(
+        private readonly OtpService  $otpService,
+        private readonly TotpService $totpService,
+    ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/v1/employee/profile
@@ -150,12 +154,68 @@ class EmployeeProfileController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // POST /api/v1/employee/2fa/setup-totp
+    // Generate TOTP secret + QR code for employee to scan
+    // ─────────────────────────────────────────────────────────────────────────
+    public function setupTotp(Request $request): JsonResponse
+    {
+        $emp    = $request->user('employee');
+        $secret = $this->totpService->generateSecret();
+        $label  = $emp->email ?: $emp->mobile;
+        $qrDataUri = $this->totpService->getQrImageDataUri($secret, $label);
+
+        $emp->update(['totp_secret' => $secret]);
+
+        return response()->json([
+            'secret'  => $secret,
+            'qr_url'  => $qrDataUri ?: $this->totpService->getQrImageUrl($secret, $label),
+            'otp_uri' => $this->totpService->getQrCodeUri($secret, $label),
+            'message' => 'Scan the QR code with your Authenticator app, then confirm with a code.',
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // POST /api/v1/employee/2fa/enable-totp
+    // Confirm TOTP setup by verifying first code
+    // ─────────────────────────────────────────────────────────────────────────
+    public function enableTotp(Request $request): JsonResponse
+    {
+        $request->validate(['code' => ['required', 'digits:6']]);
+
+        $emp = $request->user('employee');
+
+        if (! $emp->totp_secret) {
+            return response()->json(['message' => 'Run TOTP setup first.'], 422);
+        }
+
+        if (! $this->totpService->verify($emp->totp_secret, $request->code)) {
+            return response()->json(['message' => 'Invalid code. Make sure your device clock is correct.'], 422);
+        }
+
+        $emp->update([
+            'totp_enabled'       => true,
+            'two_factor_enabled' => true,
+            'two_factor_method'  => 'totp',
+        ]);
+
+        $this->auditLog($emp->id, 'profile.totp_enabled', 'Employee enabled TOTP 2FA.', $request);
+
+        return response()->json(['message' => 'Authenticator app 2FA enabled successfully.']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // DELETE /api/v1/employee/2fa/disable
     // ─────────────────────────────────────────────────────────────────────────
     public function disableTfa(Request $request): JsonResponse
     {
         $emp = $request->user('employee');
-        $emp->update(['two_factor_enabled' => false, 'backup_codes' => null]);
+        $emp->update([
+            'two_factor_enabled' => false,
+            'totp_enabled'       => false,
+            'totp_secret'        => null,
+            'two_factor_method'  => 'none',
+            'backup_codes'       => null,
+        ]);
 
         $this->auditLog($emp->id, 'profile.2fa_disabled', 'Employee disabled 2FA.', $request);
 
