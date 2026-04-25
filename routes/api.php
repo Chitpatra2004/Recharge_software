@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
 use App\Http\Controllers\Admin\UserPaymentRequestController as AdminUserPaymentRequestController;
 use App\Http\Controllers\Admin\OperatorApiSettingController;
+use App\Http\Controllers\Admin\PdrsAdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\TwoFactorController;
@@ -150,6 +151,11 @@ Route::prefix('v1/employee')
     Route::put('/operator-routes/{route}/api-setting',        [OperatorApiSettingController::class, 'update']);
     Route::put('/operator-routes/{route}/margin',             [OperatorApiSettingController::class, 'updateMargin']);
 
+    // PDRS admin utilities (balance, status check, complaint)
+    Route::get('/pdrs/{route}/balance',                       [PdrsAdminController::class, 'balance']);
+    Route::get('/pdrs/{route}/check-status',                  [PdrsAdminController::class, 'checkStatus']);
+    Route::post('/pdrs/{route}/complain',                     [PdrsAdminController::class, 'raiseComplaint']);
+
 });
 
 // ── Public endpoints ────────────────────────────────────────────────────────
@@ -179,7 +185,9 @@ Route::prefix('v1')->middleware('log.api')->group(function () {
          ->middleware('throttle:5,1');
 
     // Operator callback webhook — secured by HMAC in controller
-    Route::post('/recharge/callback', [RechargeController::class, 'callback']);
+    Route::post('/recharge/callback',       [RechargeController::class, 'callback']);
+    // PDRS sends GET callbacks: ?uniqueid={order_id}&status={}&transaction_id={}&...
+    Route::get('/recharge/pdrs-callback',   [RechargeController::class, 'pdrsCallback']);
 
 });
 

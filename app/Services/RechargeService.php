@@ -131,14 +131,15 @@ class RechargeService implements RechargeServiceInterface
 
                 // Guzzle HTTP call — enforces hard timeout
                 $routeTimeout = min($route->timeout_seconds ?? $syncTimeout, $syncTimeout);
+                $cfg          = $route->api_config ?? [];
 
-                $response = Http::timeout($routeTimeout)
-                    ->connectTimeout($connectTimeout)
-                    ->withHeaders(['Accept' => 'application/json'])
-                    ->post($route->api_endpoint, $payload);
+                $response = $this->callOperatorApi(
+                    $route->api_endpoint, $payload, $cfg,
+                    $routeTimeout, $connectTimeout
+                );
 
                 $duration = (int) ((microtime(true) - $startTime) * 1000);
-                $isOk     = $response->successful() && $this->isOperatorSuccess($response->json());
+                $isOk     = $response->successful() && $this->isOperatorSuccess($response->json(), $cfg);
 
                 RechargeAttempt::create([
                     'recharge_transaction_id' => $transaction->id,
@@ -154,9 +155,10 @@ class RechargeService implements RechargeServiceInterface
 
                 if ($isOk) {
                     // ── Step 5a: Confirmed success ────────────────────────────
-                    $operatorRef = $response->json('txn_id')
-                                ?? $response->json('ref_id')
-                                ?? $response->json('operator_ref');
+                    $txnidKey    = $cfg['txnid_key'] ?? null;
+                    $operatorRef = $txnidKey
+                        ? ($response->json($txnidKey) ?? $apiRef)
+                        : ($response->json('txn_id') ?? $response->json('ref_id') ?? $response->json('operator_ref') ?? $apiRef);
 
                     DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
                         $this->rechargeRepo->updateStatus($transaction->id, 'success', [
@@ -350,13 +352,14 @@ class RechargeService implements RechargeServiceInterface
                     'api_ref' => $apiRef,
                 ]);
 
-                $response = Http::timeout($route->timeout_seconds ?? 10)
-                    ->connectTimeout(5)
-                    ->withHeaders(['Accept' => 'application/json'])
-                    ->post($route->api_endpoint, $payload);
+                $cfg2     = $route->api_config ?? [];
+                $response = $this->callOperatorApi(
+                    $route->api_endpoint, $payload, $cfg2,
+                    $route->timeout_seconds ?? 10, 5
+                );
 
                 $duration = (int) ((microtime(true) - $startTime) * 1000);
-                $isOk     = $response->successful() && $this->isOperatorSuccess($response->json());
+                $isOk     = $response->successful() && $this->isOperatorSuccess($response->json(), $cfg2);
 
                 RechargeAttempt::create([
                     'recharge_transaction_id' => $transaction->id,
@@ -371,9 +374,10 @@ class RechargeService implements RechargeServiceInterface
                 ]);
 
                 if ($isOk) {
-                    $operatorRef = $response->json('txn_id')
-                                ?? $response->json('ref_id')
-                                ?? $response->json('operator_ref');
+                    $txnidKey2   = $cfg2['txnid_key'] ?? null;
+                    $operatorRef = $txnidKey2
+                        ? ($response->json($txnidKey2) ?? $apiRef)
+                        : ($response->json('txn_id') ?? $response->json('ref_id') ?? $response->json('operator_ref') ?? $apiRef);
 
                     DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
                         $this->rechargeRepo->updateStatus($transaction->id, 'success', [
@@ -595,6 +599,40 @@ class RechargeService implements RechargeServiceInterface
 
     private function buildPayload(RechargeTransaction $t, array $config, string $apiRef): array
     {
+        $template = trim($config['request_params'] ?? '');
+
+        if ($template !== '') {
+            // Template-based (PDRS and similar providers): replace [placeholder] tokens
+            $search  = ['[username]', '[apitoken]', '[password]', '[token]',
+                        '[number]', '[mobile]', '[amount]', '[opcode]',
+                        '[operator]', '[transid]', '[txnid]', '[order_id]',
+                        '[circlecode]', '[circle]', '[type]', '[apiref]'];
+            $replace = [
+                $config['username']  ?? '',
+                $config['api_token'] ?? '',
+                $config['api_token'] ?? '',
+                $config['api_token'] ?? '',
+                $t->mobile, $t->mobile,
+                $t->amount, $t->operator_code, $t->operator_code,
+                $t->id, $t->id, $t->id,
+                $t->circle ?? '*', $t->circle ?? '',
+                $t->recharge_type, $apiRef,
+            ];
+
+            $paramString = str_replace($search, $replace, $template);
+            parse_str($paramString, $params);
+
+            $safeParams = $params;
+            foreach (['token', 'apitoken', 'api_token', 'password', 'key', 'secret'] as $k) {
+                if (isset($safeParams[$k])) {
+                    $safeParams[$k] = $this->maskSecret((string) $safeParams[$k]);
+                }
+            }
+
+            return [$params, $safeParams];
+        }
+
+        // Legacy fixed-key format
         $payload = [
             'api_key'  => $config['api_key'] ?? '',
             'mobile'   => $t->mobile,
@@ -606,10 +644,24 @@ class RechargeService implements RechargeServiceInterface
             'type'     => $t->recharge_type,
         ];
 
-        $safePayload              = $payload;
-        $safePayload['api_key']   = $this->maskSecret($payload['api_key']);
+        $safePayload            = $payload;
+        $safePayload['api_key'] = $this->maskSecret($payload['api_key']);
 
         return [$payload, $safePayload];
+    }
+
+    private function callOperatorApi(
+        string $endpoint, array $params, array $config,
+        int $timeout, int $connectTimeout
+    ): \Illuminate\Http\Client\Response {
+        $method = strtolower($config['method'] ?? 'post');
+        $http   = Http::timeout($timeout)->connectTimeout($connectTimeout);
+
+        if ($method === 'get') {
+            return $http->get($endpoint, $params);
+        }
+
+        return $http->withHeaders(['Accept' => 'application/json'])->post($endpoint, $params);
     }
 
     private function maskSecret(string $value): string
@@ -621,11 +673,66 @@ class RechargeService implements RechargeServiceInterface
         return substr($value, 0, 4) . str_repeat('*', min($len - 4, 12));
     }
 
-    private function isOperatorSuccess(array $response): bool
+    private function isOperatorSuccess(array $response, array $config = []): bool
     {
-        $status = strtolower(
-            $response['status'] ?? $response['STATUS'] ?? $response['code'] ?? ''
-        );
-        return in_array($status, ['success', 'successful', '1', 'ok', 'true']);
+        $statusKey  = $config['status_key']  ?? 'status';
+        $successVal = $config['success_val'] ?? null;
+
+        $status = (string) ($response[$statusKey] ?? $response['STATUS'] ?? $response['code'] ?? '');
+
+        if ($successVal) {
+            return strtolower($status) === strtolower($successVal);
+        }
+
+        return in_array(strtolower($status), ['success', 'successful', '1', 'ok', 'true']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // handlePdrsCallback() — PDRS GET callback
+    // PDRS posts: ?uniqueid={our_order_id}&status={}&operator_id={}&transaction_id={pdrs_tid}
+    // ─────────────────────────────────────────────────────────────────────────
+    public function handlePdrsCallback(int $transactionId, string $status, string $pdrsRef, array $payload): void
+    {
+        $eventToFire = null;
+
+        DB::transaction(function () use ($transactionId, $status, $pdrsRef, $payload, &$eventToFire) {
+            $transaction = RechargeTransaction::where('id', $transactionId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $transaction || $transaction->isTerminal()) {
+                return;
+            }
+
+            $normalised = strtolower($status);
+
+            if (in_array($normalised, ['success', 'successful'])) {
+                $this->rechargeRepo->updateStatus($transaction->id, 'success', [
+                    'operator_ref'      => $pdrsRef ?: ($payload['operator_id'] ?? null),
+                    'operator_response' => $payload,
+                    'processed_at'      => now(),
+                ]);
+                $this->finalizeDebit($transaction);
+                $eventToFire = new RechargeCompleted($transaction->fresh());
+
+            } elseif (in_array($normalised, ['pending', 'processing'])) {
+                Log::info('PDRS callback: operator reports pending', ['transaction_id' => $transactionId]);
+
+            } else {
+                $this->rechargeRepo->updateStatus($transaction->id, 'failed', [
+                    'failure_reason' => "PDRS callback status: {$status}",
+                    'processed_at'   => now(),
+                ]);
+                $wallet = $this->walletRepo->findByUserIdLocked($transaction->user_id);
+                if ($wallet) {
+                    $this->walletRepo->releaseReserve($wallet, (float) $transaction->amount);
+                }
+                $eventToFire = new RechargeFailed($transaction->fresh());
+            }
+        });
+
+        if ($eventToFire) {
+            event($eventToFire);
+        }
     }
 }

@@ -194,4 +194,36 @@ class RechargeController extends Controller
 
         return response()->json(['message' => 'Callback received.']);
     }
+
+    /**
+     * GET /api/v1/recharge/pdrs-callback
+     *
+     * PDRS sends GET callbacks:
+     * ?uniqueid={our_order_id}&status=Success&operator_id={}&transaction_id={pdrs_tid}&number={}&amount={}
+     */
+    public function pdrsCallback(Request $request): \Illuminate\Http\Response
+    {
+        $orderId  = $request->input('uniqueid');
+        $status   = $request->input('status');
+        $pdrsRef  = $request->input('transaction_id', '');
+
+        Log::info('PDRS callback received', $request->all());
+
+        if (! $orderId || ! $status) {
+            return response('INVALID', 400);
+        }
+
+        try {
+            $this->rechargeService->handlePdrsCallback(
+                (int) $orderId,
+                $status,
+                $pdrsRef,
+                $request->all()
+            );
+        } catch (\Throwable $e) {
+            Log::error('PDRS callback handler exception', ['error' => $e->getMessage(), 'payload' => $request->all()]);
+        }
+
+        return response('OK', 200);
+    }
 }

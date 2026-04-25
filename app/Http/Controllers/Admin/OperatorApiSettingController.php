@@ -144,17 +144,19 @@ class OperatorApiSettingController extends Controller
                 'is_active'    => $route->is_active,
             ],
             'config' => [
+                'username'       => $cfg['username']       ?? '',
+                // api_token intentionally omitted — never send raw secret to browser
                 'method'         => $cfg['method']         ?? 'GET',
                 'request_params' => $cfg['request_params'] ?? '',
                 'response_type'  => $cfg['response_type']  ?? 'JSON',
                 'separator'      => $cfg['separator']      ?? '|',
                 'status_key'     => $cfg['status_key']     ?? 'status',
-                'txnid_key'      => $cfg['txnid_key']      ?? 'txnid',
-                'live_id_key'    => $cfg['live_id_key']    ?? 'liveid',
+                'txnid_key'      => $cfg['txnid_key']      ?? 'tid',
+                'live_id_key'    => $cfg['live_id_key']    ?? 'operator_id',
                 'balance_key'    => $cfg['balance_key']    ?? 'balance',
-                'success_val'    => $cfg['success_val']    ?? 'SUCCESS',
-                'pending_val'    => $cfg['pending_val']    ?? 'PENDING',
-                'failure_val'    => $cfg['failure_val']    ?? 'FAILED',
+                'success_val'    => $cfg['success_val']    ?? 'Success',
+                'pending_val'    => $cfg['pending_val']    ?? 'Pending',
+                'failure_val'    => $cfg['failure_val']    ?? 'Failure',
             ],
         ]);
     }
@@ -164,6 +166,8 @@ class OperatorApiSettingController extends Controller
     {
         $v = Validator::make($request->all(), [
             'api_endpoint'   => ['required', 'url', 'max:500'],
+            'username'       => ['nullable', 'string', 'max:100'],
+            'api_token'      => ['nullable', 'string', 'max:500'],
             'method'         => ['required', 'in:GET,POST'],
             'request_params' => ['nullable', 'string', 'max:2000'],
             'response_type'  => ['required', 'in:JSON,XML,PIPE,STRING'],
@@ -184,21 +188,29 @@ class OperatorApiSettingController extends Controller
         $d   = $v->validated();
         $cfg = $route->api_config ?? [];   // preserve list-level fields
 
+        $merged = array_merge($cfg, [
+            'method'         => $d['method'],
+            'request_params' => $d['request_params'] ?? '',
+            'response_type'  => $d['response_type'],
+            'separator'      => $d['separator'] ?? '|',
+            'username'       => $d['username'] ?? ($cfg['username'] ?? ''),
+            'status_key'     => $d['status_key'],
+            'txnid_key'      => $d['txnid_key'],
+            'live_id_key'    => $d['live_id_key'] ?? '',
+            'balance_key'    => $d['balance_key'] ?? '',
+            'success_val'    => $d['success_val'],
+            'pending_val'    => $d['pending_val'] ?? '',
+            'failure_val'    => $d['failure_val'],
+        ]);
+
+        // Only overwrite api_token if a new value was provided
+        if (! empty($d['api_token'])) {
+            $merged['api_token'] = $d['api_token'];
+        }
+
         $route->update([
             'api_endpoint' => $d['api_endpoint'],
-            'api_config'   => array_merge($cfg, [
-                'method'         => $d['method'],
-                'request_params' => $d['request_params'] ?? '',
-                'response_type'  => $d['response_type'],
-                'separator'      => $d['separator'] ?? '|',
-                'status_key'     => $d['status_key'],
-                'txnid_key'      => $d['txnid_key'],
-                'live_id_key'    => $d['live_id_key'] ?? '',
-                'balance_key'    => $d['balance_key'] ?? '',
-                'success_val'    => $d['success_val'],
-                'pending_val'    => $d['pending_val'] ?? '',
-                'failure_val'    => $d['failure_val'],
-            ]),
+            'api_config'   => $merged,
         ]);
 
         return response()->json(['message' => 'API settings updated successfully.']);

@@ -219,6 +219,21 @@ html[data-dark="1"] .cfg-info-box input[readonly]{color:var(--text-primary)}
         </div>
         <div class="api-modal-body">
             <input type="hidden" id="cfg-id">
+
+            {{-- Credentials section --}}
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px">API Credentials</div>
+            <div class="cfg-grid" style="margin-bottom:4px">
+                <div class="field">
+                    <label>Username</label>
+                    <input type="text" id="cfg-username" placeholder="Your registered mobile / username" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label>API Token</label>
+                    <input type="password" id="cfg-apitoken" placeholder="API token / key" autocomplete="new-password">
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Used as <code>[apitoken]</code> and <code>[password]</code> in params</div>
+                </div>
+            </div>
+
             <div class="cfg-grid">
                 <div class="field">
                     <label>Method *</label>
@@ -238,12 +253,12 @@ html[data-dark="1"] .cfg-info-box input[readonly]{color:var(--text-primary)}
                 </div>
                 <div class="field" style="grid-column:1/-1">
                     <label>Website URL *</label>
-                    <input type="url" id="cfg-url" placeholder="https://api.example.com/recharge?">
+                    <input type="url" id="cfg-url" placeholder="https://pdrs.online/API2/RechargeNew">
                 </div>
                 <div class="field" style="grid-column:1/-1">
                     <label>Request Parameters</label>
-                    <textarea id="cfg-params" rows="3" placeholder="number=[number]&amount=[amount]&opcode=[opcode]&transid=[transid]"></textarea>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Placeholders: <code>[number]</code> <code>[amount]</code> <code>[opcode]</code> <code>[transid]</code></div>
+                    <textarea id="cfg-params" rows="3" placeholder="username=[username]&token=[apitoken]&number=[number]&opcode=[opcode]&amount=[amount]&transid=[transid]&circlecode=*"></textarea>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Placeholders: <code>[username]</code> <code>[apitoken]</code> <code>[number]</code> <code>[amount]</code> <code>[opcode]</code> <code>[transid]</code> <code>[circlecode]</code></div>
                 </div>
                 <div class="field" id="sep-field">
                     <label>Separator</label>
@@ -360,6 +375,7 @@ function renderTable(rows) {
             <td><span style="font-size:12px;font-weight:600;color:${r.purchase === 'active' ? '#2e7d32' : '#9e9e9e'}">${r.purchase}</span></td>
             <td>${toggleHtml(r.id, 'renewal', r.auto_renewal)}</td>
             <td style="display:flex;gap:6px;align-items:center">
+                <button class="btn-api green" onclick="checkBalance(${r.id},this)" title="Fetch live balance from PDRS">Bal</button>
                 <button class="btn-api grey" onclick="openEditModal(${r.id})">Update</button>
                 <span style="color:var(--border)">|</span>
                 <button class="btn-api red" onclick="deleteProvider(${r.id}, '${esc(r.name)}')">Delete</button>
@@ -513,18 +529,20 @@ async function openCfgModal(id) {
         const d = await r.json();
         if (!r.ok) return;
         const c = d.config;
-        document.getElementById('cfg-method').value   = c.method;
-        document.getElementById('cfg-url').value      = d.route.api_endpoint;
-        document.getElementById('cfg-params').value   = c.request_params;
-        document.getElementById('cfg-rtype').value    = c.response_type;
-        document.getElementById('cfg-sep').value      = c.separator;
-        document.getElementById('cfg-status-key').value = c.status_key;
-        document.getElementById('cfg-txnid-key').value  = c.txnid_key;
-        document.getElementById('cfg-live-id-key').value = c.live_id_key;
-        document.getElementById('cfg-balance-key').value = c.balance_key;
-        document.getElementById('cfg-success').value  = c.success_val;
-        document.getElementById('cfg-pending').value  = c.pending_val;
-        document.getElementById('cfg-failure').value  = c.failure_val;
+        document.getElementById('cfg-username').value   = c.username || '';
+        document.getElementById('cfg-apitoken').value   = '';           // never pre-fill passwords
+        document.getElementById('cfg-method').value     = c.method;
+        document.getElementById('cfg-url').value        = d.route.api_endpoint;
+        document.getElementById('cfg-params').value     = c.request_params;
+        document.getElementById('cfg-rtype').value      = c.response_type;
+        document.getElementById('cfg-sep').value        = c.separator;
+        document.getElementById('cfg-status-key').value   = c.status_key;
+        document.getElementById('cfg-txnid-key').value    = c.txnid_key;
+        document.getElementById('cfg-live-id-key').value  = c.live_id_key;
+        document.getElementById('cfg-balance-key').value  = c.balance_key;
+        document.getElementById('cfg-success').value    = c.success_val;
+        document.getElementById('cfg-pending').value    = c.pending_val;
+        document.getElementById('cfg-failure').value    = c.failure_val;
         toggleSep();
     } catch(e) {}
 }
@@ -538,12 +556,15 @@ function toggleSep() {
 
 async function saveCfg() {
     const id  = document.getElementById('cfg-id').value;
+    const tokenVal = document.getElementById('cfg-apitoken').value;
     const body = {
         api_endpoint:   document.getElementById('cfg-url').value.trim(),
         method:         document.getElementById('cfg-method').value,
         request_params: document.getElementById('cfg-params').value,
         response_type:  document.getElementById('cfg-rtype').value,
         separator:      document.getElementById('cfg-sep').value,
+        username:       document.getElementById('cfg-username').value.trim(),
+        api_token:      tokenVal || undefined,   // only send if changed
         status_key:     document.getElementById('cfg-status-key').value.trim(),
         txnid_key:      document.getElementById('cfg-txnid-key').value.trim(),
         live_id_key:    document.getElementById('cfg-live-id-key').value.trim(),
@@ -552,6 +573,7 @@ async function saveCfg() {
         pending_val:    document.getElementById('cfg-pending').value.trim(),
         failure_val:    document.getElementById('cfg-failure').value.trim(),
     };
+    if (!body.api_token) delete body.api_token;   // don't overwrite with empty string
     if (!body.api_endpoint || !body.status_key || !body.txnid_key) {
         alert('URL, Status Key, and TxnId Key are required.');
         return;
@@ -594,15 +616,34 @@ async function saveMargin() {
     } catch(e) { alert('Request failed.'); }
 }
 
+// ── Balance check ─────────────────────────────────────────────────────────────
+async function checkBalance(id, btn) {
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+        const r = await fetch(`${API_BASE}/pdrs/${id}/balance`, {headers:{'Authorization':'Bearer '+_token(),'Accept':'application/json'}});
+        const d = await r.json();
+        if (!r.ok) { showToast((d.message || 'Balance check failed.'), true); return; }
+        const route = _allRoutes.find(x => x.id === id);
+        if (route) {
+            route.balance = d.balance;
+            const row = document.getElementById('row-' + id);
+            if (row) row.cells[2].textContent = '₹' + d.balance;
+        }
+        showToast(`Balance: ₹${d.balance}`);
+    } catch(e) { showToast('Request failed.', true); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function showToast(msg) {
+function showToast(msg, isError = false) {
     const t = document.createElement('div');
     t.textContent = msg;
-    Object.assign(t.style, {position:'fixed',bottom:'24px',right:'24px',background:'#1b5e20',color:'#fff',padding:'10px 20px',borderRadius:'8px',fontWeight:'600',fontSize:'13px',zIndex:9999,boxShadow:'0 4px 16px rgba(0,0,0,.2)'});
+    Object.assign(t.style, {position:'fixed',bottom:'24px',right:'24px',background: isError ? '#c62828' : '#1b5e20',color:'#fff',padding:'10px 20px',borderRadius:'8px',fontWeight:'600',fontSize:'13px',zIndex:9999,boxShadow:'0 4px 16px rgba(0,0,0,.2)'});
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    setTimeout(() => t.remove(), 3500);
 }
 
 // Close modals on overlay click
