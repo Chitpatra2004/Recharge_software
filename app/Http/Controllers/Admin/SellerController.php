@@ -248,6 +248,81 @@ class SellerController extends Controller
         ]);
     }
 
+    /**
+     * PUT /api/v1/employee/sellers/{id}/api-config/integration
+     * Admin updates a seller's integration URLs and allowed IPs.
+     */
+    public function updateIntegration(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'website_url'      => ['required', 'url', 'max:255'],
+            'callback_url'     => ['required', 'url', 'max:255'],
+            'status_check_url' => ['required', 'url', 'max:255'],
+            'dispute_url'      => ['required', 'url', 'max:255'],
+            'allowed_ips'      => ['required', 'string', 'max:1000'],
+        ]);
+
+        $integration = SellerIntegrationRequest::where('user_id', $id)->latest()->first();
+
+        if (! $integration) {
+            return response()->json(['message' => 'No integration request found for this seller.'], 404);
+        }
+
+        $ips = preg_split('/[\r\n,]+/', $data['allowed_ips']) ?: [];
+        $ips = implode("\n", array_values(array_filter(array_map('trim', $ips))));
+
+        $integration->update([
+            'website_url'      => $data['website_url'],
+            'callback_url'     => $data['callback_url'],
+            'status_check_url' => $data['status_check_url'],
+            'dispute_url'      => $data['dispute_url'],
+            'allowed_ips'      => $ips,
+        ]);
+
+        ActivityLogger::log('admin.integration_updated', "Integration config updated for seller #{$id}", null,
+            ['seller_id' => $id], null, $request);
+
+        return response()->json(['message' => 'Integration config updated successfully.', 'data' => $integration]);
+    }
+
+    /**
+     * POST /api/v1/employee/sellers/{id}/api-config/generate-key
+     * Admin generates a new API key for a seller.
+     */
+    public function generateSellerApiKey(Request $request, int $id): JsonResponse
+    {
+        $seller = User::whereIn('role', ['api_user', 'retailer'])->findOrFail($id);
+
+        $rawKey = 'rk_' . Str::random(60);
+        $name   = 'Seller API Key';
+
+        ApiKey::where('user_id', $seller->id)
+            ->where('name', $name)
+            ->update(['is_active' => false]);
+
+        $integration = SellerIntegrationRequest::where('user_id', $seller->id)->latest()->first();
+
+        $apiKey = ApiKey::create([
+            'user_id'      => $seller->id,
+            'name'         => $name,
+            'key_prefix'   => substr($rawKey, 0, 12),
+            'key_hash'     => hash('sha256', $rawKey),
+            'scopes'       => ['recharge:read', 'recharge:write', 'wallet:read'],
+            'ip_whitelist' => $this->parseAllowedIps($integration?->allowed_ips),
+            'is_active'    => true,
+        ]);
+
+        ActivityLogger::log('admin.api_key_generated', "API key generated for seller #{$id} ({$seller->email})", null,
+            ['seller_id' => $id], null, $request);
+
+        return response()->json([
+            'message'    => 'API key generated. Store this key securely — it will not be shown again.',
+            'api_key'    => $rawKey,
+            'key_prefix' => $apiKey->key_prefix,
+            'seller'     => ['id' => $seller->id, 'name' => $seller->name],
+        ], 201);
+    }
+
     private function parseAllowedIps(?string $raw): ?array
     {
         if (! $raw) {

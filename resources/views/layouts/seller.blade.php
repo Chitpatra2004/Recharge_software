@@ -242,6 +242,10 @@
             <a href="/seller/reports/topup"    class="nav-item {{ request()->is('seller/reports/topup')    ? 'active' : '' }}">Topup Report</a>
             <a href="/seller/reports/operator" class="nav-item {{ request()->is('seller/reports/operator') ? 'active' : '' }}">Operator Report</a>
             <a href="/seller/reports/ledger"   class="nav-item {{ request()->is('seller/reports/ledger')   ? 'active' : '' }}">Account Ledger</a>
+            <a href="/seller/api-setting" class="nav-item {{ request()->is('seller/api-setting') || request()->is('seller/api-config') ? 'active' : '' }}" style="border-top:1px solid rgba(255,255,255,.07);margin-top:4px">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                API Config
+            </a>
         </div>
 
         <div class="nav-section">Finance</div>

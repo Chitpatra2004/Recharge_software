@@ -31,7 +31,7 @@ class ApiConfigController extends Controller
         return response()->json([
             'data' => [
                 'server_ip'    => env('APP_SERVER_IP', request()->server('SERVER_ADDR', '0.0.0.0')),
-                'callback_url' => url('/api/v1/recharge/callback'),
+                'callback_url' => url('/api/v1/recharge/callback/' . $user->id),
                 'api_key'      => $apiKey ? [
                     'id'         => $apiKey->id,
                     'prefix'     => $apiKey->key_prefix,
@@ -52,6 +52,42 @@ class ApiConfigController extends Controller
                 'api_docs_url' => url('/seller/api-docs'),
             ],
         ]);
+    }
+
+    /**
+     * PATCH /api/v1/seller/api-config/integration/update
+     * Allow seller to update integration details (even after approval).
+     */
+    public function updateIntegrationDetails(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'website_url'       => ['required', 'url', 'max:255'],
+            'callback_url'      => ['required', 'url', 'max:255'],
+            'status_check_url'  => ['required', 'url', 'max:255'],
+            'dispute_url'       => ['required', 'url', 'max:255'],
+            'allowed_ips'       => ['required', 'string', 'max:1000'],
+            'site_username'     => ['sometimes', 'nullable', 'string', 'max:100'],
+            'site_password_hint'=> ['sometimes', 'nullable', 'string', 'max:100'],
+        ]);
+
+        $user        = $request->user();
+        $integration = SellerIntegrationRequest::where('user_id', $user->id)->latest()->first();
+
+        if (! $integration) {
+            return response()->json(['message' => 'No integration request found. Please submit first.'], 404);
+        }
+
+        $integration->update([
+            'website_url'        => $data['website_url'],
+            'callback_url'       => $data['callback_url'],
+            'status_check_url'   => $data['status_check_url'],
+            'dispute_url'        => $data['dispute_url'],
+            'site_username'      => $data['site_username'] ?? $integration->site_username,
+            'site_password_hint' => $data['site_password_hint'] ?? $integration->site_password_hint,
+            'allowed_ips'        => $this->normalizeAllowedIps($data['allowed_ips']),
+        ]);
+
+        return response()->json(['message' => 'Integration details updated successfully.']);
     }
 
     /**

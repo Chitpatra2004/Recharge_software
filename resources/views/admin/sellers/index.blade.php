@@ -220,6 +220,84 @@ tr.pending-row:hover td{background:#fef3c7!important}
     </div>
 </div>
 
+{{-- Generate API Key Modal --}}
+<div id="genKeyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
+    <div class="card" style="width:480px;max-width:95vw;padding:26px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <h3 style="font-size:16px;font-weight:700">Generate API Key</h3>
+            <button onclick="closeGenKeyModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px">
+            <div style="color:var(--text-secondary);margin-bottom:3px">Seller</div>
+            <div id="genKeySellerName" style="font-weight:700;font-size:15px"></div>
+        </div>
+        <div id="genKeyResult" style="display:none;margin-bottom:18px">
+            <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:8px">Generated API Key (copy now — shown only once):</div>
+            <div style="background:#1e293b;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+                <span id="genKeyValue" style="font-family:monospace;font-size:12.5px;color:#e2e8f0;flex:1;word-break:break-all"></span>
+                <button onclick="copyGenKey()" style="background:rgba(255,255,255,.15);border:none;color:#94a3b8;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer">Copy</button>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px">
+            <button id="genKeySubmitBtn" onclick="submitGenKey()" style="flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Generate Key</button>
+            <button onclick="closeGenKeyModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Close</button>
+        </div>
+    </div>
+</div>
+
+{{-- API Config Modal (admin view/update seller's integration) --}}
+<div id="apiCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
+    <div class="card" style="width:580px;max-width:95vw;padding:26px;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <h3 style="font-size:16px;font-weight:700">API Config — <span id="apiCfgSellerName"></span></h3>
+            <button onclick="closeApiCfgModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
+        </div>
+
+        {{-- Server Info Box --}}
+        <div id="apiCfgServerInfo" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:10px;padding:14px 16px;margin-bottom:18px;color:#fff;font-size:13px">
+            <div style="font-size:10.5px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Platform Credentials for This Seller</div>
+            <div style="margin-bottom:6px">
+                <span style="opacity:.7;font-size:11px">Server IP:</span>
+                <span id="apiCfgServerIp" style="font-family:monospace;font-weight:600;margin-left:8px"></span>
+            </div>
+            <div>
+                <span style="opacity:.7;font-size:11px">Unique Callback URL:</span>
+                <span id="apiCfgCallbackUrl" style="font-family:monospace;font-weight:600;margin-left:8px;font-size:11.5px;word-break:break-all"></span>
+            </div>
+        </div>
+
+        <div id="apiCfgLoading" style="text-align:center;padding:20px;color:#64748b">Loading integration details…</div>
+        <div id="apiCfgForm" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px">
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Website URL *</label>
+                    <input id="cfg-website" type="url" placeholder="https://yourdomain.com" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Seller Callback URL * <span style="font-size:11px;color:#94a3b8">(we call this to notify seller)</span></label>
+                    <input id="cfg-callback" type="url" placeholder="https://yourdomain.com/recharge/callback" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Status Check URL *</label>
+                    <input id="cfg-status-check" type="url" placeholder="https://yourdomain.com/recharge/status" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Dispute URL *</label>
+                    <input id="cfg-dispute" type="url" placeholder="https://yourdomain.com/recharge/dispute" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Allowed IPs *</label>
+                    <textarea id="cfg-ips" rows="3" placeholder="203.0.113.42&#10;198.51.100.0/24" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical"></textarea>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px">
+                <button id="apiCfgSaveBtn" onclick="saveApiCfg()" style="flex:1;padding:10px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Save Config</button>
+                <button onclick="closeApiCfgModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 const TOKEN = ()=>localStorage.getItem('emp_token');
@@ -362,6 +440,14 @@ function renderTable(sellers){
                         <button onclick="loginAsSeller(${r.id},'${r.name.replace(/'/g,"\\'")}')"
                             style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-primary)">
                             Login As
+                        </button>
+                        <button onclick="openGenKeyModal(${r.id},'${r.name.replace(/'/g,"\\'")}')"
+                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #7c3aed;color:#7c3aed;background:#fff;font-weight:600">
+                            Gen Key
+                        </button>
+                        <button onclick="openApiCfgModal(${r.id},'${r.name.replace(/'/g,"\\'")}')"
+                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #0891b2;color:#0891b2;background:#fff;font-weight:600">
+                            API Cfg
                         </button>
                     ` : ''}
                 </div>
@@ -544,6 +630,79 @@ function loginAsSeller(id,name){
 function showAddModal(){ document.getElementById('addModal').style.display='flex'; }
 function submitAdd(){ document.getElementById('addModal').style.display='none'; }
 function exportSellers(){ window.open('/api/v1/employee/sellers?export=csv&role='+activeTab+'&'+new URLSearchParams({search:document.getElementById('searchSeller').value,status:document.getElementById('fStatus').value}),'_blank'); }
+
+// ── Generate API Key Modal ─────────────────────────────────────────────────
+let genKeySellerId = null;
+function openGenKeyModal(id, name){
+    genKeySellerId = id;
+    document.getElementById('genKeySellerName').textContent = name;
+    document.getElementById('genKeyResult').style.display   = 'none';
+    document.getElementById('genKeyValue').textContent      = '';
+    document.getElementById('genKeySubmitBtn').disabled     = false;
+    document.getElementById('genKeySubmitBtn').textContent  = 'Generate Key';
+    document.getElementById('genKeyModal').style.display    = 'flex';
+}
+function closeGenKeyModal(){ document.getElementById('genKeyModal').style.display='none'; }
+function copyGenKey(){
+    navigator.clipboard.writeText(document.getElementById('genKeyValue').textContent.trim());
+}
+function submitGenKey(){
+    const btn = document.getElementById('genKeySubmitBtn');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    empFetch(`/api/v1/employee/sellers/${genKeySellerId}/api-config/generate-key`, 'POST')
+        .then(data=>{
+            document.getElementById('genKeyValue').textContent    = data.api_key || '';
+            document.getElementById('genKeyResult').style.display = 'block';
+            btn.textContent = 'Regenerate';
+            btn.disabled    = false;
+            loadData(currentPage);
+        })
+        .catch(e=>{ alert(e.message||'Failed to generate key.'); btn.disabled=false; btn.textContent='Generate Key'; });
+}
+
+// ── API Config Modal ───────────────────────────────────────────────────────
+let apiCfgSellerId = null;
+function openApiCfgModal(id, name){
+    apiCfgSellerId = id;
+    document.getElementById('apiCfgSellerName').textContent = name;
+    document.getElementById('apiCfgLoading').style.display  = 'block';
+    document.getElementById('apiCfgForm').style.display     = 'none';
+    document.getElementById('apiCfgServerIp').textContent   = '';
+    document.getElementById('apiCfgCallbackUrl').textContent = window.location.origin + '/api/v1/recharge/callback/' + id;
+    document.getElementById('apiCfgModal').style.display    = 'flex';
+
+    empFetch(`/api/v1/employee/sellers/${id}`).then(({data})=>{
+        const intg = data.integration || {};
+        document.getElementById('cfg-website').value     = intg.website_url     || '';
+        document.getElementById('cfg-callback').value    = intg.callback_url    || '';
+        document.getElementById('cfg-status-check').value = intg.status_check_url || '';
+        document.getElementById('cfg-dispute').value     = intg.dispute_url     || '';
+        document.getElementById('cfg-ips').value         = intg.allowed_ips     || '';
+        document.getElementById('apiCfgLoading').style.display = 'none';
+        document.getElementById('apiCfgForm').style.display    = 'block';
+    }).catch(()=>{
+        document.getElementById('apiCfgLoading').textContent = 'Failed to load integration details.';
+    });
+}
+function closeApiCfgModal(){ document.getElementById('apiCfgModal').style.display='none'; }
+function saveApiCfg(){
+    const btn = document.getElementById('apiCfgSaveBtn');
+    const body = {
+        website_url:      document.getElementById('cfg-website').value.trim(),
+        callback_url:     document.getElementById('cfg-callback').value.trim(),
+        status_check_url: document.getElementById('cfg-status-check').value.trim(),
+        dispute_url:      document.getElementById('cfg-dispute').value.trim(),
+        allowed_ips:      document.getElementById('cfg-ips').value.trim(),
+    };
+    if(!body.website_url||!body.callback_url||!body.status_check_url||!body.dispute_url||!body.allowed_ips){
+        alert('All fields are required.'); return;
+    }
+    btn.disabled=true; btn.textContent='Saving…';
+    empFetch(`/api/v1/employee/sellers/${apiCfgSellerId}/api-config/integration`,'PUT',body)
+        .then(d=>{ alert(d.message||'Saved.'); closeApiCfgModal(); })
+        .catch(e=>alert(e.message||'Failed.'))
+        .finally(()=>{ btn.disabled=false; btn.textContent='Save Config'; });
+}
 
 // ── Wallet Adjust ─────────────────────────────────────────────────────────
 let walletSellerId=null, walletType=null;

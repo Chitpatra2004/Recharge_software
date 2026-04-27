@@ -823,11 +823,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
-        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/operator-api-settings') ? 'open' : '' }}" id="manage-sub">
+        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') ? 'open' : '' }}" id="manage-sub">
             <a href="/admin/operators" class="nav-item {{ request()->is('admin/operators') ? 'active' : '' }}">Operators</a>
             <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees') ? 'active' : '' }}">Employees</a>
             <a href="/admin/api-keys" class="nav-item {{ request()->is('admin/api-keys') ? 'active' : '' }}">API Keys</a>
-            <a href="/admin/operator-api-settings" class="nav-item {{ request()->is('admin/operator-api-settings') ? 'active' : '' }}">API Configuration</a>
+            <a href="/admin/operator-api-settings" class="nav-item {{ request()->is('admin/operator-api-settings') ? 'active' : '' }}">API List</a>
+            <a href="/admin/api-integration-portal" class="nav-item {{ request()->is('admin/api-integration-portal') ? 'active' : '' }}">API Integration Portal</a>
         </div>
 
         <div class="nav-section">Commission</div>

@@ -7,6 +7,10 @@
         <h1 class="page-title">Account Report</h1>
         <p class="page-sub">Your account performance summary and statistics</p>
     </div>
+    <a href="/seller/api-setting" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        API Config
+    </a>
 </div>
 
 <!-- Date Filters -->

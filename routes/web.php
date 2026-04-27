@@ -128,6 +128,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/employees',             fn () => view('admin.manage.employees'))->name('employees');
     Route::get('/api-keys',              fn () => view('admin.manage.api-keys'))->name('api-keys');
     Route::get('/operator-api-settings', fn () => view('admin.manage.operator-api-settings'))->name('operator-api-settings');
+    Route::get('/api-integration-portal', fn () => view('admin.manage.api-integration-portal'))->name('api-integration-portal');
 
     // Commission
     Route::get('/commission/slab',    fn () => view('admin.commission.slab'))->name('commission.slab');

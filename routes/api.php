@@ -147,14 +147,20 @@ Route::prefix('v1/employee')
     Route::put('/api-providers/{route}/basic',                [OperatorApiSettingController::class, 'updateBasic']);
     Route::patch('/api-providers/{route}/toggle',             [OperatorApiSettingController::class, 'toggle']);
     Route::delete('/api-providers/{route}',                   [OperatorApiSettingController::class, 'destroy']);
-    Route::get('/operator-routes/{route}/api-setting',        [OperatorApiSettingController::class, 'show']);
-    Route::put('/operator-routes/{route}/api-setting',        [OperatorApiSettingController::class, 'update']);
-    Route::put('/operator-routes/{route}/margin',             [OperatorApiSettingController::class, 'updateMargin']);
 
-    // PDRS admin utilities (balance, status check, complaint)
-    Route::get('/pdrs/{route}/balance',                       [PdrsAdminController::class, 'balance']);
-    Route::get('/pdrs/{route}/check-status',                  [PdrsAdminController::class, 'checkStatus']);
-    Route::post('/pdrs/{route}/complain',                     [PdrsAdminController::class, 'raiseComplaint']);
+    // API Integration Portal — per-section config + live test
+    Route::get('/api-providers/{route}/full-config',          [OperatorApiSettingController::class, 'fullConfig']);
+    Route::put('/api-providers/{route}/credentials',          [OperatorApiSettingController::class, 'updateCredentials']);
+    Route::put('/api-providers/{route}/recharge-api',         [OperatorApiSettingController::class, 'updateRechargeApi']);
+    Route::put('/api-providers/{route}/balance-api',          [OperatorApiSettingController::class, 'updateBalanceApi']);
+    Route::put('/api-providers/{route}/status-api',           [OperatorApiSettingController::class, 'updateStatusApi']);
+    Route::put('/api-providers/{route}/complaint-api',        [OperatorApiSettingController::class, 'updateComplaintApi']);
+    Route::put('/api-providers/{route}/callback',             [OperatorApiSettingController::class, 'updateCallback']);
+    Route::put('/api-providers/{route}/op-codes',             [OperatorApiSettingController::class, 'updateOpCodes']);
+    Route::get('/api-providers/{route}/test-balance',         [OperatorApiSettingController::class, 'testBalance']);
+    Route::get('/api-providers/{route}/test-status',          [OperatorApiSettingController::class, 'testStatus']);
+    Route::post('/api-providers/{route}/test-complaint',      [OperatorApiSettingController::class, 'testComplaint']);
+    Route::put('/api-providers/{route}/margin',               [OperatorApiSettingController::class, 'updateMargin']);
 
 });
 
@@ -185,9 +191,12 @@ Route::prefix('v1')->middleware('log.api')->group(function () {
          ->middleware('throttle:5,1');
 
     // Operator callback webhook — secured by HMAC in controller
-    Route::post('/recharge/callback',       [RechargeController::class, 'callback']);
+    Route::post('/recharge/callback',                     [RechargeController::class, 'callback']);
+    // Per-seller callback URLs (sellerId is used for routing/logging only; HMAC still verified)
+    Route::post('/recharge/callback/{sellerId}',          [RechargeController::class, 'callback']);
+    Route::get('/recharge/callback/{sellerId}',           [RechargeController::class, 'pdrsCallback']);
     // PDRS sends GET callbacks: ?uniqueid={order_id}&status={}&transaction_id={}&...
-    Route::get('/recharge/pdrs-callback',   [RechargeController::class, 'pdrsCallback']);
+    Route::get('/recharge/pdrs-callback',                 [RechargeController::class, 'pdrsCallback']);
 
 });
 
@@ -354,9 +363,10 @@ Route::prefix('v1/seller')
 
     Route::get('/dashboard',               [SellerDashboardController::class, 'index']);
 
-    Route::get('/api-config',              [SellerApiConfigController::class, 'config']);
-    Route::post('/api-config/integration', [SellerApiConfigController::class, 'submitIntegration']);
-    Route::patch('/api-config/toggle-api', [SellerApiConfigController::class, 'toggleApiStatus']);
+    Route::get('/api-config',                        [SellerApiConfigController::class, 'config']);
+    Route::post('/api-config/integration',           [SellerApiConfigController::class, 'submitIntegration']);
+    Route::patch('/api-config/integration',          [SellerApiConfigController::class, 'updateIntegrationDetails']);
+    Route::patch('/api-config/toggle-api',           [SellerApiConfigController::class, 'toggleApiStatus']);
 
     Route::get('/sales', [SellerSalesController::class, 'index']);
 
@@ -394,8 +404,12 @@ Route::prefix('v1/employee/sellers')
     Route::post('/{id}/login-as',      [AdminSellerController::class, 'loginAs']);
 
     // Wallet management
-    Route::post('/{id}/wallet/adjust',       [AdminWalletController::class, 'adjust']);
-    Route::get('/{id}/wallet/transactions',  [AdminWalletController::class, 'transactions']);
+    Route::post('/{id}/wallet/adjust',              [AdminWalletController::class, 'adjust']);
+    Route::get('/{id}/wallet/transactions',         [AdminWalletController::class, 'transactions']);
+
+    // API config management for a seller (update integration URLs + generate key)
+    Route::put('/{id}/api-config/integration',      [AdminSellerController::class, 'updateIntegration']);
+    Route::post('/{id}/api-config/generate-key',    [AdminSellerController::class, 'generateSellerApiKey']);
 });
 
 // ── Admin: User Impersonation ───────────────────────────────────────────────
