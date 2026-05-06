@@ -30,6 +30,7 @@ class ApiKeyController extends Controller
         $q = trim($request->input('q', $request->input('search', '')));
 
         $users = User::where('status', 'active')
+            ->whereIn('role', ['api_user', 'retailer'])
             ->when($q, fn ($query) =>
                 $query->where(fn ($sub) =>
                     $sub->where('name', 'like', "%{$q}%")
@@ -54,7 +55,6 @@ class ApiKeyController extends Controller
                 'user:id,name,email,role,status',
                 'user.latestIntegration:id,user_id,status,api_status,admin_status',
             ])
-            ->whereHas('user', fn ($query) => $query->whereIn('role', ['api_user', 'retailer']))
             ->latest()
             ->paginate($request->integer('per_page', 25));
 
