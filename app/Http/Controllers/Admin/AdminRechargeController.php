@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RechargeTransaction;
+use App\Models\OperatorRoute;
 use App\Contracts\Services\RechargeServiceInterface;
 use App\Services\ApiRequestLogSchema;
 use App\Services\ActivityLogger;
@@ -119,8 +120,11 @@ class AdminRechargeController extends Controller
             ->leftJoin('operator_routes as orr', 'orr.id', '=', 'ra.operator_route_id')
             ->where('ra.recharge_transaction_id', $id)
             ->orderBy('ra.attempt_number')
+            ->orderBy('ra.id')
             ->get([
                 'ra.id',
+                'ra.log_type',
+                'ra.log_label',
                 'ra.attempt_number',
                 'ra.status',
                 'ra.request_url',
@@ -131,6 +135,7 @@ class AdminRechargeController extends Controller
                 'ra.error_message',
                 'ra.created_at',
                 'orr.operator_code',
+                'orr.api_provider',
                 'orr.api_endpoint',
             ]);
 
@@ -226,5 +231,95 @@ class AdminRechargeController extends Controller
             'message' => "Transaction #{$id} resent successfully.",
             'status'  => $transaction->status,
         ]);
+    }
+
+    public function markSuccess(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $transaction = RechargeTransaction::findOrFail($id);
+
+        if ($transaction->status === 'refunded') {
+            return response()->json(['message' => 'Refunded transaction cannot be marked success.'], 422);
+        }
+
+        $transaction->update([
+            'status'            => 'success',
+            'failure_reason'    => null,
+            'operator_response' => array_filter([
+                'manual_action' => 'marked_success',
+                'remarks'       => $data['remarks'] ?? null,
+                'updated_by'     => 'admin',
+                'updated_at'     => now()->toDateTimeString(),
+            ]),
+            'processed_at'      => now(),
+        ]);
+
+        ActivityLogger::log('admin.recharge_marked_success', "Admin marked recharge #{$id} as success", null, [
+            'txn_id' => $id,
+            'remarks' => $data['remarks'] ?? null,
+        ], null, $request);
+
+        return response()->json(['message' => "Transaction #{$id} marked as success."]);
+    }
+
+    public function markStatus(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'status'  => ['required', 'in:pending,queued,processing,success,failed,refunded,partial'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $transaction = RechargeTransaction::findOrFail($id);
+        $transaction->update([
+            'status'         => $data['status'],
+            'failure_reason' => $data['remarks'] ?? $transaction->failure_reason,
+            'processed_at'   => in_array($data['status'], ['success', 'failed', 'refunded'], true) ? now() : null,
+        ]);
+
+        ActivityLogger::log('admin.recharge_status_changed', "Admin changed recharge #{$id} to {$data['status']}", null, [
+            'txn_id' => $id,
+            'status' => $data['status'],
+            'remarks' => $data['remarks'] ?? null,
+        ], null, $request);
+
+        return response()->json(['message' => "Transaction #{$id} status updated to {$data['status']}."]);
+    }
+
+    public function sendToApi(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'route_id' => ['required', 'exists:operator_routes,id'],
+            'remarks'  => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $transaction = RechargeTransaction::findOrFail($id);
+        $route = OperatorRoute::findOrFail($data['route_id']);
+
+        if (in_array($transaction->status, ['success', 'refunded'], true)) {
+            return response()->json(['message' => "Transaction #{$id} is '{$transaction->status}' and cannot be sent again."], 422);
+        }
+
+        $transaction->update([
+            'operator_code'      => $route->operator_code,
+            'recharge_type'      => $route->recharge_type,
+            'operator_route_id'  => $route->id,
+            'status'             => 'pending',
+            'failure_reason'     => $data['remarks'] ?? null,
+            'processed_at'       => null,
+        ]);
+
+        $this->rechargeService->process($transaction->fresh());
+
+        ActivityLogger::log('admin.recharge_sent_to_api', "Admin sent recharge #{$id} to {$route->api_provider}", null, [
+            'txn_id' => $id,
+            'route_id' => $route->id,
+            'api_provider' => $route->api_provider,
+            'remarks' => $data['remarks'] ?? null,
+        ], null, $request);
+
+        return response()->json(['message' => "Transaction #{$id} sent to {$route->api_provider}."]);
     }
 }

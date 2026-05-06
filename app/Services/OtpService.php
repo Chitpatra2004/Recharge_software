@@ -93,6 +93,10 @@ class OtpService
     {
         $purpose = match ($type) {
             'login_2fa'        => 'login verification',
+            'login_2fa_mobile' => 'login mobile verification',
+            'login_2fa_email'  => 'login email verification',
+            'setup_2fa_mobile' => '2FA mobile setup',
+            'setup_2fa_email'  => '2FA email setup',
             'reset_password'   => 'password reset',
             'register_verify'  => 'email/mobile verification',
             default            => 'verification',

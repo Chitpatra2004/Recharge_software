@@ -21,6 +21,7 @@ class Employee extends Authenticatable
         'dob', 'city', 'state', 'pan',
         'two_factor_enabled', 'backup_codes', 'preferences',
         'totp_secret', 'totp_enabled', 'two_factor_method',
+        'two_factor_methods',
     ];
 
     protected $hidden = ['password', 'remember_token', 'totp_secret'];
@@ -32,6 +33,7 @@ class Employee extends Authenticatable
             'permissions'        => 'array',
             'backup_codes'       => 'array',
             'preferences'        => 'array',
+            'two_factor_methods'  => 'array',
             'two_factor_enabled' => 'boolean',
             'totp_enabled'       => 'boolean',
             'dob'                => 'date',
@@ -67,5 +69,33 @@ class Employee extends Authenticatable
             return true;
         }
         return isset($this->permissions[$permission]) && $this->permissions[$permission] === true;
+    }
+
+    public function enabledTwoFactorMethods(): array
+    {
+        $methods = $this->two_factor_methods;
+
+        if (is_array($methods) && count($methods) > 0) {
+            return array_values(array_unique(array_filter($methods)));
+        }
+
+        if ($this->totp_enabled && $this->totp_secret) {
+            return ['google_authenticator'];
+        }
+
+        if (($this->two_factor_method ?? 'none') === 'otp' && $this->mobile) {
+            return ['mobile_otp'];
+        }
+
+        if (($this->two_factor_method ?? 'none') === 'totp' && $this->totp_secret) {
+            return ['google_authenticator'];
+        }
+
+        return [];
+    }
+
+    public function hasTwoFactorMethod(string $method): bool
+    {
+        return in_array($method, $this->enabledTwoFactorMethods(), true);
     }
 }

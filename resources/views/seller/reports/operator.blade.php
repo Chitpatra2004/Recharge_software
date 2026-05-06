@@ -81,12 +81,7 @@
 </div>
 
 <style>
-.op-table { width:100%; border-collapse:collapse; font-size:13px; }
-.op-table th { background:#f8fafc; color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:10px 14px; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
-.op-table td { padding:10px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
-.op-table tr:last-child td { border-bottom:none; }
-.op-table tr:hover td { background:#f8fafc; }
-.prog-bar { flex:1; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden; min-width:50px; }
+.prog-bar { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; min-width:50px; }
 .prog-fill { height:100%; border-radius:3px; }
 </style>
 
@@ -183,7 +178,7 @@ function loadData() {
         document.getElementById('chart-legend').innerHTML = legend;
 
         // Table
-        let html = `<table class="op-table"><thead><tr>
+        let html = `<table><thead><tr>
             <th>#</th>
             <th>Operator</th>
             <th>Total Txns</th>
@@ -215,7 +210,7 @@ function loadData() {
                 </td>
                 <td style="font-weight:600">${total}</td>
                 <td><span class="badge-success">${succ}</span></td>
-                <td><span class="badge-danger">${r.failed || 0}</span></td>
+                <td><span class="badge-failed">${r.failed || 0}</span></td>
                 <td style="font-weight:700;color:#1e293b">₹${fmtMoney(saleAmt)}</td>
                 <td>
                     <div style="color:#10b981;font-weight:700">+₹${fmtMoney(discount)}</div>
@@ -238,7 +233,7 @@ function loadData() {
             <td colspan="2" style="color:#374151;font-size:13px;padding:12px 14px">TOTAL</td>
             <td>${totTxn}</td>
             <td><span class="badge-success">${totSucc}</span></td>
-            <td><span class="badge-danger">${totFail}</span></td>
+            <td><span class="badge-failed">${totFail}</span></td>
             <td style="font-weight:800;color:#1e293b">₹${fmtMoney(totVol)}</td>
             <td>
                 <div style="color:#10b981;font-weight:800">+₹${fmtMoney(totDiscount)}</div>

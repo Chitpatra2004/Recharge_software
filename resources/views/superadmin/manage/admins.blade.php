@@ -87,11 +87,11 @@
                 <tbody id="adminTableBody">
                     @php
                     $admins = [
-                        ['id'=>1,'name'=>'Arjun Sharma','email'=>'arjun@rechargerhub.in','role'=>'Admin','sellers'=>42,'last'=>'2 hours ago','status'=>'active'],
-                        ['id'=>2,'name'=>'Priya Nair','email'=>'priya@rechargerhub.in','role'=>'Admin','sellers'=>38,'last'=>'5 hours ago','status'=>'active'],
-                        ['id'=>3,'name'=>'Rahul Verma','email'=>'rahul@rechargerhub.in','role'=>'Admin','sellers'=>29,'last'=>'1 day ago','status'=>'active'],
-                        ['id'=>4,'name'=>'Sneha Patel','email'=>'sneha@rechargerhub.in','role'=>'Admin','sellers'=>17,'last'=>'3 days ago','status'=>'inactive'],
-                        ['id'=>5,'name'=>'Kiran Reddy','email'=>'kiran@rechargerhub.in','role'=>'Admin','sellers'=>55,'last'=>'1 hour ago','status'=>'active'],
+                        ['id'=>1,'name'=>'Arjun Sharma','email'=>'arjun@coldpay.in','role'=>'Admin','sellers'=>42,'last'=>'2 hours ago','status'=>'active'],
+                        ['id'=>2,'name'=>'Priya Nair','email'=>'priya@coldpay.in','role'=>'Admin','sellers'=>38,'last'=>'5 hours ago','status'=>'active'],
+                        ['id'=>3,'name'=>'Rahul Verma','email'=>'rahul@coldpay.in','role'=>'Admin','sellers'=>29,'last'=>'1 day ago','status'=>'active'],
+                        ['id'=>4,'name'=>'Sneha Patel','email'=>'sneha@coldpay.in','role'=>'Admin','sellers'=>17,'last'=>'3 days ago','status'=>'inactive'],
+                        ['id'=>5,'name'=>'Kiran Reddy','email'=>'kiran@coldpay.in','role'=>'Admin','sellers'=>55,'last'=>'1 hour ago','status'=>'active'],
                     ];
                     @endphp
                     @foreach($admins as $a)
@@ -150,7 +150,7 @@
             </div>
             <div>
                 <label class="rh-label">Email Address</label>
-                <input type="email" class="rh-input" placeholder="admin@rechargerhub.in">
+                <input type="email" class="rh-input" placeholder="admin@coldpay.in">
             </div>
             <div>
                 <label class="rh-label">Password</label>

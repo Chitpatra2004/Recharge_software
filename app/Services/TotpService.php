@@ -54,7 +54,7 @@ class TotpService
     public function getQrCodeUri(string $secret, string $label, string $issuer = ''): string
     {
         if (!$issuer) {
-            $issuer = config('app.name', 'RechargeHub');
+            $issuer = config('app.name', 'ColdPay');
         }
         $label = rawurlencode($issuer . ':' . $label);
         return "otpauth://totp/{$label}?secret={$secret}&issuer=" . rawurlencode($issuer)

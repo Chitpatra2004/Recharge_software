@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class BBPSController extends Controller
 {
     // ── Biller catalogue (static; replace with live BBPS API call in production) ──
-    private const BILLERS = [
+    public const BILLERS = [
         'electricity' => [
             ['id' => 'TPDDL',       'name' => 'TPDDL (Delhi)'],
             ['id' => 'BSES_RAJ',    'name' => 'BSES Rajdhani (Delhi)'],

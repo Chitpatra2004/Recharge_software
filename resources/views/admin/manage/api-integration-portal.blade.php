@@ -314,22 +314,64 @@ html[data-dark="1"] .test-result{background:var(--bg-page)}
                 {{-- ⑤ Complaint API ── --}}
                 <div class="portal-section" id="sec-complaint">
                     <h4>Complaint / Dispute API</h4>
+                    {{-- Red param bar --}}
+                    <div style="background:#c62828;color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-bottom:16px;line-height:1.8">
+                        <strong>Parameters:</strong>
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[date]</code> recharge date yyyy-mm-dd &nbsp;
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[transid]</code> Your Unique Id &nbsp;
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[apirefid]</code> Api Txn Id &nbsp;
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[message]</code> Complaint Message &nbsp;
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[username]</code> Username &nbsp;
+                        <code style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;margin:0 3px">[apitoken]</code> API Token
+                    </div>
                     <div class="pf-grid">
                         <div>
-                            <label class="pf-label">Method *</label>
+                            <label class="pf-label">Request Type *</label>
                             <select class="pf-select" id="ca-method">
                                 <option value="GET">GET</option>
                                 <option value="POST">POST</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="pf-label">Response Type *</label>
+                            <select class="pf-select" id="ca-rtype" onchange="toggleCaSep()">
+                                <option value="JSON">JSON</option>
+                                <option value="XML">XML</option>
+                                <option value="OTHER">OTHER</option>
+                            </select>
+                        </div>
                         <div class="pf-full">
-                            <label class="pf-label">Complaint API URL *</label>
+                            <label class="pf-label">URL Part 1 (Base URL)</label>
                             <input class="pf-input" id="ca-url" placeholder="https://pdrs.online/API2/complain_api">
                         </div>
                         <div class="pf-full">
+                            <label class="pf-label">URL Part 2 (Suffix / Extra path)</label>
+                            <input class="pf-input" id="ca-url2" placeholder="Leave blank if not required">
+                        </div>
+                        <div class="pf-full">
                             <label class="pf-label">Request Parameters</label>
-                            <textarea class="pf-textarea" id="ca-params" placeholder="username=[username]&token=[apitoken]&order_id=[order_id]&Message=[message]"></textarea>
-                            <div class="pf-hint">Placeholders: <code>[username]</code> <code>[apitoken]</code> <code>[order_id]</code> <code>[message]</code></div>
+                            <textarea class="pf-textarea" id="ca-params" placeholder="username=[username]&token=[apitoken]&order_id=[transid]&Message=[message]"></textarea>
+                        </div>
+                        <div id="ca-sep-field" style="display:none">
+                            <label class="pf-label">Separator</label>
+                            <input class="pf-input" id="ca-sep" placeholder="|">
+                            <div class="pf-hint">Only required for non-JSON/XML response types</div>
+                        </div>
+                        <div>
+                            <label class="pf-label">Status Field</label>
+                            <input class="pf-input" id="ca-status-key" placeholder="status">
+                        </div>
+                        <div>
+                            <label class="pf-label">Success Key</label>
+                            <input class="pf-input" id="ca-success-key" placeholder="success">
+                        </div>
+                        <div>
+                            <label class="pf-label">Failure Key</label>
+                            <input class="pf-input" id="ca-failure-key" placeholder="failure">
+                        </div>
+                        <div>
+                            <label class="pf-label">Pending Key</label>
+                            <input class="pf-input" id="ca-pending-key" placeholder="pending">
                         </div>
                     </div>
                     <div class="pf-save-row">
@@ -339,7 +381,7 @@ html[data-dark="1"] .test-result{background:var(--bg-page)}
                     <div class="test-panel">
                         <h5>Live Test — Raise Complaint</h5>
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                            <input class="pf-input" id="test-complaint-order" placeholder="Order ID" style="max-width:160px">
+                            <input class="pf-input" id="test-complaint-order" placeholder="Order ID / TransId" style="max-width:160px">
                             <input class="pf-input" id="test-complaint-msg" placeholder="Message" style="max-width:200px">
                             <button class="btn btn-outline btn-sm" onclick="testComplaint()">Send Complaint</button>
                         </div>
@@ -349,82 +391,106 @@ html[data-dark="1"] .test-result{background:var(--bg-page)}
 
                 {{-- ⑥ Callback Settings ── --}}
                 <div class="portal-section" id="sec-callback">
-                    <h4>Callback / Webhook Settings</h4>
+                    <h4>Callback API Settings</h4>
+                    {{-- Callback URL display --}}
                     <div style="background:var(--bg-page);border:1.5px solid var(--primary);border-radius:10px;padding:14px 16px;margin-bottom:20px">
-                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--primary);margin-bottom:8px">Your Callback URL (set this in provider dashboard)</div>
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--primary);margin-bottom:8px">Your Callback URL — Set This in Provider Dashboard</div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <input class="pf-input" id="cb-url-big" readonly style="font-family:monospace;font-size:12px;font-weight:600;color:var(--primary)">
                             <button onclick="copyCallback()" class="btn btn-outline btn-sm" style="white-space:nowrap">Copy URL</button>
                         </div>
                     </div>
-                    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">Map how the provider sends callback parameters to your system:</div>
                     <div class="pf-grid">
                         <div>
-                            <label class="pf-label">Order ID Param Name *</label>
-                            <input class="pf-input" id="cb-orderid" placeholder="uniqueid">
-                            <div class="pf-hint">The param name provider uses for your order/txn ID (e.g. <code>uniqueid</code>)</div>
+                            <label class="pf-label">Response Type (Callback Method)</label>
+                            <select class="pf-select" id="cb-method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                            </select>
+                            <div class="pf-hint">How the provider sends the callback to you</div>
                         </div>
                         <div>
-                            <label class="pf-label">Status Param Name *</label>
+                            <label class="pf-label">IP Address (Provider's IP)</label>
+                            <input class="pf-input" id="cb-ip" placeholder="e.g. 176.9.113.0">
+                            <div class="pf-hint">Whitelist this IP on your server for security</div>
+                        </div>
+                        <div>
+                            <label class="pf-label">Status Field *</label>
                             <input class="pf-input" id="cb-status" placeholder="status">
+                            <div class="pf-hint">Callback param that carries recharge status</div>
                         </div>
                         <div>
-                            <label class="pf-label">Provider TxnId Param</label>
+                            <label class="pf-label">OurTransId (Your Order ID param)</label>
+                            <input class="pf-input" id="cb-orderid" placeholder="uniqueid">
+                            <div class="pf-hint">Param name provider uses to send back YOUR order ID</div>
+                        </div>
+                        <div>
+                            <label class="pf-label">Api TxnId (Provider TxnId param)</label>
                             <input class="pf-input" id="cb-txnid" placeholder="transaction_id">
                         </div>
                         <div>
-                            <label class="pf-label">Operator ID Param</label>
+                            <label class="pf-label">Live Id (Operator ID param)</label>
                             <input class="pf-input" id="cb-opid" placeholder="operator_id">
                         </div>
+                        <div>
+                            <label class="pf-label">Balance (Balance param in callback)</label>
+                            <input class="pf-input" id="cb-balance" placeholder="balance">
+                        </div>
+                        <div></div>
                         <div>
                             <label class="pf-label">Success Value *</label>
                             <input class="pf-input" id="cb-success" placeholder="Success">
                         </div>
                         <div>
-                            <label class="pf-label">Failure Value *</label>
-                            <input class="pf-input" id="cb-failure" placeholder="Failure">
-                        </div>
-                        <div>
                             <label class="pf-label">Pending Value</label>
                             <input class="pf-input" id="cb-pending" placeholder="Pending">
                         </div>
+                        <div>
+                            <label class="pf-label">Failure Value *</label>
+                            <input class="pf-input" id="cb-failure" placeholder="Failure">
+                        </div>
                     </div>
                     <div class="pf-save-row">
-                        <button class="btn btn-primary btn-sm" onclick="saveSection('callback')">Save Callback Settings</button>
+                        <button class="btn btn-primary btn-sm" onclick="saveSection('callback')">Update</button>
                         <span class="pf-save-msg" id="msg-callback"></span>
                     </div>
                 </div>
 
                 {{-- ⑦ Operator Codes ── --}}
                 <div class="portal-section" id="sec-opcodes">
-                    <h4>Operator Code Mapping</h4>
-                    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">Map your system's operator codes to this API provider's codes. Used as <code>[opcode]</code> in request params.</div>
+                    <h4>Operator Code</h4>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">Map each operator to this provider's API codes. Used as <code>[opcode]</code> in request parameters.</div>
+
+                    {{-- Category tabs --}}
+                    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+                        <button onclick="showOpCat('mobile')" id="ocat-mobile" class="btn btn-primary btn-sm" style="font-size:11px">Mobile</button>
+                        <button onclick="showOpCat('dth')"    id="ocat-dth"    class="btn btn-outline btn-sm" style="font-size:11px">DTH</button>
+                        <button onclick="showOpCat('other')"  id="ocat-other"  class="btn btn-outline btn-sm" style="font-size:11px">Other</button>
+                    </div>
+
                     <div style="overflow-x:auto">
-                        <table class="opcode-table" id="opcode-table">
+                        <table class="opcode-table" id="opcode-table" style="min-width:700px">
                             <thead>
                                 <tr>
-                                    <th>Operator Name / Your Code</th>
-                                    <th>API Provider Code</th>
-                                    <th style="width:40px"></th>
+                                    <th style="width:36px">Sr</th>
+                                    <th style="min-width:160px">Company Name</th>
+                                    <th>OPParam1</th>
+                                    <th>OPParam2</th>
+                                    <th>OPParam3</th>
+                                    <th>OPParam4</th>
+                                    <th>OPParam5</th>
+                                    <th style="width:70px">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="opcode-tbody"></tbody>
                         </table>
                     </div>
-                    <button class="btn btn-outline btn-sm" onclick="addOpCodeRow()" style="margin-top:12px">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Add Row
-                    </button>
-                    <div class="pf-save-row">
-                        <button class="btn btn-primary btn-sm" onclick="saveSection('opcodes')">Save Operator Codes</button>
-                        <span class="pf-save-msg" id="msg-opcodes"></span>
-                    </div>
 
-                    {{-- Quick-fill PDRS codes --}}
-                    <div class="test-panel">
-                        <h5>Quick Fill — PDRS Standard Codes</h5>
-                        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">Click to pre-populate PDRS operator codes. You can edit them after.</div>
-                        <button class="btn btn-outline btn-sm" onclick="fillPdrsCodes()">Load PDRS Codes</button>
+                    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+                        <button class="btn btn-outline btn-sm" onclick="addOpCodeRow()">+ Add Row</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadDefaultOperators()">Load Default Operators</button>
+                        <button class="btn btn-primary btn-sm" onclick="saveSection('opcodes')">Save All</button>
+                        <span class="pf-save-msg" id="msg-opcodes" style="align-self:center"></span>
                     </div>
                 </div>
 
@@ -586,18 +652,29 @@ function fillForms(d) {
     set('sa-txnid-key', sa.txnid_key || 'tid');
 
     // Complaint API
-    set('ca-method', ca.method || 'GET', true);
-    set('ca-url', ca.url || '');
-    set('ca-params', ca.params || '');
+    set('ca-method',      ca.method       || 'GET', true);
+    set('ca-rtype',       ca.response_type|| 'JSON', true);
+    set('ca-url',         ca.url          || '');
+    set('ca-url2',        ca.url_part2    || '');
+    set('ca-params',      ca.params       || '');
+    set('ca-sep',         ca.separator    || '');
+    set('ca-status-key',  ca.status_key   || '');
+    set('ca-success-key', ca.success_key  || '');
+    set('ca-failure-key', ca.failure_key  || '');
+    set('ca-pending-key', ca.pending_key  || '');
+    toggleCaSep();
 
     // Callback
-    set('cb-orderid',  cb.order_id_param || 'uniqueid');
-    set('cb-status',   cb.status_param   || 'status');
-    set('cb-txnid',    cb.txnid_param    || 'transaction_id');
-    set('cb-opid',     cb.op_id_param    || 'operator_id');
-    set('cb-success',  cb.success_val    || 'Success');
-    set('cb-failure',  cb.failure_val    || 'Failure');
-    set('cb-pending',  cb.pending_val    || 'Pending');
+    set('cb-method',  cb.callback_method  || 'GET', true);
+    set('cb-ip',      cb.ip_address       || '');
+    set('cb-status',  cb.status_param     || 'status');
+    set('cb-orderid', cb.order_id_param   || 'uniqueid');
+    set('cb-txnid',   cb.txnid_param      || 'transaction_id');
+    set('cb-opid',    cb.op_id_param      || 'operator_id');
+    set('cb-balance', cb.balance_param    || '');
+    set('cb-success', cb.success_val      || 'Success');
+    set('cb-pending', cb.pending_val      || 'Pending');
+    set('cb-failure', cb.failure_val      || 'Failure');
 
     // Op codes
     renderOpCodes(oc);
@@ -628,20 +705,48 @@ async function saveSection(section) {
                 status_key:get('sa-status-key'),txnid_key:get('sa-txnid-key')};
         url = `${API}/api-providers/${id}/status-api`;
     } else if (section === 'complaint') {
-        body = {method:get('ca-method'),url:get('ca-url'),params:get('ca-params')};
+        body = {
+            method:        get('ca-method'),
+            url:           get('ca-url'),
+            url_part2:     get('ca-url2'),
+            params:        get('ca-params'),
+            response_type: get('ca-rtype'),
+            separator:     get('ca-sep'),
+            status_key:    get('ca-status-key'),
+            success_key:   get('ca-success-key'),
+            failure_key:   get('ca-failure-key'),
+            pending_key:   get('ca-pending-key'),
+        };
         url = `${API}/api-providers/${id}/complaint-api`;
     } else if (section === 'callback') {
-        body = {order_id_param:get('cb-orderid'),status_param:get('cb-status'),
-                txnid_param:get('cb-txnid'),op_id_param:get('cb-opid'),
-                success_val:get('cb-success'),failure_val:get('cb-failure'),pending_val:get('cb-pending')};
+        body = {
+            callback_method: get('cb-method'),
+            ip_address:      get('cb-ip'),
+            status_param:    get('cb-status'),
+            order_id_param:  get('cb-orderid'),
+            txnid_param:     get('cb-txnid'),
+            op_id_param:     get('cb-opid'),
+            balance_param:   get('cb-balance'),
+            success_val:     get('cb-success'),
+            pending_val:     get('cb-pending'),
+            failure_val:     get('cb-failure'),
+        };
         url = `${API}/api-providers/${id}/callback`;
     } else if (section === 'opcodes') {
-        const rows = document.querySelectorAll('#opcode-tbody tr');
+        const rows = document.querySelectorAll('#opcode-tbody tr[data-cat]');
         const codes = [];
         rows.forEach(row => {
-            const our = row.querySelector('.oc-our')?.value?.trim();
-            const api = row.querySelector('.oc-api')?.value?.trim();
-            if (our && api) codes.push({our_code: our, api_code: api});
+            const name = row.querySelector('.oc-name')?.value?.trim();
+            if (!name) return;
+            codes.push({
+                company_name: name,
+                category:     row.dataset.cat || 'mobile',
+                op_param1:    row.querySelector('.oc-p1')?.value?.trim() || '',
+                op_param2:    row.querySelector('.oc-p2')?.value?.trim() || '',
+                op_param3:    row.querySelector('.oc-p3')?.value?.trim() || '',
+                op_param4:    row.querySelector('.oc-p4')?.value?.trim() || '',
+                op_param5:    row.querySelector('.oc-p5')?.value?.trim() || '',
+            });
         });
         body = {codes};
         url = `${API}/api-providers/${id}/op-codes`;
@@ -699,28 +804,94 @@ async function testComplaint() {
     } catch(e) { el.className = 'test-result err'; el.textContent = 'Request failed: ' + e.message; }
 }
 
-// ── Op codes table ────────────────────────────────────────────────────────────
-function renderOpCodes(codes) {
-    const tbody = document.getElementById('opcode-tbody');
-    const entries = Object.entries(codes);
-    if (!entries.length) { tbody.innerHTML = ''; addOpCodeRow(); return; }
-    tbody.innerHTML = entries.map(([our, api]) => opCodeRow(our, api)).join('');
+// ── Op codes table ─────────────────────────────────────────────────────────────
+const DEFAULT_OPERATORS = {
+    mobile: [
+        'Jio Prepaid','Airtel Prepaid','VI Prepaid','BSNL Topup Prepaid','BSNL STV Prepaid',
+        'IDEA Prepaid','MTNL Mumbai Dolphin','MTNL Delhi Dolphin',
+        'Airtel Postpaid','VI Postpaid','BSNL Postpaid','Jio Postpaid',
+    ],
+    dth: [
+        'Airtel DTH','Dish TV','Tata Sky','Sun Direct','Videocon D2H','DD Free Dish','MTS',
+    ],
+    other: [
+        'Fastag','BBPS Electricity','BBPS Water','BBPS Gas','BBPS Insurance',
+    ],
+};
+
+let _currentCat = 'mobile';
+
+function showOpCat(cat) {
+    _currentCat = cat;
+    ['mobile','dth','other'].forEach(c => {
+        const btn = document.getElementById('ocat-' + c);
+        btn.className = c === cat ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+        btn.style.fontSize = '11px';
+    });
+    document.querySelectorAll('#opcode-tbody tr[data-cat]').forEach(row => {
+        row.style.display = row.dataset.cat === cat ? '' : 'none';
+    });
 }
 
-function opCodeRow(our = '', api = '') {
-    return `<tr>
-        <td><input class="oc-our" value="${esc(our)}" placeholder="Our code (e.g. JIO)"></td>
-        <td><input class="oc-api" value="${esc(api)}" placeholder="API code (e.g. JIO)"></td>
-        <td><button class="opcode-del" onclick="this.closest('tr').remove()">✕</button></td>
+function renderOpCodes(codes) {
+    const tbody = document.getElementById('opcode-tbody');
+    // Support both old format {key:val} and new format [{company_name,...}]
+    let rows = Array.isArray(codes) ? codes : Object.entries(codes).map(([k,v]) => ({
+        company_name: k, category: 'mobile', op_param1: v, op_param2:'',op_param3:'',op_param4:'',op_param5:''
+    }));
+    if (!rows.length) { tbody.innerHTML = ''; loadDefaultOperators(); return; }
+    let sr = {mobile:0, dth:0, other:0};
+    tbody.innerHTML = rows.map(r => {
+        const cat = r.category || 'mobile';
+        sr[cat] = (sr[cat] || 0) + 1;
+        return opCodeRow(sr[cat], cat, r.company_name, r.op_param1, r.op_param2, r.op_param3, r.op_param4, r.op_param5);
+    }).join('');
+    showOpCat(_currentCat);
+}
+
+function opCodeRow(sr = '', cat = 'mobile', name = '', p1 = '', p2 = '', p3 = '', p4 = '', p5 = '') {
+    const idx = document.querySelectorAll(`#opcode-tbody tr[data-cat="${cat}"]`).length + 1;
+    const num = sr || idx;
+    return `<tr data-cat="${cat}" style="${cat !== _currentCat ? 'display:none' : ''}">
+        <td style="text-align:center;font-size:12px;color:var(--text-muted)">${num}</td>
+        <td><input class="oc-name" value="${esc(name)}" placeholder="Company Name" style="width:100%"></td>
+        <td><input class="oc-p1" value="${esc(p1)}" placeholder="Code 1" style="width:100%"></td>
+        <td><input class="oc-p2" value="${esc(p2)}" placeholder="Code 2" style="width:100%"></td>
+        <td><input class="oc-p3" value="${esc(p3)}" placeholder="Code 3" style="width:100%"></td>
+        <td><input class="oc-p4" value="${esc(p4)}" placeholder="Code 4" style="width:100%"></td>
+        <td><input class="oc-p5" value="${esc(p5)}" placeholder="Code 5" style="width:100%"></td>
+        <td><button class="opcode-del" onclick="this.closest('tr').remove()" title="Remove">✕</button></td>
     </tr>`;
 }
 
 function addOpCodeRow() {
-    document.getElementById('opcode-tbody').insertAdjacentHTML('beforeend', opCodeRow());
+    const tbody = document.getElementById('opcode-tbody');
+    const cat = _currentCat;
+    const existing = tbody.querySelectorAll(`tr[data-cat="${cat}"]`);
+    const sr = existing.length + 1;
+    tbody.insertAdjacentHTML('beforeend', opCodeRow(sr, cat));
 }
 
-function fillPdrsCodes() {
-    document.getElementById('opcode-tbody').innerHTML = PDRS_CODES.map(c => opCodeRow(c.our, c.api)).join('');
+function loadDefaultOperators() {
+    const tbody = document.getElementById('opcode-tbody');
+    // Keep existing rows, add missing default operators
+    const existing = [...tbody.querySelectorAll('.oc-name')].map(i => i.value.trim().toLowerCase());
+    let html = '';
+    ['mobile','dth','other'].forEach(cat => {
+        DEFAULT_OPERATORS[cat].forEach((name, idx) => {
+            if (!existing.includes(name.toLowerCase())) {
+                html += opCodeRow(idx + 1, cat, name);
+            }
+        });
+    });
+    tbody.insertAdjacentHTML('beforeend', html);
+    showOpCat(_currentCat);
+}
+
+function toggleCaSep() {
+    const v = document.getElementById('ca-rtype')?.value;
+    const f = document.getElementById('ca-sep-field');
+    if (f) f.style.display = (v === 'OTHER') ? '' : 'none';
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────

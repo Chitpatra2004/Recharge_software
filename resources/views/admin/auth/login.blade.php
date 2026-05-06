@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Login — RechargeHub</title>
+    <title>Employee Login — ColdPay</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -206,6 +206,11 @@
         .otp-digit{width:44px;height:52px;border:1.5px solid #e5e7eb;border-radius:10px;text-align:center;font-size:22px;font-weight:700;color:var(--text);background:#f9fafb;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;}
         .otp-digit:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff;}
         .otp-digit.is-error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+        .tfa-method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+        .tfa-method-card{border:1.5px solid #e5e7eb;border-radius:12px;padding:12px;cursor:pointer;background:#fff;text-align:left;transition:border-color .15s,background .15s,box-shadow .15s;}
+        .tfa-method-card:hover,.tfa-method-card.active{border-color:var(--blue);background:#f5f7ff;box-shadow:0 4px 14px rgba(79,70,229,.12);}
+        .tfa-method-name{font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px;}
+        .tfa-method-sub{font-size:11.5px;color:var(--muted);line-height:1.35;}
         .tfa-back{background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:18px;}
         .tfa-back:hover{color:var(--text);}
 
@@ -247,7 +252,7 @@
                 </svg>
             </div>
             <div>
-                <div class="brand-text-name">RechargeHub</div>
+                <div class="brand-text-name">ColdPay</div>
                 <div class="brand-text-sub">Admin Portal</div>
             </div>
         </div>
@@ -377,6 +382,8 @@
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span id="tfa-error-msg"></span>
             </div>
+
+            <div class="tfa-method-grid" id="tfa-method-grid" style="display:none"></div>
 
             <div class="otp-row" id="tfa-otp-row">
                 <input class="otp-digit" type="text" inputmode="numeric" maxlength="1">
@@ -558,6 +565,7 @@ el('password').addEventListener('input', function () {
 /* ── State ────────────────────────────────────────────────────── */
 let _pendingToken = null;
 let _tfaMethod    = null;
+let _tfaMethods   = [];
 let _rememberMe   = false;
 
 /* ── Loading state ────────────────────────────────────────────── */
@@ -601,8 +609,9 @@ el('login-form').addEventListener('submit', async (e) => {
 
         if (res.ok && data.requires_2fa) {
             _pendingToken = data.pending_token;
+            _tfaMethods   = data.methods || [];
             _tfaMethod    = data.method;
-            showTfaPanel(data.method, data.message);
+            showTfaPanel(data.method, data.message, _tfaMethods);
         } else if (res.ok) {
             handleLoginSuccess(data);
         } else if (res.status === 423) {
@@ -623,18 +632,78 @@ el('login-form').addEventListener('submit', async (e) => {
 /* ── 2FA panel ────────────────────────────────────────────────── */
 const tfaDigits = () => Array.from(document.querySelectorAll('#tfa-otp-row .otp-digit'));
 
-function showTfaPanel(method, message) {
+function showTfaPanel(method, message, methods = []) {
     el('login-form').style.display = 'none';
     el('tfa-panel').classList.add('show');
     clearAlerts();
     hide('tfa-error-alert');
 
-    el('tfa-title').textContent    = method === 'totp' ? 'Authenticator App' : 'SMS Verification';
+    renderTfaMethods(methods, method);
+    const active = currentTfaMethod();
+    const isTotp = methodChannel(active) === 'totp';
+
+    el('tfa-title').textContent    = isTotp ? methodLabel(active) : methodLabel(active) + ' Verification';
     el('tfa-subtitle').textContent = message || 'Enter the 6-digit verification code.';
-    el('tfa-resend-wrap').style.display = method === 'otp' ? '' : 'none';
+    el('tfa-resend-wrap').style.display = isTotp ? 'none' : '';
 
     tfaDigits().forEach(d => { d.value = ''; d.classList.remove('is-error'); });
     tfaDigits()[0].focus();
+}
+
+function renderTfaMethods(methods, activeMethod) {
+    const grid = el('tfa-method-grid');
+    if (!methods || methods.length <= 1) {
+        grid.style.display = 'none';
+        grid.innerHTML = '';
+        return;
+    }
+
+    grid.innerHTML = methods.map(m => `
+        <div class="tfa-method-card ${m.key === activeMethod ? 'active' : ''}" onclick="selectTfaMethod('${m.key}')">
+            <div class="tfa-method-name">${m.label}</div>
+            <div class="tfa-method-sub">${m.masked || ''}</div>
+        </div>
+    `).join('');
+    grid.style.display = 'grid';
+}
+
+async function selectTfaMethod(method) {
+    _tfaMethod = method;
+    renderTfaMethods(_tfaMethods, method);
+    hide('tfa-error-alert');
+    tfaDigits().forEach(d => { d.value = ''; d.classList.remove('is-error'); });
+
+    const isTotp = methodChannel(method) === 'totp';
+    el('tfa-title').textContent = isTotp ? methodLabel(method) : methodLabel(method) + ' Verification';
+    el('tfa-subtitle').textContent = isTotp
+        ? 'Enter the 6-digit code from your authenticator app.'
+        : 'Sending verification code...';
+    el('tfa-resend-wrap').style.display = isTotp ? 'none' : '';
+
+    if (!isTotp) {
+        await resendOtp(false);
+    }
+
+    tfaDigits()[0].focus();
+}
+
+function currentTfaMethod() {
+    return _tfaMethod || (_tfaMethods[0] && _tfaMethods[0].key) || 'mobile_otp';
+}
+
+function methodChannel(method) {
+    const found = _tfaMethods.find(m => m.key === method);
+    if (found) return found.channel;
+    return ['google_authenticator', 'microsoft_authenticator', 'totp'].includes(method) ? 'totp' : 'otp';
+}
+
+function methodLabel(method) {
+    const found = _tfaMethods.find(m => m.key === method);
+    if (found) return found.label;
+    if (method === 'microsoft_authenticator') return 'Microsoft Authenticator';
+    if (method === 'google_authenticator' || method === 'totp') return 'Google Authenticator';
+    if (method === 'email_otp') return 'Email OTP';
+    return 'Mobile OTP';
 }
 
 function backToLogin() {
@@ -642,6 +711,7 @@ function backToLogin() {
     el('tfa-panel').classList.remove('show');
     _pendingToken = null;
     _tfaMethod    = null;
+    _tfaMethods   = [];
     hide('tfa-error-alert');
 }
 
@@ -664,12 +734,13 @@ async function submitTfa() {
     setTfaLoading(true);
 
     try {
-        const url  = _tfaMethod === 'totp'
+        const isTotp = methodChannel(currentTfaMethod()) === 'totp';
+        const url  = isTotp
             ? '/api/v1/employee/auth/2fa/verify-totp'
             : '/api/v1/employee/auth/2fa/verify-otp';
-        const body = _tfaMethod === 'totp'
-            ? { pending_token: _pendingToken, code }
-            : { pending_token: _pendingToken, otp: code };
+        const body = isTotp
+            ? { pending_token: _pendingToken, code, method: currentTfaMethod() }
+            : { pending_token: _pendingToken, otp: code, method: currentTfaMethod() };
 
         const res  = await fetch(url, {
             method: 'POST',
@@ -694,15 +765,19 @@ async function submitTfa() {
     }
 }
 
-async function resendOtp() {
+async function resendOtp(showSuccessMessage = true) {
     try {
-        await fetch('/api/v1/employee/auth/2fa/resend-otp', {
+        const res = await fetch('/api/v1/employee/auth/2fa/resend-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ pending_token: _pendingToken }),
+            body: JSON.stringify({ pending_token: _pendingToken, method: currentTfaMethod() }),
         });
-        el('tfa-error-msg').textContent = 'A new OTP has been sent to your mobile.';
-        el('tfa-error-alert').className = 'alert alert-success show';
+        const data = await res.json();
+        el('tfa-subtitle').textContent = data.message || 'Enter the 6-digit verification code.';
+        if (showSuccessMessage) {
+            el('tfa-error-msg').textContent = data.message || 'A new OTP has been sent.';
+            el('tfa-error-alert').className = 'alert alert-success show';
+        }
     } catch {
         el('tfa-error-msg').textContent = 'Failed to resend OTP.';
         show('tfa-error-alert');
@@ -714,8 +789,9 @@ function handleLoginSuccess(data) {
         ? localStorage.setItem('emp_remember_email', el('email').value.trim())
         : localStorage.removeItem('emp_remember_email');
 
-    localStorage.setItem('emp_token', data.token);
-    localStorage.setItem('emp_data',  JSON.stringify(data.employee || {}));
+    localStorage.setItem('emp_token',         data.token);
+    localStorage.setItem('emp_data',          JSON.stringify(data.employee || {}));
+    localStorage.setItem('emp_session_start', String(Date.now()));
 
     showSuccess('Login successful! Redirecting…');
     setTimeout(() => { window.location.href = '/admin/dashboard'; }, 800);

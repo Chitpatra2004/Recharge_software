@@ -14,7 +14,7 @@ class SellerPaymentController extends Controller
     /** GET /api/v1/employee/sellers/payment-requests/list */
     public function index(Request $request): JsonResponse
     {
-        $query = SellerPaymentRequest::with('user:id,name,email,mobile')
+        $query = SellerPaymentRequest::with('user:id,name,email,mobile,role')
             ->orderByDesc('created_at');
 
         if ($request->filled('status')) {
@@ -25,6 +25,13 @@ class SellerPaymentController extends Controller
         }
         if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request->filled('bank_name')) {
+            $query->where('bank_name', $request->bank_name);
+        }
+        if ($request->filled('search')) {
+            $s = '%' . $request->search . '%';
+            $query->whereHas('user', fn ($q) => $q->where('name', 'like', $s)->orWhere('mobile', 'like', $s));
         }
 
         $perPage  = min($request->integer('per_page', 25), 100);
@@ -39,13 +46,22 @@ class SellerPaymentController extends Controller
             ")
             ->first();
 
-        return response()->json(['data' => $requests, 'stats' => $stats]);
+        $banks = DB::table('seller_payment_requests')
+            ->whereNotNull('bank_name')
+            ->distinct()
+            ->orderBy('bank_name')
+            ->pluck('bank_name');
+
+        return response()->json(['data' => $requests, 'stats' => $stats, 'banks' => $banks]);
     }
 
     /** POST /api/v1/employee/sellers/payment-requests/{id}/approve */
     public function approve(Request $request, int $id): JsonResponse
     {
-        $request->validate(['notes' => ['sometimes', 'nullable', 'string', 'max:500']]);
+        $request->validate([
+            'notes'   => ['sometimes', 'nullable', 'string', 'max:500'],
+            'txn_ref' => ['sometimes', 'nullable', 'string', 'max:100'],
+        ]);
 
         $pr = SellerPaymentRequest::with('user')->findOrFail($id);
 
@@ -53,10 +69,14 @@ class SellerPaymentController extends Controller
             return response()->json(['message' => 'Request is already ' . $pr->status . '.'], 422);
         }
 
-        DB::transaction(function () use ($pr, $request) {
+        $adminNotes = $request->filled('txn_ref')
+            ? 'By REF:' . $request->input('txn_ref')
+            : ($request->input('notes') ?? 'Approved by admin');
+
+        DB::transaction(function () use ($pr, $adminNotes) {
             $pr->update([
                 'status'       => 'approved',
-                'admin_notes'  => $request->notes,
+                'admin_notes'  => $adminNotes,
                 'processed_at' => now(),
             ]);
 

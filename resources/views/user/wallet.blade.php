@@ -291,7 +291,7 @@ function printWalletReceipt(txn) {
     td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}
     .footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}
     @media print{body{padding:0}}</style></head><body>
-    <div class="header"><div class="brand">RechargeHub</div>
+    <div class="header"><div class="brand">ColdPay</div>
     <div style="font-size:12px;color:#6b7280;margin-top:4px">Wallet Transaction Receipt</div></div>
     <div style="text-align:center">
     <div class="amount">${isCredit?'+':'−'}₹${parseFloat(txn.amount||0).toFixed(2)}</div>
@@ -305,7 +305,7 @@ function printWalletReceipt(txn) {
     <tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr>
     <tr><td style="color:#6b7280">Account</td><td>${user.name||'—'}</td></tr>
     </table>
-    <div class="footer">Thank you for using RechargeHub</div>
+    <div class="footer">Thank you for using ColdPay</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }

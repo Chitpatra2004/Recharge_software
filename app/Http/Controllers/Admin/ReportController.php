@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 
 /**
  * ReportController — admin-only reporting endpoints.
@@ -144,12 +145,18 @@ class ReportController extends Controller
     public function users(Request $request): JsonResponse
     {
         $filters = $this->parseFilters($request, [
-            'role'    => ['sometimes', 'in:admin,retailer,distributor,api_user,buyer'],
-            'status'  => ['sometimes', 'in:active,inactive,suspended'],
-            'search'  => ['sometimes', 'string', 'max:100'],
+            'role'            => ['sometimes', 'in:admin,retailer,distributor,api_user,buyer'],
+            'status'          => ['sometimes', 'in:active,inactive,suspended'],
+            'search'          => ['sometimes', 'string', 'max:100'],
+            'exclude_sellers' => ['sometimes', 'in:0,1'],
         ]);
 
         if ($filters instanceof JsonResponse) return $filters;
+
+        // When exclude_sellers=1 (user list page default), hide only api_user
+        if (! empty($filters['exclude_sellers']) && $filters['exclude_sellers'] === '1') {
+            $filters['exclude_roles'] = ['api_user'];
+        }
 
         $data = $this->reports->userReport($filters, (int) ($filters['per_page'] ?? 20));
 
@@ -167,9 +174,10 @@ class ReportController extends Controller
     {
         $filters = $this->parseFilters($request, [
             'operator_code'  => ['sometimes', 'string', 'max:30'],
-            'status'         => ['sometimes', 'in:queued,processing,success,failed,refunded,partial'],
+            'status'         => ['sometimes', 'in:pending,queued,processing,success,failed,refunded,partial'],
             'mobile'         => ['sometimes', 'digits_between:10,15'],
             'recharge_type'  => ['sometimes', 'in:prepaid,postpaid,dth,broadband'],
+            'api_provider'   => ['sometimes', 'string', 'max:50'],
         ]);
 
         if ($filters instanceof JsonResponse) return $filters;
@@ -305,27 +313,43 @@ class ReportController extends Controller
 
     public function pending(Request $request): JsonResponse
     {
-        $perPage    = min((int) $request->integer('per_page', 25), 100);
-        $minAge     = $request->integer('min_age', 0);   // minutes
-        $operator   = $request->input('operator_code');
-        $dateFilter = $request->input('date');           // YYYY-MM-DD
+        $perPage   = min((int) $request->integer('per_page', 25), 100);
+        $minAge    = $request->integer('min_age', 0);
+        $operator  = $request->input('operator_code');
+        $dateFrom  = $request->input('date_from') ?? $request->input('date');
+        $dateTo    = $request->input('date_to')   ?? $request->input('date');
+        $search    = $request->input('search');
+        $userName  = $request->input('user_name');
+        $status    = $request->input('status');
+
+        $allowedStatuses = ['pending', 'queued', 'processing'];
 
         $query = DB::table('recharge_transactions as rt')
             ->leftJoin('users as u', 'u.id', '=', 'rt.user_id')
-            ->whereIn('rt.status', ['pending', 'queued', 'processing'])
+            ->leftJoin('operator_routes as orr', 'orr.id', '=', 'rt.operator_route_id')
+            ->whereIn('rt.status', $allowedStatuses)
             ->whereNull('rt.deleted_at')
+            // Prevent accidental duplicate rows if joins expand later
+            ->distinct()
             ->select([
                 'rt.id',
                 'rt.mobile',
                 'rt.operator_code',
+                'rt.recharge_type',
                 'rt.amount',
+                'rt.commission',
                 'rt.status',
                 'rt.retry_count',
+                'rt.operator_ref',
+                'rt.api_ref',
                 'rt.created_at',
                 'rt.updated_at',
                 'rt.failure_reason',
                 'u.name as seller_name',
                 'u.email as seller_email',
+                'orr.api_provider',
+                'orr.name as route_name',
+                'orr.id as route_id',
                 DB::raw('TIMESTAMPDIFF(MINUTE, rt.created_at, NOW()) as age_minutes'),
             ]);
 
@@ -333,12 +357,39 @@ class ReportController extends Controller
             $query->where('rt.operator_code', strtoupper($operator));
         }
 
-        if ($dateFilter) {
-            $query->whereDate('rt.created_at', $dateFilter);
+        // Date filters are provided as "local dates" from the UI. Our DB timestamps
+        // are stored in UTC. Using whereDate() causes midnight boundary bugs (IST vs UTC),
+        // e.g. a recharge at 00:10 IST is still "yesterday" in UTC.
+        // Fix: convert selected day range to UTC and filter by created_at between.
+        if ($dateFrom || $dateTo) {
+            $tz = config('app.timezone', 'UTC');
+            $fromUtc = $dateFrom
+                ? Carbon::parse($dateFrom, $tz)->startOfDay()->utc()
+                : Carbon::parse($dateTo, $tz)->startOfDay()->utc();
+            $toUtc = $dateTo
+                ? Carbon::parse($dateTo, $tz)->endOfDay()->utc()
+                : Carbon::parse($dateFrom, $tz)->endOfDay()->utc();
+
+            $query->whereBetween('rt.created_at', [$fromUtc, $toUtc]);
         }
 
         if ($minAge > 0) {
             $query->whereRaw('TIMESTAMPDIFF(MINUTE, rt.created_at, NOW()) >= ?', [$minAge]);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('rt.mobile', 'like', "%{$search}%")
+                  ->orWhere('rt.id', $search);
+            });
+        }
+
+        if ($userName) {
+            $query->where('u.name', 'like', "%{$userName}%");
+        }
+
+        if ($status && \in_array($status, $allowedStatuses, true)) {
+            $query->where('rt.status', $status);
         }
 
         $query->orderByDesc('rt.created_at');

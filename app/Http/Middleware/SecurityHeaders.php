@@ -63,9 +63,12 @@ class SecurityHeaders
 
         // ── Legacy XSS filter ─────────────────────────────────────────────
         $response->headers->set('X-XSS-Protection', '1; mode=block');
+        $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
         // ── Referrer leakage ──────────────────────────────────────────────
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
 
         // ── Hardware API restrictions ─────────────────────────────────────
         $response->headers->set(
@@ -106,9 +109,16 @@ class SecurityHeaders
         }
 
         // ── Prevent caching of sensitive API responses ────────────────────
-        if (str_starts_with($request->path(), 'api/')) {
+        if (
+            str_starts_with($request->path(), 'api/')
+            || $request->is('admin*')
+            || $request->is('superadmin*')
+            || $request->is('seller*')
+            || $request->is('user*')
+        ) {
             $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate');
             $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
         }
 
         // ── Remove server fingerprint headers ─────────────────────────────

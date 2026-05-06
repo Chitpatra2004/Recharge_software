@@ -20,6 +20,8 @@ class User extends Authenticatable
         'commission_rate', 'email_verified_at',
         'document_path', 'pan_image_path', 'gst_certificate_path',
         'totp_secret', 'totp_enabled', 'two_factor_method',
+        'address', 'pincode', 'state', 'city',
+        'pan_no', 'aadhar_no', 'gst_number', 'contact_person',
     ];
 
     protected $hidden = ['password', 'remember_token', 'api_key', 'totp_secret'];
@@ -83,6 +85,11 @@ class User extends Authenticatable
     public function sellerGstInvoices(): HasMany
     {
         return $this->hasMany(SellerGstInvoice::class);
+    }
+
+    public function sellerOperatorCommissions(): HasMany
+    {
+        return $this->hasMany(SellerOperatorCommission::class);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

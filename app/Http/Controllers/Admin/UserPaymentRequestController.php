@@ -81,10 +81,12 @@ class UserPaymentRequestController extends Controller
                     'updated_at' => now(),
                 ]);
                 DB::table('wallet_transactions')->insert([
-                    'user_id'       => $pr->user_id,
-                    'type'          => 'credit',
-                    'amount'        => $pr->amount,
-                    'balance_after' => $balAfter,
+                    'wallet_id'      => $wallet->id,
+                    'user_id'        => $pr->user_id,
+                    'type'           => 'credit',
+                    'amount'         => $pr->amount,
+                    'balance_before' => (float) $wallet->balance,
+                    'balance_after'  => $balAfter,
                     'description'   => 'Wallet top-up approved — Ref: ' . $pr->reference_number,
                     'txn_id'        => 'TOPUP-' . strtoupper(substr(md5($pr->id . now()), 0, 10)),
                     'created_at'    => now(),

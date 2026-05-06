@@ -59,7 +59,7 @@ class PaymentController extends Controller
 
         if ($request->hasFile('proof_image')) {
             $proofPath = $request->file('proof_image')
-                ->store("seller_proofs/{$user->id}", 'local');
+                ->store("seller_proofs/{$user->id}", 'public');
         }
 
         $pr = SellerPaymentRequest::create([

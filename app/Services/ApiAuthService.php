@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ApiKey;
 use App\Models\SellerIntegrationRequest;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 
 class ApiAuthService
@@ -32,17 +33,26 @@ class ApiAuthService
         string $name   = 'API Key',
         array  $scopes = ['recharge:write', 'recharge:read', 'wallet:read']
     ): string {
+        $integration = null;
+        if (in_array($user->role, ['api_user', 'retailer'], true)) {
+            $integration = SellerIntegrationRequest::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->latest()
+                ->first();
+
+            if (! $integration || ! $this->hasRequiredSellerApiSetup($integration)) {
+                throw ValidationException::withMessages([
+                    'api_key' => ['Callback URL and IP whitelist are required before generating the seller API token.'],
+                ]);
+            }
+        }
+
         $rawKey = 'rk_' . Str::random(60);
 
         // Deactivate any existing key with the same name so re-generation replaces it
         ApiKey::where('user_id', $user->id)
             ->where('name', $name)
             ->update(['is_active' => false]);
-
-        $integration = SellerIntegrationRequest::where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->latest()
-            ->first();
 
         ApiKey::create([
             'user_id'    => $user->id,
@@ -92,5 +102,10 @@ class ApiAuthService
         $ips = array_values(array_filter(array_map('trim', $ips)));
 
         return $ips === [] ? null : $ips;
+    }
+
+    private function hasRequiredSellerApiSetup(SellerIntegrationRequest $integration): bool
+    {
+        return filled($integration->callback_url) && ! empty($this->parseAllowedIps($integration->allowed_ips));
     }
 }

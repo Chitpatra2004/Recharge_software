@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\ApiSwitchingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeAuthController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
 use App\Http\Controllers\Admin\UserPaymentRequestController as AdminUserPaymentRequestController;
 use App\Http\Controllers\Admin\OperatorApiSettingController;
+use App\Http\Controllers\Admin\OperatorSettingController;
 use App\Http\Controllers\Admin\PdrsAdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ForgotPasswordController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Seller\GstController as SellerGstController;
 use App\Http\Controllers\Seller\PaymentController as SellerPaymentController;
 use App\Http\Controllers\Seller\ReportController as SellerReportController;
 use App\Http\Controllers\Seller\SalesController as SellerSalesController;
+use App\Http\Controllers\Seller\DocumentController as SellerDocumentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,7 +61,7 @@ use Illuminate\Support\Facades\Route;
 // ── Employee authentication (public — no auth required) ────────────────────
 // brute.force middleware tracks failed attempts per IP and locks accounts
 Route::prefix('v1/employee/auth')
-    ->middleware(['brute.force:20,15', 'log.api'])
+    ->middleware(['throttle:auth', 'brute.force:10,15', 'log.api'])
     ->group(function () {
 
     Route::post('/login',           [EmployeeAuthController::class, 'login']);
@@ -121,6 +124,9 @@ Route::prefix('v1/employee')
     Route::get('/recharges/{id}',        [AdminRechargeController::class, 'show']);
     Route::post('/recharges/{id}/resend',[AdminRechargeController::class, 'resend']);
     Route::post('/recharges/{id}/refund',[AdminRechargeController::class, 'refund']);
+    Route::post('/recharges/{id}/success',[AdminRechargeController::class, 'markSuccess']);
+    Route::post('/recharges/{id}/status', [AdminRechargeController::class, 'markStatus']);
+    Route::post('/recharges/{id}/send-api', [AdminRechargeController::class, 'sendToApi']);
 
     // Employee profile (self)
     Route::get('/profile',               [EmployeeProfileController::class, 'show']);
@@ -142,6 +148,14 @@ Route::prefix('v1/employee')
     Route::put('/preferences',           [EmployeeProfileController::class, 'savePreferences']);
 
     // Operator API provider management
+    Route::get('/api-switching',                            [ApiSwitchingController::class, 'index']);
+    Route::post('/api-switching/routes',                    [ApiSwitchingController::class, 'saveRoute']);
+
+    Route::get('/operator-settings',                         [OperatorSettingController::class, 'index']);
+    Route::post('/operator-settings',                        [OperatorSettingController::class, 'store']);
+    Route::put('/operator-settings/{operator}',              [OperatorSettingController::class, 'update']);
+    Route::patch('/operator-settings/{operator}/toggle',     [OperatorSettingController::class, 'toggle']);
+
     Route::get('/api-providers',                              [OperatorApiSettingController::class, 'listRoutes']);
     Route::post('/api-providers',                             [OperatorApiSettingController::class, 'storeRoute']);
     Route::put('/api-providers/{route}/basic',                [OperatorApiSettingController::class, 'updateBasic']);
@@ -162,41 +176,47 @@ Route::prefix('v1/employee')
     Route::post('/api-providers/{route}/test-complaint',      [OperatorApiSettingController::class, 'testComplaint']);
     Route::put('/api-providers/{route}/margin',               [OperatorApiSettingController::class, 'updateMargin']);
 
+    // PDRS admin utility calls (legacy — kept for backward compat)
+    Route::get('/pdrs/{route}/balance',       [PdrsAdminController::class, 'balance']);
+    Route::get('/pdrs/{route}/check-status',  [PdrsAdminController::class, 'checkStatus']);
+    Route::post('/pdrs/{route}/complain',     [PdrsAdminController::class, 'raiseComplaint']);
+
 });
 
 // ── Public endpoints ────────────────────────────────────────────────────────
 Route::prefix('v1')->middleware('log.api')->group(function () {
 
     // New user registration (returns Sanctum token on success)
-    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/register', [AuthController::class, 'register'])
+         ->middleware('throttle:auth');
 
     // Password-based login — brute.force:10,15 = max 10 failures in 15-min window
     Route::post('/auth/login', [AuthController::class, 'login'])
-         ->middleware('brute.force:10,15');
+         ->middleware(['throttle:auth', 'brute.force:10,15']);
 
     // 2FA verification (no auth token required — uses pending_token instead)
     Route::post('/auth/2fa/verify-otp',  [TwoFactorController::class, 'verifyOtp'])
-         ->middleware('throttle:10,1');
+         ->middleware('throttle:otp');
     Route::post('/auth/2fa/verify-totp', [TwoFactorController::class, 'verifyTotp'])
-         ->middleware('throttle:10,1');
+         ->middleware('throttle:otp');
     Route::post('/auth/2fa/resend-otp',  [TwoFactorController::class, 'resendOtp'])
          ->middleware('throttle:3,1');   // max 3 resends per minute
 
     // Forgot / Reset password
     Route::post('/auth/forgot-password',            [ForgotPasswordController::class, 'sendOtp'])
-         ->middleware('throttle:5,1');
+         ->middleware('throttle:auth');
     Route::post('/auth/forgot-password/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
-         ->middleware('throttle:10,1');
+         ->middleware('throttle:otp');
     Route::post('/auth/forgot-password/reset',      [ForgotPasswordController::class, 'resetPassword'])
-         ->middleware('throttle:5,1');
+         ->middleware('throttle:auth');
 
     // Operator callback webhook — secured by HMAC in controller
-    Route::post('/recharge/callback',                     [RechargeController::class, 'callback']);
+    Route::post('/recharge/callback',                     [RechargeController::class, 'callback'])->middleware('throttle:callback');
     // Per-seller callback URLs (sellerId is used for routing/logging only; HMAC still verified)
-    Route::post('/recharge/callback/{sellerId}',          [RechargeController::class, 'callback']);
-    Route::get('/recharge/callback/{sellerId}',           [RechargeController::class, 'pdrsCallback']);
+    Route::post('/recharge/callback/{sellerId}',          [RechargeController::class, 'callback'])->middleware('throttle:callback');
+    Route::get('/recharge/callback/{sellerId}',           [RechargeController::class, 'pdrsCallback'])->middleware('throttle:callback');
     // PDRS sends GET callbacks: ?uniqueid={order_id}&status={}&transaction_id={}&...
-    Route::get('/recharge/pdrs-callback',                 [RechargeController::class, 'pdrsCallback']);
+    Route::get('/recharge/pdrs-callback',                 [RechargeController::class, 'pdrsCallback'])->middleware('throttle:callback');
 
 });
 
@@ -206,6 +226,7 @@ Route::prefix('v1')
     ->group(function () {
 
     // Auth
+    Route::get('/auth/me',           [AuthController::class, 'me']);
     Route::post('/auth/logout',      [AuthController::class, 'logout']);
     Route::post('/auth/api-key',     [AuthController::class, 'generateApiKey']);
 
@@ -227,7 +248,7 @@ Route::prefix('v1')
     // Wallet
     Route::get('/wallet/balance',       [WalletController::class, 'balance']);
     Route::get('/wallet/transactions',  [WalletController::class, 'transactions']);
-    Route::post('/wallet/self-topup',   [WalletController::class, 'selfTopup']);
+    Route::post('/wallet/self-topup',   [WalletController::class, 'selfTopup'])->middleware('throttle:money');
 
     // Operators
     Route::get('/operators',        [OperatorController::class, 'index']);
@@ -249,12 +270,12 @@ Route::prefix('v1')
 
     // ── User Payment Requests (add money with proof) ───────────────────────
     Route::get('/payment-requests',      [UserPaymentRequestController::class, 'index']);
-    Route::post('/payment-requests',     [UserPaymentRequestController::class, 'store']);
+    Route::post('/payment-requests',     [UserPaymentRequestController::class, 'store'])->middleware(['throttle:money', 'throttle:upload']);
 
     // ── Admin-only ─────────────────────────────────────────────────────────
     Route::middleware('can:admin')->group(function () {
-        Route::post('/wallet/topup',         [WalletController::class, 'topup']);
-        Route::post('/recharge/{id}/refund', [RechargeController::class, 'refund']);
+        Route::post('/wallet/topup',         [WalletController::class, 'topup'])->middleware('throttle:money');
+        Route::post('/recharge/{id}/refund', [RechargeController::class, 'refund'])->middleware('throttle:money');
     });
 
 });
@@ -347,7 +368,7 @@ Route::prefix('v1/admin/reports')
 
 // ── Seller Portal Auth (public) ─────────────────────────────────────────────
 Route::prefix('v1/seller/auth')
-    ->middleware(['log.api'])
+    ->middleware(['throttle:auth', 'log.api'])
     ->group(function () {
     Route::post('/register', [SellerAuthController::class, 'register']);
     Route::post('/login',    [SellerAuthController::class, 'login'])->middleware('brute.force:10,15');
@@ -363,10 +384,12 @@ Route::prefix('v1/seller')
 
     Route::get('/dashboard',               [SellerDashboardController::class, 'index']);
 
-    Route::get('/api-config',                        [SellerApiConfigController::class, 'config']);
-    Route::post('/api-config/integration',           [SellerApiConfigController::class, 'submitIntegration']);
-    Route::patch('/api-config/integration',          [SellerApiConfigController::class, 'updateIntegrationDetails']);
-    Route::patch('/api-config/toggle-api',           [SellerApiConfigController::class, 'toggleApiStatus']);
+    Route::get('/api-config',                              [SellerApiConfigController::class, 'config']);
+    Route::patch('/api-config/notification-settings',     [SellerApiConfigController::class, 'updateNotificationSettings']);
+    Route::post('/api-config/integration',                [SellerApiConfigController::class, 'submitIntegration']);
+    Route::patch('/api-config/integration',               [SellerApiConfigController::class, 'updateIntegrationDetails']);
+    Route::patch('/api-config/toggle-api',                [SellerApiConfigController::class, 'toggleApiStatus']);
+    Route::post('/api-config/generate-token',             [SellerApiConfigController::class, 'generateToken']);
 
     Route::get('/sales', [SellerSalesController::class, 'index']);
 
@@ -374,12 +397,16 @@ Route::prefix('v1/seller')
     Route::get('/reports/topup',    [SellerReportController::class, 'topup']);
     Route::get('/reports/operator', [SellerReportController::class, 'operator']);
     Route::get('/reports/ledger',   [SellerReportController::class, 'ledger']);
+    Route::get('/reports/my-commission', [SellerReportController::class, 'myCommission']);
 
     Route::get('/payments',  [SellerPaymentController::class, 'index']);
-    Route::post('/payments', [SellerPaymentController::class, 'store']);
+    Route::post('/payments', [SellerPaymentController::class, 'store'])->middleware(['throttle:money', 'throttle:upload']);
 
     Route::get('/gst',  [SellerGstController::class, 'index']);
-    Route::post('/gst', [SellerGstController::class, 'store']);
+    Route::post('/gst', [SellerGstController::class, 'store'])->middleware('throttle:upload');
+
+    Route::get('/documents',        [SellerDocumentController::class, 'status']);
+    Route::post('/documents/upload', [SellerDocumentController::class, 'upload'])->middleware('throttle:upload');
 });
 
 // ── Admin: Seller Management ────────────────────────────────────────────────
@@ -389,22 +416,26 @@ Route::prefix('v1/employee/sellers')
 
     // Payment requests first (specific path before {id} wildcard)
     Route::get('/payment-requests/list',          [AdminSellerPaymentController::class, 'index']);
-    Route::post('/payment-requests/{id}/approve', [AdminSellerPaymentController::class, 'approve']);
-    Route::post('/payment-requests/{id}/reject',  [AdminSellerPaymentController::class, 'reject']);
+    Route::post('/payment-requests/{id}/approve', [AdminSellerPaymentController::class, 'approve'])->middleware('throttle:money');
+    Route::post('/payment-requests/{id}/reject',  [AdminSellerPaymentController::class, 'reject'])->middleware('throttle:money');
 
     // Integration decisions
     Route::post('/integrations/{id}/decision', [AdminSellerController::class, 'integrationDecision']);
 
     // Seller CRUD + actions
-    Route::get('/',                    [AdminSellerController::class, 'index']);
-    Route::get('/{id}',                [AdminSellerController::class, 'show']);
-    Route::post('/{id}/approve',       [AdminSellerController::class, 'approve']);
-    Route::post('/{id}/reject',        [AdminSellerController::class, 'reject']);
+    Route::get('/',                         [AdminSellerController::class, 'index']);
+    Route::get('/{id}',                     [AdminSellerController::class, 'show']);
+    Route::patch('/{id}',                   [AdminSellerController::class, 'update']);
+    Route::get('/{id}/commissions',         [AdminSellerController::class, 'commissions']);
+    Route::put('/{id}/commissions',         [AdminSellerController::class, 'updateCommissions']);
+    Route::get('/{id}/document/{type}',     [AdminSellerController::class, 'viewDocument']);
+    Route::post('/{id}/approve',            [AdminSellerController::class, 'approve']);
+    Route::post('/{id}/reject',             [AdminSellerController::class, 'reject']);
     Route::post('/{id}/api-setting',   [AdminSellerController::class, 'updateApiSetting']);
     Route::post('/{id}/login-as',      [AdminSellerController::class, 'loginAs']);
 
     // Wallet management
-    Route::post('/{id}/wallet/adjust',              [AdminWalletController::class, 'adjust']);
+    Route::post('/{id}/wallet/adjust',              [AdminWalletController::class, 'adjust'])->middleware('throttle:money');
     Route::get('/{id}/wallet/transactions',         [AdminWalletController::class, 'transactions']);
 
     // API config management for a seller (update integration URLs + generate key)
@@ -425,6 +456,6 @@ Route::prefix('v1/employee/user-payment-requests')
     ->group(function () {
 
     Route::get('/',                    [AdminUserPaymentRequestController::class, 'index']);
-    Route::post('/{id}/approve',       [AdminUserPaymentRequestController::class, 'approve']);
-    Route::post('/{id}/reject',        [AdminUserPaymentRequestController::class, 'reject']);
+    Route::post('/{id}/approve',       [AdminUserPaymentRequestController::class, 'approve'])->middleware('throttle:money');
+    Route::post('/{id}/reject',        [AdminUserPaymentRequestController::class, 'reject'])->middleware('throttle:money');
 });

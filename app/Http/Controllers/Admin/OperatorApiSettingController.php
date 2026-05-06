@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Operator;
 use App\Models\OperatorRoute;
 use App\Services\GenericApiService;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,8 @@ class OperatorApiSettingController extends Controller
                 'api_id'        => 'API ' . $r->id,
                 'name'          => $r->name,
                 'api_provider'  => $r->api_provider ?? '—',
+                'operator_code' => $r->operator_code,
+                'recharge_type' => $r->recharge_type,
                 'is_active'     => $r->is_active,
                 'api_status'    => (bool) ($cfg['api_status']   ?? false),
                 'auto_renewal'  => (bool) ($cfg['auto_renewal'] ?? false),
@@ -43,25 +46,33 @@ class OperatorApiSettingController extends Controller
     {
         $v = Validator::make($request->all(), [
             'name'         => ['required', 'string', 'max:100'],
-            'api_provider' => ['nullable', 'string', 'max:150'],
-            'operator_code'=> ['required', 'string', 'max:20'],
-            'recharge_type'=> ['required', 'in:prepaid,postpaid,dth,bbps,fastag,other'],
+            'api_provider' => ['nullable', 'string', 'max:50'],
+            'validity_till'=> ['nullable', 'date'],
+            'purchase'     => ['nullable', 'in:active,deactive'],
         ]);
 
         if ($v->fails()) {
             return response()->json(['message' => 'Validation failed.', 'errors' => $v->errors()], 422);
         }
 
+        $operator = Operator::query()->orderBy('id')->first();
+        if (! $operator) {
+            return response()->json(['message' => 'Please add at least one operator before adding an API provider.'], 422);
+        }
+
         $route = OperatorRoute::create([
             'name'          => $request->name,
             'api_provider'  => $request->api_provider ?? '',
-            'operator_code' => $request->operator_code,
-            'recharge_type' => $request->recharge_type,
+            'operator_id'   => $operator->id,
+            'operator_code' => $operator->code,
+            'recharge_type' => 'prepaid',
             'api_endpoint'  => '',
             'is_active'     => false,
             'api_config'    => [
                 'api_status'   => false, 'auto_renewal' => false,
-                'validity_till'=> '0000-00-00', 'purchase' => 'active', 'margin' => 0,
+                'validity_till'=> $request->input('validity_till') ?: '0000-00-00',
+                'purchase'     => $request->input('purchase', 'active'),
+                'margin'       => 0,
             ],
         ]);
 
@@ -96,9 +107,7 @@ class OperatorApiSettingController extends Controller
     {
         $v = Validator::make($request->all(), [
             'name'          => ['required', 'string', 'max:100'],
-            'api_provider'  => ['nullable', 'string', 'max:150'],
-            'operator_code' => ['required', 'string', 'max:20'],
-            'recharge_type' => ['required', 'in:prepaid,postpaid,dth,bbps,fastag,other'],
+            'api_provider'  => ['nullable', 'string', 'max:50'],
             'validity_till' => ['nullable', 'date'],
             'purchase'      => ['nullable', 'in:active,deactive'],
         ]);
@@ -114,8 +123,6 @@ class OperatorApiSettingController extends Controller
         $route->update([
             'name'          => $request->name,
             'api_provider'  => $request->api_provider ?? $route->api_provider,
-            'operator_code' => $request->operator_code,
-            'recharge_type' => $request->recharge_type,
             'api_config'    => $cfg,
         ]);
 
@@ -150,15 +157,17 @@ class OperatorApiSettingController extends Controller
                 // api_token never returned to browser
             ],
             'recharge_api' => [
-                'method'     => $cfg['recharge_api']['method']  ?? $cfg['method']          ?? 'GET',
-                'url'        => $cfg['recharge_api']['url']     ?? $route->api_endpoint    ?? '',
-                'params'     => $cfg['recharge_api']['params']  ?? $cfg['request_params']  ?? '',
-                'status_key' => $cfg['recharge_api']['status_key'] ?? $cfg['status_key']   ?? 'status',
-                'txnid_key'  => $cfg['recharge_api']['txnid_key']  ?? $cfg['txnid_key']    ?? 'tid',
-                'live_id_key'=> $cfg['recharge_api']['live_id_key'] ?? $cfg['live_id_key'] ?? 'operator_id',
-                'success_val'=> $cfg['recharge_api']['success_val'] ?? $cfg['success_val'] ?? 'Success',
-                'pending_val'=> $cfg['recharge_api']['pending_val'] ?? $cfg['pending_val'] ?? 'Pending',
-                'failure_val'=> $cfg['recharge_api']['failure_val'] ?? $cfg['failure_val'] ?? 'Failure',
+                'method'        => $cfg['recharge_api']['method']        ?? $cfg['method']          ?? 'GET',
+                'url'           => $cfg['recharge_api']['url']           ?? $route->api_endpoint    ?? '',
+                'params'        => $cfg['recharge_api']['params']        ?? $cfg['request_params']  ?? '',
+                'response_type' => $cfg['recharge_api']['response_type'] ?? $cfg['response_type']   ?? 'JSON',
+                'separator'     => $cfg['recharge_api']['separator']     ?? $cfg['separator']       ?? '',
+                'status_key'    => $cfg['recharge_api']['status_key']    ?? $cfg['status_key']      ?? 'status',
+                'txnid_key'     => $cfg['recharge_api']['txnid_key']     ?? $cfg['txnid_key']       ?? 'tid',
+                'live_id_key'   => $cfg['recharge_api']['live_id_key']   ?? $cfg['live_id_key']     ?? 'operator_id',
+                'success_val'   => $cfg['recharge_api']['success_val']   ?? $cfg['success_val']     ?? 'Success',
+                'pending_val'   => $cfg['recharge_api']['pending_val']   ?? $cfg['pending_val']     ?? 'Pending',
+                'failure_val'   => $cfg['recharge_api']['failure_val']   ?? $cfg['failure_val']     ?? 'Failure',
             ],
             'balance_api' => [
                 'method'      => $cfg['balance_api']['method']      ?? 'GET',
@@ -211,15 +220,17 @@ class OperatorApiSettingController extends Controller
     public function updateRechargeApi(Request $request, OperatorRoute $route): JsonResponse
     {
         $v = Validator::make($request->all(), [
-            'method'     => ['required', 'in:GET,POST'],
-            'url'        => ['required', 'url', 'max:500'],
-            'params'     => ['nullable', 'string', 'max:2000'],
-            'status_key' => ['required', 'string', 'max:100'],
-            'txnid_key'  => ['required', 'string', 'max:100'],
-            'live_id_key'=> ['nullable', 'string', 'max:100'],
-            'success_val'=> ['required', 'string', 'max:100'],
-            'pending_val'=> ['nullable', 'string', 'max:100'],
-            'failure_val'=> ['required', 'string', 'max:100'],
+            'method'        => ['required', 'in:GET,POST'],
+            'url'           => ['required', 'url', 'max:500'],
+            'params'        => ['nullable', 'string', 'max:2000'],
+            'response_type' => ['nullable', 'in:JSON,XML,PIPE,STRING'],
+            'separator'     => ['nullable', 'string', 'max:10'],
+            'status_key'    => ['required', 'string', 'max:100'],
+            'txnid_key'     => ['required', 'string', 'max:100'],
+            'live_id_key'   => ['nullable', 'string', 'max:100'],
+            'success_val'   => ['required', 'string', 'max:100'],
+            'pending_val'   => ['nullable', 'string', 'max:100'],
+            'failure_val'   => ['required', 'string', 'max:100'],
         ]);
         if ($v->fails()) return response()->json(['message' => 'Validation failed.', 'errors' => $v->errors()], 422);
 
@@ -229,6 +240,8 @@ class OperatorApiSettingController extends Controller
         // keep flat fields in sync for backward compat with RechargeService
         $cfg['method']         = $d['method'];
         $cfg['request_params'] = $d['params'] ?? '';
+        $cfg['response_type']  = $d['response_type'] ?? 'JSON';
+        $cfg['separator']      = $d['separator'] ?? '';
         $cfg['status_key']     = $d['status_key'];
         $cfg['txnid_key']      = $d['txnid_key'];
         $cfg['live_id_key']    = $d['live_id_key'] ?? '';
@@ -245,7 +258,7 @@ class OperatorApiSettingController extends Controller
     {
         $v = Validator::make($request->all(), [
             'method'      => ['required', 'in:GET,POST'],
-            'url'         => ['required', 'url', 'max:500'],
+            'url'         => ['nullable', 'url', 'max:500'],
             'params'      => ['nullable', 'string', 'max:1000'],
             'balance_key' => ['required', 'string', 'max:100'],
         ]);
@@ -279,9 +292,16 @@ class OperatorApiSettingController extends Controller
     public function updateComplaintApi(Request $request, OperatorRoute $route): JsonResponse
     {
         $v = Validator::make($request->all(), [
-            'method' => ['required', 'in:GET,POST'],
-            'url'    => ['required', 'url', 'max:500'],
-            'params' => ['nullable', 'string', 'max:1000'],
+            'method'        => ['required', 'in:GET,POST'],
+            'url'           => ['nullable', 'string', 'max:500'],
+            'url_part2'     => ['nullable', 'string', 'max:500'],
+            'params'        => ['nullable', 'string', 'max:1000'],
+            'response_type' => ['nullable', 'in:JSON,XML,OTHER'],
+            'separator'     => ['nullable', 'string', 'max:10'],
+            'status_key'    => ['nullable', 'string', 'max:100'],
+            'success_key'   => ['nullable', 'string', 'max:100'],
+            'failure_key'   => ['nullable', 'string', 'max:100'],
+            'pending_key'   => ['nullable', 'string', 'max:100'],
         ]);
         if ($v->fails()) return response()->json(['message' => 'Validation failed.', 'errors' => $v->errors()], 422);
 

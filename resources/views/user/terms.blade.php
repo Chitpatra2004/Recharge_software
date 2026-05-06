@@ -1,5 +1,5 @@
 @extends('layouts.user')
-@section('title','Terms & Conditions — RechargeHub')
+@section('title','Terms & Conditions — ColdPay')
 @section('page-title','Terms & Conditions')
 
 @push('head')
@@ -64,7 +64,7 @@
                     1. Acceptance of Terms
                 </h2>
             </div>
-            <p>By accessing or using RechargeHub's services, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our platform.</p>
+            <p>By accessing or using ColdPay's services, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our platform.</p>
             <p>These terms govern your use of our website, mobile application, and related services including recharges, bill payments, and wallet management.</p>
         </div>
 
@@ -113,7 +113,7 @@
                 <li>Recharges are processed in <strong>real-time</strong> via our operator API gateway.</li>
                 <li>Wallet is debited <strong>immediately</strong> when a recharge is initiated.</li>
                 <li>For <strong>failed recharges</strong>, the deducted amount is automatically reversed to your wallet.</li>
-                <li>RechargeHub is not responsible for <strong>operator-side delays</strong> or service downtimes.</li>
+                <li>ColdPay is not responsible for <strong>operator-side delays</strong> or service downtimes.</li>
                 <li>Entering the wrong mobile number is the <strong>user's responsibility</strong>. Such transactions cannot be reversed.</li>
                 <li>DTH and data card recharges require the correct <strong>subscriber ID or account number</strong>.</li>
             </ul>
@@ -176,7 +176,7 @@
                     8. Limitation of Liability
                 </h2>
             </div>
-            <p>RechargeHub shall not be liable for any indirect, incidental, or consequential damages arising from:</p>
+            <p>ColdPay shall not be liable for any indirect, incidental, or consequential damages arising from:</p>
             <ul>
                 <li>Operator API downtime or delayed service delivery.</li>
                 <li>User errors such as wrong mobile numbers or consumer IDs.</li>

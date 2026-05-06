@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,6 +30,8 @@ class ReportService
         $dateTo   = $filters['date_to']   ?? now()->endOfDay();
 
         // ── Summary row ───────────────────────────────────────────────────────
+        $excludeRoles = $filters['exclude_roles'] ?? [];
+
         $summary = DB::table('users as u')
             ->selectRaw("
                 COUNT(DISTINCT u.id)                                    AS total_users,
@@ -48,6 +48,7 @@ class ReportService
             ->whereNull('u.deleted_at')
             ->when(isset($filters['role']),   fn ($q) => $q->where('u.role',   $filters['role']))
             ->when(isset($filters['status']), fn ($q) => $q->where('u.status', $filters['status']))
+            ->when(! empty($excludeRoles),    fn ($q) => $q->whereNotIn('u.role', $excludeRoles))
             ->first();
 
         // ── User list with denormalized wallet & transaction totals ───────────
@@ -77,6 +78,7 @@ class ReportService
             ->whereNull('u.deleted_at')
             ->when(isset($filters['role']),    fn ($q) => $q->where('u.role',   $filters['role']))
             ->when(isset($filters['status']),  fn ($q) => $q->where('u.status', $filters['status']))
+            ->when(! empty($excludeRoles),     fn ($q) => $q->whereNotIn('u.role', $excludeRoles))
             ->when(isset($filters['search']),  fn ($q) => $q->where(function ($q2) use ($filters) {
                 // FIX L1: escape LIKE wildcards before wrapping in % %.
                 // Un-escaped % or _ in user input causes full-table scans and
@@ -86,7 +88,7 @@ class ReportService
                     ['\\\\', '\\%', '\\_'],
                     $filters['search']
                 );
-                $term = '%' . $safe . '%';
+                $term = "%{$safe}%";
                 $q2->where('u.name', 'like', $term)
                    ->orWhere('u.email', 'like', $term)
                    ->orWhere('u.mobile', 'like', $term);
@@ -132,6 +134,14 @@ class ReportService
             ->when(isset($filters['status']),        fn ($q) => $q->where('status',        $filters['status']))
             ->when(isset($filters['user_id']),       fn ($q) => $q->where('user_id',       $filters['user_id']))
             ->when(isset($filters['recharge_type']), fn ($q) => $q->where('recharge_type', $filters['recharge_type']))
+            ->when(isset($filters['api_provider']), function ($q) use ($filters) {
+                $q->whereExists(function ($sub) use ($filters) {
+                    $sub->selectRaw('1')
+                        ->from('operator_routes as or_sum')
+                        ->whereColumn('or_sum.id', 'recharge_transactions.operator_route_id')
+                        ->where('or_sum.api_provider', $filters['api_provider']);
+                });
+            })
             ->first();
 
         // ── Daily breakdown — uses idx_rt_status_date (status, created_at) ───
@@ -150,6 +160,14 @@ class ReportService
             ->when(isset($filters['operator_code']), fn ($q) => $q->where('operator_code', $filters['operator_code']))
             ->when(isset($filters['status']),        fn ($q) => $q->where('status',        $filters['status']))
             ->when(isset($filters['user_id']),       fn ($q) => $q->where('user_id',       $filters['user_id']))
+            ->when(isset($filters['api_provider']), function ($q) use ($filters) {
+                $q->whereExists(function ($sub) use ($filters) {
+                    $sub->selectRaw('1')
+                        ->from('operator_routes as or_day')
+                        ->whereColumn('or_day.id', 'recharge_transactions.operator_route_id')
+                        ->where('or_day.api_provider', $filters['api_provider']);
+                });
+            })
             ->groupByRaw('DATE(created_at)')
             ->orderByRaw('DATE(created_at) DESC')
             ->get();
@@ -159,10 +177,14 @@ class ReportService
             ->select([
                 'rt.id', 'rt.mobile', 'rt.operator_code', 'rt.recharge_type',
                 'rt.amount', 'rt.commission', 'rt.status', 'rt.operator_ref',
+                'rt.api_ref', 'rt.operator_response', 'rt.operator_margin', 'rt.circle',
                 'rt.retry_count', 'rt.failure_reason', 'rt.processed_at', 'rt.created_at',
                 'u.name as user_name', 'u.email as user_email',
+                'orr.api_provider',
+                'orr.name as route_name',
             ])
             ->leftJoin('users as u', 'u.id', '=', 'rt.user_id')
+            ->leftJoin('operator_routes as orr', 'orr.id', '=', 'rt.operator_route_id')
             ->whereBetween('rt.created_at', [$dateFrom, $dateTo])
             ->whereNull('rt.deleted_at')
             ->when(isset($filters['operator_code']), fn ($q) => $q->where('rt.operator_code', $filters['operator_code']))
@@ -170,6 +192,7 @@ class ReportService
             ->when(isset($filters['user_id']),       fn ($q) => $q->where('rt.user_id',       $filters['user_id']))
             ->when(isset($filters['mobile']),        fn ($q) => $q->where('rt.mobile',        $filters['mobile']))
             ->when(isset($filters['recharge_type']), fn ($q) => $q->where('rt.recharge_type', $filters['recharge_type']))
+            ->when(isset($filters['api_provider']),  fn ($q) => $q->where('orr.api_provider', $filters['api_provider']))
             ->orderByDesc('rt.created_at')
             ->paginate($perPage);
 

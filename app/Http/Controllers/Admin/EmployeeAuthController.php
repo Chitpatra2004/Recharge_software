@@ -124,29 +124,30 @@ class EmployeeAuthController extends Controller
         $this->clearFailureCounter($email);
 
         // ── 2FA gate ──────────────────────────────────────────────────────
-        if ($employee->two_factor_enabled) {
+        $methods = $employee->enabledTwoFactorMethods();
+
+        if ($employee->two_factor_enabled && count($methods) > 0) {
             $pendingToken = Str::random(64);
             Cache::put(
                 'emp_pending_2fa:' . $pendingToken,
-                ['employee_id' => $employee->id, 'device' => $device],
+                ['employee_id' => $employee->id, 'device' => $device, 'methods' => $methods],
                 now()->addMinutes(self::PENDING_2FA_TTL)
             );
 
-            $method = $employee->two_factor_method ?? 'otp';
-
-            if ($method === 'otp') {
-                $this->otpService->generate($employee->mobile, 'login_2fa', $employee->id, $ip);
+            if (count($methods) === 1 && in_array($methods[0], ['mobile_otp', 'email_otp'], true)) {
+                $this->sendLoginOtp($employee, $methods[0], $ip);
             }
 
             $this->logAttempt($employee->id, $email, 'auth.employee_2fa_required', $ip, $request, 'pending');
 
             return response()->json([
                 'requires_2fa'  => true,
-                'method'        => $method,
+                'method'        => $methods[0],
+                'methods'       => $this->formatTwoFactorMethods($employee, $methods),
                 'pending_token' => $pendingToken,
-                'message'       => $method === 'totp'
-                    ? 'Enter the 6-digit code from your authenticator app.'
-                    : 'A verification code has been sent to your registered mobile.',
+                'message'       => count($methods) > 1
+                    ? 'Choose a verification method to continue.'
+                    : $this->twoFactorMethodMessage($methods[0]),
             ]);
         }
 
@@ -218,6 +219,7 @@ class EmployeeAuthController extends Controller
         $request->validate([
             'pending_token' => ['required', 'string'],
             'otp'           => ['required', 'digits:6'],
+            'method'        => ['sometimes', 'string', 'in:mobile_otp,email_otp,otp'],
         ]);
 
         $pending = $this->resolvePendingToken($request->pending_token);
@@ -226,8 +228,9 @@ class EmployeeAuthController extends Controller
         }
 
         $employee = Employee::findOrFail($pending['employee_id']);
+        $method = $this->normalizeOtpMethod($request->input('method'), $pending, $employee);
 
-        if (! $this->otpService->verify($employee->mobile, 'login_2fa', $request->otp)) {
+        if (! $method || ! $this->otpService->verify($this->otpIdentifier($employee, $method), $this->otpType($method), $request->otp)) {
             return response()->json(['message' => 'Invalid OTP. Please try again.'], 422);
         }
 
@@ -243,6 +246,7 @@ class EmployeeAuthController extends Controller
         $request->validate([
             'pending_token' => ['required', 'string'],
             'code'          => ['required', 'digits:6'],
+            'method'        => ['sometimes', 'string', 'in:google_authenticator,microsoft_authenticator,totp'],
         ]);
 
         $pending = $this->resolvePendingToken($request->pending_token);
@@ -251,8 +255,9 @@ class EmployeeAuthController extends Controller
         }
 
         $employee = Employee::findOrFail($pending['employee_id']);
+        $method = $this->normalizeTotpMethod($request->input('method'), $pending, $employee);
 
-        if (! $employee->totp_secret || ! $this->totpService->verify($employee->totp_secret, $request->code)) {
+        if (! $method || ! $employee->totp_secret || ! $this->totpService->verify($employee->totp_secret, $request->code)) {
             return response()->json(['message' => 'Invalid code. Please try again.'], 422);
         }
 
@@ -265,7 +270,10 @@ class EmployeeAuthController extends Controller
     // ─────────────────────────────────────────────────────────────────────
     public function resend2faOtp(Request $request): JsonResponse
     {
-        $request->validate(['pending_token' => ['required', 'string']]);
+        $request->validate([
+            'pending_token' => ['required', 'string'],
+            'method'        => ['sometimes', 'string', 'in:mobile_otp,email_otp,otp'],
+        ]);
 
         $pending = $this->resolvePendingToken($request->pending_token);
         if (! $pending) {
@@ -273,9 +281,15 @@ class EmployeeAuthController extends Controller
         }
 
         $employee = Employee::findOrFail($pending['employee_id']);
-        $this->otpService->generate($employee->mobile, 'login_2fa', $employee->id, $request->ip());
+        $method = $this->normalizeOtpMethod($request->input('method'), $pending, $employee);
 
-        return response()->json(['message' => 'A new OTP has been sent to your registered mobile.']);
+        if (! $method) {
+            return response()->json(['message' => 'Select a valid OTP method.'], 422);
+        }
+
+        $this->sendLoginOtp($employee, $method, $request->ip());
+
+        return response()->json(['message' => $this->otpSentMessage($method)]);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -285,6 +299,105 @@ class EmployeeAuthController extends Controller
     private function resolvePendingToken(string $token): ?array
     {
         return Cache::get('emp_pending_2fa:' . $token);
+    }
+
+    private function sendLoginOtp(Employee $employee, string $method, string $ip): void
+    {
+        $this->otpService->generate(
+            $this->otpIdentifier($employee, $method),
+            $this->otpType($method),
+            $employee->id,
+            $ip
+        );
+    }
+
+    private function normalizeOtpMethod(?string $method, array $pending, Employee $employee): ?string
+    {
+        $method = $method === 'otp' ? 'mobile_otp' : $method;
+        $methods = $pending['methods'] ?? $employee->enabledTwoFactorMethods();
+
+        if (! $method && count($methods) === 1 && in_array($methods[0], ['mobile_otp', 'email_otp'], true)) {
+            $method = $methods[0];
+        }
+
+        return in_array($method, ['mobile_otp', 'email_otp'], true)
+            && in_array($method, $methods, true)
+            ? $method
+            : null;
+    }
+
+    private function normalizeTotpMethod(?string $method, array $pending, Employee $employee): ?string
+    {
+        $method = $method === 'totp' ? 'google_authenticator' : $method;
+        $methods = $pending['methods'] ?? $employee->enabledTwoFactorMethods();
+        $totpMethods = array_values(array_intersect($methods, ['google_authenticator', 'microsoft_authenticator']));
+
+        if (! $method && count($totpMethods) === 1) {
+            $method = $totpMethods[0];
+        }
+
+        return in_array($method, $totpMethods, true) ? $method : null;
+    }
+
+    private function otpIdentifier(Employee $employee, string $method): string
+    {
+        return $method === 'email_otp' ? $employee->email : $employee->mobile;
+    }
+
+    private function otpType(string $method): string
+    {
+        return $method === 'email_otp' ? 'login_2fa_email' : 'login_2fa_mobile';
+    }
+
+    private function otpSentMessage(string $method): string
+    {
+        return $method === 'email_otp'
+            ? 'A new OTP has been sent to your registered email.'
+            : 'A new OTP has been sent to your registered mobile.';
+    }
+
+    private function twoFactorMethodMessage(string $method): string
+    {
+        return match ($method) {
+            'google_authenticator' => 'Enter the 6-digit code from Google Authenticator.',
+            'microsoft_authenticator' => 'Enter the 6-digit code from Microsoft Authenticator.',
+            'email_otp' => 'A verification code has been sent to your registered email.',
+            default => 'A verification code has been sent to your registered mobile.',
+        };
+    }
+
+    private function formatTwoFactorMethods(Employee $employee, array $methods): array
+    {
+        return collect($methods)->map(fn (string $method) => [
+            'key' => $method,
+            'label' => match ($method) {
+                'google_authenticator' => 'Google Authenticator',
+                'microsoft_authenticator' => 'Microsoft Authenticator',
+                'email_otp' => 'Email OTP',
+                default => 'Mobile OTP',
+            },
+            'channel' => in_array($method, ['google_authenticator', 'microsoft_authenticator'], true) ? 'totp' : 'otp',
+            'masked' => match ($method) {
+                'email_otp' => $this->maskEmail($employee->email),
+                'mobile_otp' => $this->maskMobile($employee->mobile),
+                default => 'Authenticator app',
+            },
+        ])->values()->all();
+    }
+
+    private function maskEmail(?string $email): string
+    {
+        if (! $email || ! str_contains($email, '@')) {
+            return 'registered email';
+        }
+
+        [$name, $domain] = explode('@', $email, 2);
+        return substr($name, 0, 2) . str_repeat('*', max(2, strlen($name) - 2)) . '@' . $domain;
+    }
+
+    private function maskMobile(?string $mobile): string
+    {
+        return $mobile ? substr($mobile, 0, 2) . '******' . substr($mobile, -2) : 'registered mobile';
     }
 
     private function issueTokenResponse(Employee $employee, string $device, string $ip, Request $request): JsonResponse

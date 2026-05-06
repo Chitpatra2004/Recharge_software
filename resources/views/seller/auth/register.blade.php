@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seller Registration — RechargeHub</title>
+    <title>Seller Registration — ColdPay</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -69,7 +69,7 @@
         <div class="reg-logo">
             <div class="reg-logo-icon"><svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
             <div>
-                <div class="reg-logo-name">RechargeHub</div>
+                <div class="reg-logo-name">ColdPay</div>
                 <div class="reg-logo-sub">Seller / Reseller Portal</div>
             </div>
         </div>

@@ -335,7 +335,7 @@ async function printAccountReport() {
     .footer{text-align:center;margin-top:28px;font-size:10px;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:14px}
     @media print{body{padding:0}@page{margin:12mm}}</style></head><body>
     <div class="header">
-        <div><div class="brand">RechargeHub</div><div class="sub">Account Report Statement</div></div>
+        <div><div class="brand">ColdPay</div><div class="sub">Account Report Statement</div></div>
         <div style="text-align:right;font-size:11px;color:#6b7280">Generated: ${new Date().toLocaleString('en-IN')}</div>
     </div>
     <div class="grid">
@@ -347,7 +347,7 @@ async function printAccountReport() {
         <thead><tr><th>#</th><th>Mobile</th><th>Operator</th><th>Type</th><th style="text-align:right">Amount</th><th style="text-align:center">Status</th><th>Date</th></tr></thead>
         <tbody>${txnRows}</tbody>
     </table>
-    <div class="footer">RechargeHub • Account Report • ${user.email||''} • Confidential</div>
+    <div class="footer">ColdPay • Account Report • ${user.email||''} • Confidential</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }
@@ -423,7 +423,7 @@ function printTxnReceipt(txn) {
     td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}
     .footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}
     @media print{body{padding:0}}</style></head><body>
-    <div class="header"><div class="brand">RechargeHub</div>
+    <div class="header"><div class="brand">ColdPay</div>
     <div style="font-size:12px;color:#6b7280;margin-top:4px">Transaction Receipt</div></div>
     <div style="text-align:center"><div class="amount">₹${parseFloat(txn.amount||0).toFixed(2)}</div>
     <div class="status">${(txn.status||'').toUpperCase()}</div></div>
@@ -437,7 +437,7 @@ function printTxnReceipt(txn) {
     <tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr>
     <tr><td style="color:#6b7280">Account</td><td>${user.name||'—'}</td></tr>
     </table>
-    <div class="footer">Thank you for using RechargeHub</div>
+    <div class="footer">Thank you for using ColdPay</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }
@@ -456,7 +456,7 @@ function printTopupReceipt(txn) {
     td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}
     .footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}
     @media print{body{padding:0}}</style></head><body>
-    <div class="brand">RechargeHub</div>
+    <div class="brand">ColdPay</div>
     <div class="sub">Wallet Transaction Receipt</div>
     <div class="amount">${isCredit?'+':'−'}₹${parseFloat(txn.amount||0).toFixed(2)}</div>
     <div style="text-align:center;font-size:13px;font-weight:600;color:#374151">${(txn.type||'').toUpperCase()}</div>
@@ -469,7 +469,7 @@ function printTopupReceipt(txn) {
     <tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr>
     <tr><td style="color:#6b7280">Account</td><td>${user.name||'—'}</td></tr>
     </table>
-    <div class="footer">RechargeHub • Wallet Receipt</div>
+    <div class="footer">ColdPay • Wallet Receipt</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }
@@ -546,7 +546,7 @@ function printLedgerReport() {
     .footer{text-align:center;margin-top:24px;font-size:10px;color:#9ca3af}
     @media print{body{padding:0}@page{margin:15mm}}</style></head><body>
     <div class="header">
-        <div><div class="brand">RechargeHub</div><div class="sub">Wallet Ledger Statement</div></div>
+        <div><div class="brand">ColdPay</div><div class="sub">Wallet Ledger Statement</div></div>
         <div style="text-align:right;font-size:12px;color:#6b7280">
             <div>Account: <strong style="color:#111">${user.name||'—'}</strong></div>
             <div>Period: ${from||'All time'} ${to?'to '+to:''}</div>
@@ -562,7 +562,7 @@ function printLedgerReport() {
         <thead><tr><th>Date & Time</th><th>Type</th><th>Description</th><th>Reference</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance After</th></tr></thead>
         <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#6b7280">No transactions in this period</td></tr>'}</tbody>
     </table>
-    <div class="footer">RechargeHub Wallet Ledger • ${user.email||''} • Confidential</div>
+    <div class="footer">ColdPay Wallet Ledger • ${user.email||''} • Confidential</div>
     <script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }

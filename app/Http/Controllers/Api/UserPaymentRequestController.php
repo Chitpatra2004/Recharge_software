@@ -41,7 +41,7 @@ class UserPaymentRequestController extends Controller
 
         if ($request->hasFile('proof_image')) {
             $proofPath = $request->file('proof_image')
-                ->store("user_proofs/{$user->id}", 'local');
+                ->store("user_proofs/{$user->id}", 'public');
         }
 
         $pr = UserPaymentRequest::create([

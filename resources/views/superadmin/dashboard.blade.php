@@ -122,7 +122,7 @@
             <span><strong>System Notice:</strong> Seller API Config & Operator Switching modules are now live.</span>
             <button onclick="document.getElementById('heroAnnounce').remove()" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:18px;line-height:1">×</button>
         </div>
-        <div class="rh-hero-greeting" id="heroGreeting">Good Morning, RechargeHub Admin!</div>
+        <div class="rh-hero-greeting" id="heroGreeting">Good Morning, ColdPay Admin!</div>
         <div class="rh-hero-sub">Here's your command overview for today — <span id="heroDate"></span></div>
         <div class="rh-hero-actions">
             <a href="{{ route('superadmin.seller-api-config') }}" class="rh-hero-btn rh-hero-btn-white">
@@ -356,7 +356,7 @@ function updateClock() {
 
     // greeting
     const g = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
-    document.getElementById('heroGreeting').textContent = `${g}, RechargeHub Admin!`;
+    document.getElementById('heroGreeting').textContent = `${g}, ColdPay Admin!`;
 }
 updateClock(); setInterval(updateClock, 1000);
 

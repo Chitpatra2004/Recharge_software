@@ -11,7 +11,7 @@ class OperatorRoute extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'operator_code', 'recharge_type', 'api_provider',
+        'operator_id', 'name', 'operator_code', 'recharge_type', 'api_provider',
         'api_endpoint', 'api_config', 'priority', 'success_rate',
         'timeout_seconds', 'max_retries', 'is_active',
         'min_amount', 'max_amount',

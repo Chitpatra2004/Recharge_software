@@ -269,21 +269,35 @@
 
                 <!-- 2FA Method Selection -->
                 <div id="tfa-method-select" style="display:none">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Choose your 2FA method:</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-                        <div onclick="chooseTfaMethod('otp')" id="method-otp-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Choose a 2FA method to enable:</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px">
+                        <div onclick="chooseTfaMethod('google_authenticator')" id="method-google-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                            <div style="width:40px;height:40px;background:#d1fae5;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/></svg>
+                            </div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Google Authenticator</div>
+                            <div style="font-size:11.5px;color:var(--text-muted)">Time-based code from Google app</div>
+                        </div>
+                        <div onclick="chooseTfaMethod('microsoft_authenticator')" id="method-microsoft-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                            <div style="width:40px;height:40px;background:#e0f2fe;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#0284c7" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+                            </div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Microsoft Authenticator</div>
+                            <div style="font-size:11.5px;color:var(--text-muted)">Time-based code from Microsoft app</div>
+                        </div>
+                        <div onclick="chooseTfaMethod('mobile_otp')" id="method-mobile-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
                             <div style="width:40px;height:40px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
                                 <svg fill="none" viewBox="0 0 24 24" stroke="#2563eb" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18h3"/></svg>
                             </div>
-                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">SMS OTP</div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Mobile OTP</div>
                             <div style="font-size:11.5px;color:var(--text-muted)">Code sent to your mobile number</div>
                         </div>
-                        <div onclick="chooseTfaMethod('totp')" id="method-totp-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
-                            <div style="width:40px;height:40px;background:#d1fae5;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
+                        <div onclick="chooseTfaMethod('email_otp')" id="method-email-card" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center">
+                            <div style="width:40px;height:40px;background:#fef3c7;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="#d97706" stroke-width="1.8" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                             </div>
-                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Authenticator App</div>
-                            <div style="font-size:11.5px;color:var(--text-muted)">Google Authenticator, Authy, etc.</div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Email OTP</div>
+                            <div style="font-size:11.5px;color:var(--text-muted)">Code sent to your email address</div>
                         </div>
                     </div>
                     <button class="btn btn-outline btn-sm" onclick="cancelTfaSetup()">Cancel</button>
@@ -503,6 +517,8 @@
 /* ─── PROFILE PAGE ─────────────────────────────────────── */
 let _tfaEnabled = false;
 let _otpTimer   = null;
+let _tfaMethods = [];
+let _setupTfaMethod = 'mobile_otp';
 
 /* Tab switching */
 function switchTab(name, btn) {
@@ -538,7 +554,8 @@ async function loadProfile() {
         document.getElementById('f-pan').value   = (emp.pan  || '').toUpperCase();
         document.getElementById('tfa-mobile').value = emp.mobile || '';
 
-        _tfaEnabled = !!emp.two_factor_enabled;
+        _tfaMethods = emp.two_factor_methods || [];
+        _tfaEnabled = !!emp.two_factor_enabled && _tfaMethods.length > 0;
         updateTfaBadge();
         loadPermissions(emp.permissions || []);
         loadActivity();
@@ -557,7 +574,8 @@ function updateTfaBadge() {
         el.textContent  = on ? 'Active' : 'Not Active';
         el.className    = 'tfa-status ' + (on ? 'on' : 'off');
     });
-    document.getElementById('tfa-setup-btn').style.display  = on ? 'none'  : '';
+    document.getElementById('tfa-setup-btn').style.display  = '';
+    document.getElementById('tfa-setup-btn').textContent = on ? 'Add Method' : 'Enable 2FA';
     document.getElementById('tfa-disable-btn').style.display = on ? '' : 'none';
 }
 
@@ -659,19 +677,23 @@ function startTfaSetup() {
 }
 
 function chooseTfaMethod(method) {
+    _setupTfaMethod = method === 'otp' ? 'mobile_otp' : method;
     document.getElementById('tfa-method-select').style.display = 'none';
-    if (method === 'otp') {
+    if (_setupTfaMethod === 'mobile_otp' || _setupTfaMethod === 'email_otp') {
         document.getElementById('tfa-setup-flow').style.display = 'block';
         document.getElementById('tfa-step1').style.display = '';
         document.getElementById('tfa-step2').style.display = 'none';
         document.getElementById('tfa-step3').style.display = 'none';
+        const isEmail = _setupTfaMethod === 'email_otp';
+        document.getElementById('tfa-mobile').closest('.form-group').style.display = isEmail ? 'none' : '';
+        document.querySelector('#tfa-step1 button.btn-primary').textContent = isEmail ? 'Send Email OTP' : 'Send OTP';
     } else {
         document.getElementById('totp-setup-flow').style.display = 'block';
         document.getElementById('totp-loading').style.display = '';
         document.getElementById('totp-content').style.display = 'none';
         document.getElementById('totp-step-success').style.display = 'none';
         document.getElementById('totp-error-msg').style.display = 'none';
-        loadTotpSetup();
+        loadTotpSetup(_setupTfaMethod);
     }
 }
 
@@ -682,9 +704,9 @@ function cancelTfaSetup() {
     clearInterval(_otpTimer);
 }
 
-async function loadTotpSetup() {
+async function loadTotpSetup(method = _setupTfaMethod) {
     try {
-        const res  = await apiFetch('/api/v1/employee/2fa/setup-totp', {method:'POST', body:JSON.stringify({})});
+        const res  = await apiFetch('/api/v1/employee/2fa/setup-totp', {method:'POST', body:JSON.stringify({method})});
         const data = await res.json();
         document.getElementById('totp-loading').style.display = 'none';
         if (res.ok) {
@@ -715,12 +737,13 @@ async function confirmTotp() {
     if (code.length < 6) { errEl.textContent = 'Please enter all 6 digits.'; errEl.style.display=''; return; }
     errEl.style.display = 'none';
     try {
-        const res  = await apiFetch('/api/v1/employee/2fa/enable-totp', {method:'POST', body:JSON.stringify({code})});
+        const res  = await apiFetch('/api/v1/employee/2fa/enable-totp', {method:'POST', body:JSON.stringify({code, method:_setupTfaMethod})});
         const data = await res.json();
         if (res.ok) {
             document.getElementById('totp-content').style.display = 'none';
             document.getElementById('totp-step-success').style.display = '';
             _tfaEnabled = true;
+            if (!_tfaMethods.includes(_setupTfaMethod)) _tfaMethods.push(_setupTfaMethod);
             updateTfaBadge();
         } else {
             Array.from(boxes).forEach(b => b.value = '');
@@ -733,11 +756,12 @@ async function confirmTotp() {
 
 async function sendTfaOtp() {
     const mobile = document.getElementById('tfa-mobile').value.trim();
-    if (!/^\d{10}$/.test(mobile)) { alert('Enter a valid 10-digit mobile number.'); return; }
+    const isEmail = _setupTfaMethod === 'email_otp';
+    if (!isEmail && !/^\d{10}$/.test(mobile)) { alert('Enter a valid 10-digit mobile number.'); return; }
     document.getElementById('tfa-otp-sending').style.display = '';
     try {
-        await apiFetch('/api/v1/employee/2fa/send-otp', {method:'POST', body:JSON.stringify({mobile})});
-        document.getElementById('tfa-mobile-display').textContent = mobile;
+        await apiFetch('/api/v1/employee/2fa/send-otp', {method:'POST', body:JSON.stringify({mobile, method:_setupTfaMethod})});
+        document.getElementById('tfa-mobile-display').textContent = isEmail ? 'your registered email' : mobile;
         document.getElementById('tfa-step1').style.display = 'none';
         document.getElementById('tfa-step2').style.display = '';
         startOtpTimer();
@@ -769,13 +793,14 @@ async function verifyTfaOtp() {
     errEl.style.display = 'none';
     try {
         const mobile = document.getElementById('tfa-mobile').value.trim();
-        const res    = await apiFetch('/api/v1/employee/2fa/verify', {method:'POST', body:JSON.stringify({mobile, otp})});
+        const res    = await apiFetch('/api/v1/employee/2fa/verify', {method:'POST', body:JSON.stringify({mobile, otp, method:_setupTfaMethod})});
         const data   = await res.json();
         if (res.ok) {
             document.getElementById('tfa-step2').style.display = 'none';
             document.getElementById('tfa-step3').style.display = '';
             clearInterval(_otpTimer);
             _tfaEnabled = true;
+            if (!_tfaMethods.includes(_setupTfaMethod)) _tfaMethods.push(_setupTfaMethod);
             updateTfaBadge();
             // Show backup codes
             const codes = data.backup_codes || ['XXXX-XXXX','YYYY-YYYY','ZZZZ-ZZZZ','AAAA-BBBB','CCCC-DDDD','EEEE-FFFF','GGGG-HHHH','IIII-JJJJ'];
@@ -793,6 +818,7 @@ async function disableTfa() {
         const res = await apiFetch('/api/v1/employee/2fa/disable', {method:'DELETE'});
         if (res.ok) {
             _tfaEnabled = false;
+            _tfaMethods = [];
             updateTfaBadge();
             document.getElementById('tfa-setup-flow').style.display = 'none';
             document.getElementById('totp-setup-flow').style.display = 'none';

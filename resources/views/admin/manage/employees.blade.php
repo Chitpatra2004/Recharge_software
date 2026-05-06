@@ -232,8 +232,12 @@ async function loadEmployees(page = 1) {
         <td>${roleBadge(e.role)}</td>
         <td>${statusBadge(e.status)}</td>
         <td style="font-size:11px;color:var(--muted)">${e.last_login_at ? new Date(e.last_login_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'Never'}</td>
-        <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" style="margin-right:4px" onclick='openModal(${JSON.stringify(e).replace(/'/g,"\\'")} )'>Edit</button>
+        <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-outline btn-sm" onclick='openModal(${JSON.stringify(e).replace(/'/g,"\\'")} )'>Edit</button>
+            <a href="/admin/employees/${e.id}/permissions" class="btn btn-sm" style="background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.3)">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                Permissions
+            </a>
             <button class="btn btn-sm" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)" onclick="deleteEmployee(${e.id},'${(e.name||'').replace(/'/g,"\\'")}')">Delete</button>
         </td>
     </tr>`).join('');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Seller Portal') — RechargeHub</title>
+    <title>@yield('title', 'Seller Portal') — ColdPay</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -115,13 +115,15 @@
         tbody tr:hover td { background:#f8faff; }
 
         .badge { display:inline-flex; align-items:center; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
-        .badge-success { background:#d1fae5; color:#059669; }
-        .badge-failed  { background:#fee2e2; color:#dc2626; }
-        .badge-pending { background:#fef3c7; color:#d97706; }
-        .badge-approved{ background:#d1fae5; color:#059669; }
-        .badge-rejected{ background:#fee2e2; color:#dc2626; }
+        .badge-success    { background:#d1fae5; color:#059669; }
+        .badge-failed     { background:#fee2e2; color:#dc2626; }
+        .badge-refunded   { background:#fee2e2; color:#dc2626; }
+        .badge-pending    { background:#fef3c7; color:#d97706; }
+        .badge-queued     { background:#fef3c7; color:#d97706; }
+        .badge-approved   { background:#d1fae5; color:#059669; }
+        .badge-rejected   { background:#fee2e2; color:#dc2626; }
         .badge-processing { background:#e0e7ff; color:#4338ca; }
-        .badge-info    { background:#dbeafe; color:#1d4ed8; }
+        .badge-info       { background:#dbeafe; color:#1d4ed8; }
 
         .spinner { width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
@@ -186,6 +188,20 @@
         .sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99; }
         .sb-overlay.show { display:block; }
         ::-webkit-scrollbar { width:5px; height:5px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:10px; }
+
+        /* ── Dropdowns — always light theme for seller portal ── */
+        select,
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"],
+        input[type="month"],
+        input[type="week"] {
+            color-scheme: light;
+            background: #ffffff;
+            color: var(--text, #1e293b);
+            border-color: var(--border, #e2e8f0);
+        }
+        select option { background: #ffffff; color: #1e293b; }
     </style>
     @stack('head')
 </head>
@@ -197,7 +213,7 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
         <div>
-            <div class="sb-brand-name">RechargeHub</div>
+            <div class="sb-brand-name">ColdPay</div>
             <div class="sb-brand-sub">Seller Portal</div>
         </div>
     </div>
@@ -213,11 +229,13 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
         </a>
-
-        <div class="nav-section">API Setup</div>
-        <a href="/seller/api-setting" class="nav-item {{ request()->is('seller/api-config') || request()->is('seller/api-setting') ? 'active' : '' }}">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            API Setting
+        <a href="/seller/documents" class="nav-item {{ request()->is('seller/documents') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            My Documents
+        </a>
+        <a href="/seller/api-tools" class="nav-item {{ request()->is('seller/api-tools') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            API Tools
         </a>
 
         <div class="nav-section">Transactions</div>
@@ -242,9 +260,10 @@
             <a href="/seller/reports/topup"    class="nav-item {{ request()->is('seller/reports/topup')    ? 'active' : '' }}">Topup Report</a>
             <a href="/seller/reports/operator" class="nav-item {{ request()->is('seller/reports/operator') ? 'active' : '' }}">Operator Report</a>
             <a href="/seller/reports/ledger"   class="nav-item {{ request()->is('seller/reports/ledger')   ? 'active' : '' }}">Account Ledger</a>
-            <a href="/seller/api-setting" class="nav-item {{ request()->is('seller/api-setting') || request()->is('seller/api-config') ? 'active' : '' }}" style="border-top:1px solid rgba(255,255,255,.07);margin-top:4px">
+            <a href="/seller/reports/my-commission" class="nav-item {{ request()->is('seller/reports/my-commission') ? 'active' : '' }}">My Commission</a>
+            <a href="/seller/reports/api-configuration" class="nav-item {{ request()->is('seller/reports/api-configuration') || request()->is('seller/api-setting') || request()->is('seller/api-config') ? 'active' : '' }}" style="border-top:1px solid rgba(255,255,255,.07);margin-top:4px">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                API Config
+                API Configuration
             </a>
         </div>
 
@@ -374,7 +393,7 @@ async function apiFetch(url, options = {}) {
 /* ── Helpers ── */
 function fmtMoney(n) { return Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function fmtDate(s)  { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); }
-function statusBadge(s) { const m={success:'badge-success',failed:'badge-failed',pending:'badge-pending',processing:'badge-processing',approved:'badge-approved',rejected:'badge-rejected',refunded:'badge-info'}; return `<span class="badge ${m[s]||'badge-info'}">${(s||'').replace(/_/g,' ')}</span>`; }
+function statusBadge(s) { const m={success:'badge-success',failed:'badge-failed',refunded:'badge-refunded',pending:'badge-pending',queued:'badge-queued',processing:'badge-processing',approved:'badge-approved',rejected:'badge-rejected'}; return `<span class="badge ${m[s]||'badge-info'}">${(s||'').replace(/_/g,' ')}</span>`; }
 
 /* ── Sidebar submenu ── */
 function toggleSub(id, btn) {
@@ -391,10 +410,98 @@ function toggleSidebar() {
     if (ov) ov.classList.toggle('show', open);
 }
 
+/* ── Session lock ── */
+// 30 min inactivity → lock. No auto-logout; user must enter password to unlock.
+const SELLER_LOCK_SESSION_KEY = 'seller_screen_locked';
+const SELLER_LOCK_AFTER_MS    = 30 * 60 * 1000;
+let _sLockTimer = null;
+let _sIsLocked  = false;
+
+function initSellerSession() {
+    ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(e =>
+        document.addEventListener(e, resetSellerIdleTimers, { passive: true })
+    );
+    if (sessionStorage.getItem(SELLER_LOCK_SESSION_KEY)) {
+        _sIsLocked = false;
+        sellerLockScreen();
+    } else {
+        resetSellerIdleTimers();
+    }
+}
+
+function resetSellerIdleTimers() {
+    if (_sIsLocked) return;
+    clearTimeout(_sLockTimer);
+    _sLockTimer = setTimeout(sellerLockScreen, SELLER_LOCK_AFTER_MS);
+}
+
+function sellerLockScreen() {
+    if (_sIsLocked) return;
+    _sIsLocked = true;
+    clearTimeout(_sLockTimer);
+    sessionStorage.setItem(SELLER_LOCK_SESSION_KEY, '1');
+    const u = getUser();
+    const lockOverlay = el('seller-lock-overlay');
+    if (!lockOverlay) return;
+    el('seller-lock-name').textContent   = u.name  || 'Seller';
+    el('seller-lock-email').textContent  = u.email || '';
+    el('seller-lock-role').textContent   = (u.role || 'api_user').replace(/_/g,' ').toUpperCase();
+    el('seller-lock-avatar').textContent = (u.name || 'S').charAt(0).toUpperCase();
+    el('seller-lock-password').value     = '';
+    el('seller-lock-error').style.display = 'none';
+    lockOverlay.style.display = 'flex';
+    el('seller-lock-password').focus();
+    const cd = el('seller-lock-countdown');
+    if (cd) cd.textContent = '';
+}
+
+function _sellerSessionLogout() {
+    sessionStorage.removeItem(SELLER_LOCK_SESSION_KEY);
+    _sIsLocked = false;
+    localStorage.removeItem(SELLER_TOKEN_KEY);
+    localStorage.removeItem(SELLER_USER_KEY);
+    localStorage.removeItem(SELLER_USER_FALLBACK_KEY);
+    window.location.href = '/seller/login';
+}
+
+async function sellerUnlockScreen() {
+    const pwd   = el('seller-lock-password').value;
+    const errEl = el('seller-lock-error');
+    const btn   = el('seller-lock-unlock-btn');
+    errEl.style.display = 'none';
+    if (!pwd) { errEl.textContent = 'Enter your password to unlock.'; errEl.style.display = 'block'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Verifying…';
+    const u = getUser();
+    try {
+        const res = await fetch('/api/v1/seller/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ email: u.email, password: pwd, device_name: 'web' })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.token) localStorage.setItem(SELLER_TOKEN_KEY, data.token);
+            if (data.user) { localStorage.setItem(SELLER_USER_KEY, JSON.stringify(data.user)); localStorage.setItem(SELLER_USER_FALLBACK_KEY, JSON.stringify(data.user)); }
+            sessionStorage.removeItem(SELLER_LOCK_SESSION_KEY);
+            el('seller-lock-overlay').style.display = 'none';
+            clearInterval(_sCountdownInterval);
+            _sIsLocked = false;
+            resetSellerIdleTimers();
+        } else {
+            errEl.textContent = 'Incorrect password. Please try again.';
+            errEl.style.display = 'block';
+        }
+    } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+}
+
 /* ── Logout ── */
 function doLogout() {
     if (!confirm('Logout from seller portal?')) return;
     apiFetch('/api/v1/seller/auth/logout', { method:'POST' }).catch(()=>{}).finally(() => {
+        sessionStorage.removeItem(SELLER_LOCK_SESSION_KEY);
         localStorage.removeItem(SELLER_TOKEN_KEY);
         localStorage.removeItem(SELLER_USER_KEY);
         localStorage.removeItem(SELLER_USER_FALLBACK_KEY);
@@ -439,8 +546,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (pbEl) { pbEl.textContent = stats.pending_payments; pbEl.style.display = 'inline-flex'; }
         }
     } catch(e) { /* silent — non-critical */ }
+
+    initSellerSession();
 });
 </script>
+
+<!-- ── SELLER LOCK SCREEN ─────────────────────────────────────────────────── -->
+<div id="seller-lock-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.94);backdrop-filter:blur(24px);align-items:center;justify-content:center">
+    <div style="text-align:center;width:100%;max-width:340px;padding:20px">
+        <div id="seller-lock-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#6366f1);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;margin:0 auto 16px;box-shadow:0 8px 32px rgba(37,99,235,.4)">S</div>
+        <div id="seller-lock-name"  style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Seller</div>
+        <div id="seller-lock-role"  style="font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">API SELLER</div>
+        <div id="seller-lock-email" style="font-size:12px;color:#64748b;margin-bottom:20px"></div>
+        <div style="font-size:13px;color:#94a3b8;margin-bottom:20px">Session locked due to inactivity.</div>
+        <input id="seller-lock-password" type="password" placeholder="Enter password to unlock"
+               style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#fff;font-size:14px;outline:none;letter-spacing:2px;margin-bottom:10px"
+               onkeydown="if(event.key==='Enter') sellerUnlockScreen()">
+        <div id="seller-lock-error" style="display:none;font-size:12px;color:#ef4444;margin-bottom:10px"></div>
+        <button id="seller-lock-unlock-btn" onclick="sellerUnlockScreen()"
+                style="width:100%;padding:12px;background:linear-gradient(135deg,#2563eb,#6366f1);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px">Unlock</button>
+        <button onclick="_sellerSessionLogout()"
+                style="width:100%;padding:10px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:10px;font-size:13px;cursor:pointer">Sign Out</button>
+        <div id="seller-lock-countdown" style="font-size:11px;color:#475569;margin-top:16px"></div>
+    </div>
+</div>
 
 @stack('scripts')
 </body>

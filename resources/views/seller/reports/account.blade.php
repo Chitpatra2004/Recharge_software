@@ -82,7 +82,7 @@ function renderDailyTable(rows){
             <td style="font-weight:500">${r.date||'—'}</td>
             <td>${r.total||0}</td>
             <td><span class="badge-success">${r.success||0}</span></td>
-            <td><span class="badge-danger">${r.failed||0}</span></td>
+            <td><span class="badge-failed">${r.failed||0}</span></td>
             <td style="font-weight:600">₹${fmtMoney(r.amount||0)}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:8px">

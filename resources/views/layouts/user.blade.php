@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title','Dashboard') — RechargeHub</title>
+    <title>@yield('title','Dashboard') — ColdPay</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -106,12 +106,14 @@
         .breadcrumb a{color:var(--blue);text-decoration:none;font-weight:500}
         .breadcrumb svg{width:12px;height:12px;color:var(--border)}
 
-        /* ── Force dark chrome on ALL native form controls ───────────── */
+        /* ── Force dark chrome on ALL native form controls (dark is default) ── */
+        select,
         input[type="date"],
         input[type="time"],
         input[type="datetime-local"],
         input[type="month"],
-        input[type="week"] { color-scheme: dark }
+        input[type="week"] { color-scheme: dark; }
+        select option { background: var(--card2, #0d1b3e); color: var(--text, #f1f5f9); }
 
         /* ── Custom Select Component ──────────────────────────────────── */
         .csel-wrap{position:relative;display:block;width:100%}
@@ -156,11 +158,13 @@
         html[data-scheme="light"] .card{box-shadow:0 1px 4px rgba(0,0,0,.06)}
         html[data-scheme="light"] .btn-outline{background:#fff;border-color:var(--border2)}
         html[data-scheme="light"] tbody tr:hover td{background:#f1f5f9}
+        html[data-scheme="light"] select,
         html[data-scheme="light"] input[type="date"],
         html[data-scheme="light"] input[type="time"],
         html[data-scheme="light"] input[type="datetime-local"],
         html[data-scheme="light"] input[type="month"],
-        html[data-scheme="light"] input[type="week"]{color-scheme:light}
+        html[data-scheme="light"] input[type="week"] { color-scheme: light; }
+        html[data-scheme="light"] select option { background: #ffffff; color: #1e293b; }
 
         @media(max-width:768px){
             .sidebar{transform:translateX(-100%)}
@@ -210,7 +214,7 @@
 <aside class="sidebar" id="sidebar">
     <a href="/user/dashboard" class="sb-brand">
         <div class="sb-brand-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
-        <span class="sb-brand-name">Recharge<span>Hub</span></span>
+        <span class="sb-brand-name">Cold<span>Pay</span></span>
     </a>
 
     <nav class="sb-nav">
@@ -335,6 +339,7 @@ function requireAuth() {
 function _clearSession() {
     localStorage.removeItem(U_TOKEN);
     localStorage.removeItem(U_DATA);
+    sessionStorage.removeItem(USER_LOCK_KEY);
 }
 
 function doLogout() {
@@ -352,7 +357,10 @@ function confirmLogout() {
 
 async function apiFetch(url, opts = {}) {
     const token = getToken();
-    opts.headers = Object.assign({ 'Authorization':'Bearer '+token, 'Accept':'application/json', 'Content-Type':'application/json' }, opts.headers||{});
+    const defaultHeaders = { 'Authorization':'Bearer '+token, 'Accept':'application/json' };
+    if (!(opts.body instanceof FormData)) defaultHeaders['Content-Type'] = 'application/json';
+    opts.headers = Object.assign(defaultHeaders, opts.headers||{});
+    if (opts.headers['Content-Type'] == null) delete opts.headers['Content-Type'];
     const res = await fetch(url, opts);
     if (res.status === 401) { localStorage.removeItem(U_TOKEN); window.location.href = '/user/login'; return null; }
     return res;
@@ -379,53 +387,50 @@ setInterval(updateClock,1000); updateClock();
 document.addEventListener('DOMContentLoaded', () => { requireAuth(); bootSidebar(); initSession(); });
 
 // ── SESSION MANAGEMENT ────────────────────────────────────────────
-const LOCK_AFTER_MS   = 15 * 60 * 1000;   // 15 min → lock
-const LOGOUT_AFTER_MS = 30 * 60 * 1000;   // 30 min → auto-logout
-let _lockTimer = null, _logoutTimer = null, _countdownInterval = null;
-let _isLocked = false;
+// 30 min inactivity → lock. No auto-logout; user must enter password to unlock.
+const LOCK_AFTER_MS = 30 * 60 * 1000;
+const USER_LOCK_KEY = 'user_screen_locked';
+let _lockTimer = null;
+let _isLocked  = false;
 
 function initSession() {
-    resetIdleTimers();
     ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(e =>
         document.addEventListener(e, resetIdleTimers, { passive: true })
     );
+    if (sessionStorage.getItem(USER_LOCK_KEY)) {
+        _isLocked = false;
+        lockScreen();
+    } else {
+        resetIdleTimers();
+    }
 }
 
 function resetIdleTimers() {
     if (_isLocked) return;
     clearTimeout(_lockTimer);
-    clearTimeout(_logoutTimer);
-    _lockTimer   = setTimeout(lockScreen,        LOCK_AFTER_MS);
-    _logoutTimer = setTimeout(_sessionLogout,    LOGOUT_AFTER_MS);
+    _lockTimer = setTimeout(lockScreen, LOCK_AFTER_MS);
 }
 
 function lockScreen() {
     if (_isLocked) return;
     _isLocked = true;
     clearTimeout(_lockTimer);
+    sessionStorage.setItem(USER_LOCK_KEY, '1');
     const u = getUserData();
     const overlay = document.getElementById('lock-overlay');
-    document.getElementById('lock-user-name').textContent  = u.name  || 'User';
-    document.getElementById('lock-user-email').textContent = u.email || '';
+    document.getElementById('lock-user-name').textContent   = u.name  || 'User';
+    document.getElementById('lock-user-email').textContent  = u.email || '';
     document.getElementById('lock-avatar-text').textContent = (u.name||'U').charAt(0).toUpperCase();
     document.getElementById('lock-password').value = '';
     document.getElementById('lock-error').style.display = 'none';
     overlay.style.display = 'flex';
     document.getElementById('lock-password').focus();
-    // countdown to auto-logout
-    let remaining = (LOGOUT_AFTER_MS - LOCK_AFTER_MS) / 1000;
-    clearInterval(_countdownInterval);
-    _countdownInterval = setInterval(() => {
-        remaining--;
-        const m = Math.floor(remaining / 60), s = remaining % 60;
-        const el = document.getElementById('lock-countdown');
-        if (el) el.textContent = `Auto-logout in ${m}:${String(s).padStart(2,'0')}`;
-        if (remaining <= 0) { clearInterval(_countdownInterval); _sessionLogout(); }
-    }, 1000);
+    const cd = document.getElementById('lock-countdown');
+    if (cd) cd.textContent = '';
 }
 
 function _sessionLogout() {
-    clearInterval(_countdownInterval);
+    sessionStorage.removeItem(USER_LOCK_KEY);
     _isLocked = false;
     doLogout();
 }
@@ -450,8 +455,8 @@ async function unlockScreen() {
             const data = await res.json();
             localStorage.setItem(U_TOKEN, data.token);
             if (data.user) localStorage.setItem(U_DATA, JSON.stringify(data.user));
+            sessionStorage.removeItem(USER_LOCK_KEY);
             document.getElementById('lock-overlay').style.display = 'none';
-            clearInterval(_countdownInterval);
             _isLocked = false;
             resetIdleTimers();
         } else {

@@ -1,359 +1,510 @@
 @extends('layouts.admin')
-@section('title','Pending Recharge Report')
-
-@push('head')
-<style>
-.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
-.filter-bar select,.filter-bar input{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;color:#1e293b}
-.filter-bar .btn{padding:7px 18px;font-size:13px}
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-@media(max-width:900px){.stat-row{grid-template-columns:1fr 1fr}}
-.stat-card{background:var(--card-bg);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow-sm);border-left:4px solid transparent}
-.stat-card.orange{border-color:var(--accent-orange)}
-.stat-card.blue{border-color:var(--accent-blue)}
-.stat-card.red{border-color:var(--accent-red)}
-.stat-card.purple{border-color:var(--accent-purple)}
-.stat-card .val{font-size:22px;font-weight:700;margin-bottom:2px;color:#1e293b}
-.stat-card .lbl{font-size:11.5px;color:#64748b}
-.badge-pending{background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.badge-queued{background:#e0f2fe;color:#0369a1;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.badge-stuck{background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.badge-processing{background:#dbeafe;color:#1e40af;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.action-btn{padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#fff;color:#1e293b}
-.action-btn:hover{background:var(--bg-page)}
-.action-btn.refund{color:var(--accent-red);border-color:var(--accent-red)}
-.action-btn.info{color:var(--accent-blue);border-color:var(--accent-blue)}
-.action-btn.resend{color:var(--accent-green);border-color:var(--accent-green)}
-.txn-id{font-family:monospace;font-size:11.5px;color:#334155;background:#f1f5f9;padding:2px 6px;border-radius:4px}
-</style>
-@endpush
+@section('title', 'Pending Recharge Report')
+@section('page-title', 'Pending Recharge Report')
 
 @section('content')
-<div class="page-header">
-    <div>
-        <h1 class="page-title">Pending Recharge Report</h1>
-        <p class="page-sub">Transactions stuck in pending / queued / processing state</p>
-    </div>
-    <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="exportPending()">Export CSV</button>
-        <button class="btn btn-primary" onclick="loadPending(1)">Refresh</button>
-    </div>
+<style>
+.rr-card{background:#fff;border:1px solid var(--border);border-radius:4px;margin-bottom:18px}
+.rr-head{padding:13px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:800;text-transform:uppercase;color:#111827}
+.rr-filters{display:grid;grid-template-columns:100px 100px 110px 120px 130px 130px 120px 120px auto auto;gap:12px;align-items:end;padding:20px 10px 22px}
+.rr-field label{display:block;font-size:16px;font-weight:700;color:#858da8;margin-bottom:8px}
+.rr-field input,.rr-field select{width:100%;height:28px;border:1px solid #444;padding:3px 8px;font-size:12px;background:#fff}
+.rr-blue{background:#0068ce;color:#fff;border:none;border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer}
+.rr-green{background:#10b900;color:#fff;border:none;border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer}
+.rr-table-wrap{overflow:auto;padding:0 6px 14px}
+.rr-table{width:100%;border-collapse:collapse;min-width:1500px}
+.rr-table th{font-size:13px;font-weight:800;text-align:left;padding:14px 12px;border-top:1px solid #d8dde6;border-bottom:1px solid #d8dde6;color:#111827}
+.rr-table td{font-size:14px;vertical-align:top;padding:10px 8px;border-bottom:1px solid #d8dde6;color:#000}
+.rr-id{color:#005fd1;font-weight:700;cursor:pointer;line-height:1.5}
+.rr-agent{color:#2563dc;font-size:15px;font-weight:800}
+.rr-status-badge{font-weight:800;padding:2px 6px;border-radius:3px;cursor:pointer;display:inline-block}
+.rr-status-pending{background:#f59e0b;color:#fff}
+.rr-status-queued{background:#0ea5e9;color:#fff}
+.rr-status-processing{background:#8b5cf6;color:#fff}
+.rr-status-success{background:#16a34a;color:#fff}
+.rr-status-failed{background:#dc2626;color:#fff}
+.rr-actions{display:flex;flex-direction:column;gap:3px;width:80px}
+.rr-actions button{border:none;color:#fff;font-size:12px;font-weight:800;padding:6px 6px;border-radius:4px;cursor:pointer}
+.rr-a-blue{background:#0068ce}
+.rr-a-orange{background:#f59e0b}
+.rr-inline-wrap{display:flex;flex-direction:column;gap:3px;min-width:130px}
+.rr-inline-wrap input{height:26px;border:1px solid #aaa;padding:2px 6px;font-size:12px;width:100%}
+.rr-inline-wrap select{height:26px;border:1px solid #aaa;padding:2px 4px;font-size:11px;width:100%}
+.rr-inline-wrap button{background:#0068ce;color:#fff;border:none;font-size:11px;font-weight:800;padding:4px 0;border-radius:3px;cursor:pointer}
+.rr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:700;align-items:center;justify-content:center}
+.rr-box{background:#f4f4f4;min-width:560px;max-width:96vw}
+.rr-box-head{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fff;color:#858da8;font-size:20px;font-weight:800}
+.rr-box-body{padding:20px 12px}
+.rr-box-foot{display:flex;justify-content:flex-end;gap:6px;padding:16px 12px;background:#fff}
+.rr-box textarea{width:400px;height:48px}
+.rr-box select{height:31px}
+.rr-box-foot button{border:none;color:#fff;border-radius:4px;padding:8px 13px;font-weight:800;cursor:pointer}
+.rr-log .rr-box{width:1200px;max-width:98vw;max-height:88vh;overflow:auto;background:#fff}
+.rr-log .rr-box-head{background:#1a2035;color:#fff}
+.rr-log table{width:100%;border-collapse:collapse}
+.rr-log th,.rr-log td{border-top:1px solid #d8dde6;padding:14px 12px;vertical-align:top;text-align:left}
+.rr-log pre{white-space:pre-wrap;font-family:inherit;margin:0}
+.rr-pager{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid #d8dde6;font-size:12.5px;color:#64748b}
+@media(max-width:1200px){.rr-filters{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+{{-- Pending count badge --}}
+<div style="margin-bottom:12px">
+    <button style="background:#f59e0b;color:#fff;border:none;border-radius:4px;padding:7px 16px;font-weight:800;font-size:14px;cursor:default">
+        Pending : <span id="pending-count">—</span>
+    </button>
 </div>
 
-<div class="stat-row">
-    <div class="stat-card orange"><div class="val" id="sTotalPending">—</div><div class="lbl">Total Pending</div></div>
-    <div class="stat-card blue"><div class="val" id="sPendingAmt">—</div><div class="lbl">Pending Amount (₹)</div></div>
-    <div class="stat-card red"><div class="val" id="sStuck">—</div><div class="lbl">Stuck &gt; 30 min</div></div>
-    <div class="stat-card purple"><div class="val" id="sProcessing">—</div><div class="lbl">Processing</div></div>
-</div>
-
-<div class="card">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <span style="font-weight:600;font-size:14px">Pending Transactions</span>
-        <div class="filter-bar" style="margin:0">
-            <input type="text" id="fOperator" placeholder="Operator (e.g. Airtel)" style="width:140px">
-            <select id="fAge">
-                <option value="">Any Age</option>
-                <option value="5">5+ min</option>
-                <option value="10">10+ min</option>
-                <option value="30">30+ min</option>
-                <option value="60">1+ hour</option>
-                <option value="360">6+ hours</option>
+{{-- Search Filters --}}
+<div class="rr-card">
+    <div class="rr-head">Search Filters</div>
+    <div class="rr-filters">
+        <div class="rr-field"><label>From Date</label><input id="f-from" type="date"></div>
+        <div class="rr-field"><label>To Date</label><input id="f-to" type="date"></div>
+        <div class="rr-field"><label>USER</label><input id="f-user" type="text" placeholder="type username"></div>
+        <div class="rr-field"><label>Status</label>
+            <select id="f-status">
+                <option value="">ALL</option>
+                <option value="pending">Pending</option>
+                <option value="queued">Queued</option>
+                <option value="processing">Processing</option>
             </select>
-            <input type="date" id="fDate" value="{{ date('Y-m-d') }}">
-            <button class="btn btn-primary" onclick="loadPending(1)">Filter</button>
         </div>
+        <div class="rr-field"><label>Operator</label><select id="f-operator"><option value="">ALL</option></select></div>
+        <div class="rr-field"><label>Number / Id</label><input id="f-search" type="text"></div>
+        <div class="rr-field"><label>Data</label>
+            <select id="f-data">
+                <option value="all">ALL</option>
+                <option value="live">LIVE (Today)</option>
+                <option value="custom">Custom Date</option>
+            </select>
+        </div>
+        <button class="rr-blue" onclick="loadReport()">Submit</button>
+        <button class="rr-green" onclick="exportReport()">Export</button>
     </div>
-    <div class="table-wrap">
-        <table>
+</div>
+
+{{-- Report Table --}}
+<div class="rr-card">
+    <div class="rr-head">Pending Recharge Report</div>
+    <div style="padding:22px 6px 6px;color:#005fd1;font-size:13px"><span id="rr-count">0</span>&gt;</div>
+    <div class="rr-table-wrap">
+        <table class="rr-table">
             <thead>
                 <tr>
-                    <th>Txn ID</th>
-                    <th>Mobile</th>
-                    <th>Operator</th>
-                    <th>Amount</th>
-                    <th>Seller</th>
-                    <th>Initiated</th>
-                    <th>Age</th>
+                    <th>Rec.Id</th>
+                    <th>Rec.<br>Date</th>
+                    <th>Agent Name</th>
+                    <th>opcode</th>
+                    <th>Mobile No</th>
+                    <th>Amt</th>
+                    <th>otf</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>API</th>
+                    <th>OperatorId</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody id="pendingBody">
-                <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr>
+            <tbody id="rr-body">
+                <tr><td colspan="11" style="text-align:center;padding:30px;color:#777">Loading...</td></tr>
             </tbody>
         </table>
     </div>
-    <div id="tablePager" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border);font-size:12.5px;color:#64748b">
-        <span id="pageInfo">—</span>
-        <div id="pagerBtns" style="display:flex;gap:6px"></div>
+    <div class="rr-pager" id="rr-pager"></div>
+</div>
+
+{{-- Action Modal --}}
+<div id="action-modal" class="rr-modal">
+    <div class="rr-box">
+        <div class="rr-box-head">
+            <span>Action</span>
+            <button onclick="closeAction()" style="border:none;background:none;font-size:18px;color:#777;cursor:pointer">×</button>
+        </div>
+        <div class="rr-box-body">
+            <p>Username : <span id="am-user"></span></p>
+            <p>Operator : <span id="am-op"></span></p>
+            <p>Mobile Number : <span id="am-mobile"></span></p>
+            <p>Amount : <span id="am-amount"></span></p>
+            <p>Remarks or OperatorId or Transaction Id :</p>
+            <textarea id="am-remarks"></textarea>
+            <p>Recharge Ip: <span id="am-ip" style="font-size:12px;color:#64748b"></span></p>
+        </div>
+        <div class="rr-box-foot">
+            <button style="background:#e83e58" onclick="doAction('refund')">Refund</button>
+            <button style="background:#f59e0b" onclick="doAction('status')">Status</button>
+            <button style="background:#0068ce" onclick="doAction('success')">Success</button>
+            <button style="background:#f59e0b" onclick="doAction('resend')">Resend</button>
+        </div>
     </div>
 </div>
 
-{{-- Refund Confirm Modal --}}
-<div id="actionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
-    <div class="card" style="width:400px;max-width:95vw;padding:24px">
-        <h3 id="modalTitle" style="font-size:15px;font-weight:700;margin-bottom:8px">Confirm Action</h3>
-        <p id="modalMsg" style="font-size:13px;color:#64748b;margin-bottom:20px"></p>
-        <div style="display:flex;gap:10px">
-            <button class="btn btn-primary" id="modalConfirm">Confirm</button>
-            <button class="btn btn-outline" onclick="document.getElementById('actionModal').style.display='none'">Cancel</button>
+{{-- Log / Response Modal --}}
+<div id="log-modal" class="rr-modal rr-log">
+    <div class="rr-box">
+        <div class="rr-box-head">
+            <span id="log-title">Request/Response Log</span>
+            <button onclick="closeLog()" style="border:none;background:none;color:#fff;font-size:18px;cursor:pointer">×</button>
+        </div>
+        <div style="padding:16px 14px">
+            <table>
+                <thead>
+                    <tr>
+                        <th>LogId</th><th>Type</th><th>Label</th><th>api</th><th>RechargeId</th>
+                        <th>DateTime</th><th>Request</th><th>Response</th>
+                    </tr>
+                </thead>
+                <tbody id="log-body"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<div id="detailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:550;align-items:center;justify-content:center;padding:20px">
-    <div class="card" style="width:900px;max-width:96vw;max-height:88vh;overflow:auto">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:15px;font-weight:700">Transaction Log Detail</span>
-            <button class="btn btn-outline btn-sm" onclick="closeDetailModal()">Close</button>
+{{-- Live Status Modal --}}
+<div id="status-modal" class="rr-modal">
+    <div class="rr-box" style="min-width:420px;max-width:550px">
+        <div class="rr-box-head" style="background:#0068ce;color:#fff">
+            <span>Transaction Status</span>
+            <button onclick="closeStatusModal()" style="border:none;background:none;color:#fff;font-size:18px;cursor:pointer">×</button>
         </div>
-        <div class="card-body" id="detailBody">
-            <div class="loading"><div class="spinner"></div> Loading...</div>
+        <div class="rr-box-body" id="status-body" style="min-height:80px"></div>
+        <div class="rr-box-foot">
+            <button style="background:#64748b" onclick="closeStatusModal()">Close</button>
         </div>
     </div>
 </div>
+
+@endsection
 
 @push('scripts')
 <script>
-const TOKEN = () => localStorage.getItem('emp_token');
-const empFetch = (url, method='GET', body=null) =>
-    fetch(url, {
-        method,
-        headers: {'Authorization': 'Bearer ' + TOKEN(), 'Content-Type': 'application/json', 'Accept': 'application/json'},
-        ...(body ? {body: JSON.stringify(body)} : {})
-    }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.message || 'Error'); return d; });
+let rows = [], currentTxn = null;
+function todayLocalISO(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+}
+const today = todayLocalISO();
+document.getElementById('f-from').value = today;
+document.getElementById('f-to').value   = today;
 
-let currentPage = 1;
-let lastMeta = {};
-let rawRows = [];
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function jsonText(v){ if (!v) return ''; try { return JSON.stringify(typeof v === 'string' ? JSON.parse(v) : v, null, 2); } catch(e){ return String(v); } }
 
-function fmtMoney(n){ return Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
-function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); }
+function params(){
+    const p    = new URLSearchParams();
+    const data = document.getElementById('f-data').value;
+    const user   = document.getElementById('f-user').value.trim();
+    const status = document.getElementById('f-status').value;
+    const op     = document.getElementById('f-operator').value;
+    const search = document.getElementById('f-search').value.trim();
 
-function ageLabel(min){
-    min = parseInt(min) || 0;
-    if(min < 60) return min + 'm';
-    return Math.floor(min/60) + 'h ' + (min % 60) + 'm';
+    if (data === 'live') {
+        p.set('date_from', today);
+        p.set('date_to',   today);
+    } else if (data === 'custom') {
+        const from = document.getElementById('f-from').value;
+        const to   = document.getElementById('f-to').value;
+        if (from) p.set('date_from', from);
+        if (to)   p.set('date_to',   to);
+    }
+    // data === 'all' → no date filter → shows ALL pending regardless of date
+
+    if (user)   p.set('user_name', user);
+    if (status) p.set('status', status);
+    if (op)     p.set('operator_code', op);
+    if (search) p.set('search', search);
+    p.set('per_page', 25);
+    return p;
 }
 
-function statusBadge(status, age){
-    if(status === 'queued')     return '<span class="badge-queued">Queued</span>';
-    if(status === 'processing') return '<span class="badge-processing">Processing</span>';
-    if(parseInt(age) > 30)      return '<span class="badge-stuck">Stuck</span>';
-    return '<span class="badge-pending">Pending</span>';
+async function bootFilters(){
+    // Start report load immediately (don't block UI on dropdown APIs)
+    loadReport(1);
+
+    const opsRes = await apiFetch('/api/v1/employee/operator-settings');
+    const ops    = opsRes ? await opsRes.json() : {};
+    document.getElementById('f-operator').innerHTML =
+        '<option value="">ALL</option>' +
+        (ops.operators || []).map(o => `<option value="${esc(o.code)}">${esc(o.name)}</option>`).join('');
 }
 
-function renderTable(rows){
-    const tbody = document.getElementById('pendingBody');
-    if (!rows || !rows.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">No pending transactions found</td></tr>';
+let currentPage = 1, lastMeta = {};
+
+async function loadReport(page){
+    currentPage = page || currentPage;
+    const p = params();
+    p.set('page', currentPage);
+
+    document.getElementById('rr-body').innerHTML =
+        '<tr><td colspan="11" style="text-align:center;padding:30px;color:#777">Loading...</td></tr>';
+
+    const res  = await apiFetch('/api/v1/employee/reports/pending?' + p.toString());
+    if (!res) return;
+    const data = await res.json();
+
+    const pagination = data.data || {};
+    rows     = pagination.data || [];
+    lastMeta = { total: pagination.total, last_page: pagination.last_page, from: pagination.from, to: pagination.to };
+
+    const stats = data.stats || {};
+    document.getElementById('pending-count').textContent = stats.total || 0;
+    document.getElementById('rr-count').textContent      = pagination.total || rows.length;
+
+    renderRows();
+    renderPager(lastMeta);
+}
+
+function renderRows(){
+    const body = document.getElementById('rr-body');
+    if (!rows.length){
+        body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:#777">No pending transactions found.</td></tr>';
         return;
     }
-    tbody.innerHTML = rows.map(r => {
-        const age = parseInt(r.age_minutes) || 0;
-        const isStuck = age > 30;
-        return `<tr style="${isStuck ? 'background:#fff5f5' : ''}">
-            <td><span class="txn-id">#${r.id}</span></td>
-            <td style="font-weight:600;color:#1e293b">${r.mobile}</td>
-            <td>${r.operator_code || '—'}</td>
-            <td style="font-weight:700;color:#1e293b">₹${fmtMoney(r.amount)}</td>
+
+    body.innerHTML = rows.map(r => {
+        const d      = r.created_at ? new Date(r.created_at) : null;
+        const dateStr = d ? d.toISOString().slice(0,10) : '';
+        const timeStr = d ? d.toLocaleTimeString('en-IN', {hour12:false}) : '';
+        const opcode  = esc((r.operator_code || '') + ' ' + (r.recharge_type || '')).trim();
+        const statusCls = r.status === 'queued' ? 'rr-status-queued'
+                        : r.status === 'processing' ? 'rr-status-processing'
+                        : 'rr-status-pending';
+        const apiName   = esc(r.api_provider || r.route_name || '—');
+        const operRef   = esc(r.operator_ref || '');
+        const rowId     = `row-${r.id}`;
+
+        return `<tr id="${rowId}">
+            <td><div class="rr-id" onclick="openLog(${r.id})">${r.id}</div></td>
+            <td style="font-size:12px;white-space:nowrap">${dateStr}<br>${timeStr}</td>
             <td>
-                <div style="font-weight:600;font-size:13px;color:#1e293b">${r.seller_name || '—'}</div>
-                <div style="font-size:11px;color:#94a3b8">${r.seller_email || ''}</div>
+                <div class="rr-agent">${esc(r.seller_name || '—')}</div>
+                <div style="font-size:11px;color:#94a3b8">${esc(r.seller_email || '')}</div>
             </td>
-            <td style="color:#64748b;font-size:12.5px">${fmtDate(r.created_at)}</td>
-            <td style="font-weight:700;color:${isStuck ? '#ef4444' : '#64748b'}">${ageLabel(age)}</td>
-            <td>${statusBadge(r.status, age)}</td>
-            <td style="display:flex;gap:5px;flex-wrap:wrap">
-                <button class="action-btn info" onclick="viewLog(${r.id})">View Log</button>
-                <button class="action-btn resend" onclick="resendTxn(${r.id}, '${r.mobile}')">Resend</button>
-                <button class="action-btn refund" onclick="doRefund(${r.id}, '${r.mobile}', ${r.amount})">Refund</button>
+            <td>${opcode || '—'}</td>
+            <td style="font-weight:700">${esc(r.mobile)}</td>
+            <td style="font-weight:700">${Number(r.amount || 0).toFixed(2)}</td>
+            <td style="color:#64748b">${Number(r.commission || 0).toFixed(2)}</td>
+            <td>
+                <span class="rr-status-badge ${statusCls}" onclick="checkStatus(${r.id})" title="Click to check live status">
+                    ${esc(r.status || 'pending')}
+                </span>
+            </td>
+            <td style="font-size:12px">${apiName}</td>
+            <td>
+                <div class="rr-inline-wrap">
+                    <input type="text" id="oid-${r.id}" value="${operRef}" placeholder="OperatorId">
+                    <select id="api-${r.id}">
+                        <option value="">-- Select Action --</option>
+                        <option value="__success">✓ Mark Success</option>
+                        <option value="__failed">✗ Mark Failed</option>
+                    </select>
+                    <button onclick="doRowSend(${r.id})">Submit</button>
+                </div>
+            </td>
+            <td>
+                <div class="rr-actions">
+                    <button class="rr-a-blue" onclick="openAction(${r.id})">Action</button>
+                    <button class="rr-a-orange" onclick="openResponse(${r.id})">Response</button>
+                </div>
             </td>
         </tr>`;
     }).join('');
 }
 
 function renderPager(meta){
-    document.getElementById('pageInfo').textContent =
-        `Showing ${meta.from || 0}–${meta.to || 0} of ${meta.total || 0}`;
-    const btns = document.getElementById('pagerBtns');
+    const pager = document.getElementById('rr-pager');
+    if (!meta.total) { pager.innerHTML = ''; return; }
     const lp = meta.last_page || 1;
-    let html = '';
-    for (let i = 1; i <= lp; i++) {
-        html += `<button onclick="loadPending(${i})" style="padding:5px 10px;border-radius:6px;border:1.5px solid ${i===currentPage?'#2563eb':'#e2e8f0'};background:${i===currentPage?'#2563eb':'#fff'};color:${i===currentPage?'#fff':'#374151'};font-size:12.5px;cursor:pointer">${i}</button>`;
+    // Rendering every page button gets slow on large datasets.
+    // Show a small window + first/last + prev/next.
+    const win = 2; // buttons around current
+    const start = Math.max(1, currentPage - win);
+    const end   = Math.min(lp, currentPage + win);
+
+    const btn = (i, label = i) =>
+        `<button onclick="loadReport(${i})" style="padding:4px 9px;border-radius:4px;border:1.5px solid ${i===currentPage?'#0068ce':'#d1d5db'};background:${i===currentPage?'#0068ce':'#fff'};color:${i===currentPage?'#fff':'#374151'};font-size:12px;cursor:pointer;margin:0 2px">${label}</button>`;
+
+    let btns = '';
+    if (currentPage > 1) btns += btn(currentPage - 1, 'Prev');
+    btns += btn(1, '1');
+    if (start > 2) btns += `<span style="margin:0 6px;color:#94a3b8">…</span>`;
+    for (let i = start; i <= end; i++){
+        if (i === 1 || i === lp) continue;
+        btns += btn(i);
     }
-    btns.innerHTML = html;
+    if (end < lp - 1) btns += `<span style="margin:0 6px;color:#94a3b8">…</span>`;
+    if (lp > 1) btns += btn(lp, String(lp));
+    if (currentPage < lp) btns += btn(currentPage + 1, 'Next');
+
+    pager.innerHTML = `<span>Showing ${meta.from || 0}–${meta.to || 0} of ${meta.total || 0}</span><div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-end">${btns}</div>`;
 }
 
-function loadPending(page){
-    currentPage = page || 1;
-    const params = new URLSearchParams({ page: currentPage, per_page: 25 });
-    const op  = document.getElementById('fOperator').value.trim();
-    const age = document.getElementById('fAge').value;
-    const dt  = document.getElementById('fDate').value;
-    if (op)  params.set('operator_code', op);
-    if (age) params.set('min_age', age);
-    if (dt)  params.set('date', dt);
+// ── Inline row Submit ────────────────────────────────────────────────────────
+async function doRowSend(id){
+    const operatorId = document.getElementById(`oid-${id}`).value.trim();
+    const action     = document.getElementById(`api-${id}`).value;
 
-    document.getElementById('pendingBody').innerHTML =
-        '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">Loading…</td></tr>';
+    if (!action){ alert('Select an action (Success or Failed).'); return; }
 
-    empFetch(`/api/v1/employee/reports/pending?${params}`)
-        .then(res => {
-            const pagination = res.data || {};
-            rawRows = pagination.data || [];
-            const stats = res.stats || {};
+    let url, body;
 
-            document.getElementById('sTotalPending').textContent = stats.total || 0;
-            document.getElementById('sPendingAmt').textContent   = '₹' + fmtMoney(stats.total_amount || 0);
-            document.getElementById('sStuck').textContent        = stats.stuck || 0;
-            document.getElementById('sProcessing').textContent   = stats.processing || 0;
-
-            renderTable(rawRows);
-            renderPager(pagination);
-        })
-        .catch(err => {
-            document.getElementById('pendingBody').innerHTML =
-                `<tr><td colspan="9" style="text-align:center;padding:30px;color:#ef4444">${err.message || 'Failed to load pending transactions.'}</td></tr>`;
-        });
-}
-
-function doRefund(id, mobile, amount){
-    const modal = document.getElementById('actionModal');
-    document.getElementById('modalTitle').textContent = 'Initiate Refund';
-    document.getElementById('modalMsg').textContent   =
-        `Refund ₹${fmtMoney(amount)} to seller wallet for mobile ${mobile}? (Txn ID: ${id})`;
-    modal.style.display = 'flex';
-
-    document.getElementById('modalConfirm').onclick = () => {
-        modal.style.display = 'none';
-        empFetch(`/api/v1/employee/recharges/${id}/refund`, 'POST')
-            .then(d => { alert('Refund successful: ' + (d.message || '')); loadPending(currentPage); })
-            .catch(e => alert('Refund failed: ' + (e.message || 'Unknown error')));
-    };
-}
-
-function resendTxn(id, mobile){
-    const modal = document.getElementById('actionModal');
-    document.getElementById('modalTitle').textContent = 'Resend Transaction';
-    document.getElementById('modalMsg').textContent   =
-        `Resend transaction for mobile ${mobile}? (Txn ID: ${id})`;
-    modal.style.display = 'flex';
-
-    document.getElementById('modalConfirm').onclick = () => {
-        modal.style.display = 'none';
-        empFetch(`/api/v1/employee/recharges/${id}/resend`, 'POST')
-            .then(d => { alert(d.message || 'Transaction resent successfully.'); loadPending(currentPage); })
-            .catch(e => alert('Resend failed: ' + (e.message || 'Unknown error')));
-    };
-}
-
-function closeDetailModal(){
-    document.getElementById('detailModal').style.display = 'none';
-}
-
-function fmtJson(value){
-    if (!value) return '—';
-    try {
-        return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2);
-    } catch (_) {
-        return String(value);
+    if (action === '__success') {
+        url  = `/api/v1/employee/recharges/${id}/success`;
+        body = { remarks: operatorId || null };
+    } else if (action === '__failed') {
+        url  = `/api/v1/employee/recharges/${id}/status`;
+        body = { status: 'failed', remarks: operatorId || null };
+    } else {
+        alert('Unknown action.'); return;
     }
+
+    const res = await apiFetch(url, { method: 'POST', body: JSON.stringify(body) });
+    const j   = await res.json().catch(() => ({}));
+    alert(j.message || 'Done');
+    loadReport(currentPage);
 }
 
-function detailRow(label, value){
-    return `<tr>
-        <td style="padding:7px 0;width:140px;color:#64748b;font-weight:600;vertical-align:top">${label}</td>
-        <td style="padding:7px 0;color:#1e293b">${value}</td>
-    </tr>`;
+// ── Action modal ─────────────────────────────────────────────────────────────
+function openAction(id){
+    currentTxn = rows.find(r => r.id === id);
+    if (!currentTxn) return;
+    document.getElementById('am-user').textContent   = currentTxn.seller_name || '';
+    document.getElementById('am-op').textContent     = (currentTxn.operator_code || '') + ' ' + (currentTxn.recharge_type || '');
+    document.getElementById('am-mobile').textContent = currentTxn.mobile || '';
+    document.getElementById('am-amount').textContent = Number(currentTxn.amount || 0).toFixed(2);
+    document.getElementById('am-ip').textContent     = '';
+    document.getElementById('am-remarks').value      = '';
+    document.getElementById('action-modal').style.display = 'flex';
+}
+function closeAction(){ document.getElementById('action-modal').style.display = 'none'; }
+
+async function doAction(type){
+    if (!currentTxn) return;
+    const remarks = document.getElementById('am-remarks').value;
+    let url  = `/api/v1/employee/recharges/${currentTxn.id}/${type}`;
+    let body = { remarks };
+    if (type === 'status'){
+        const st = prompt('Enter status: pending, processing, success, failed, refunded', currentTxn.status || 'pending');
+        if (!st) return;
+        body.status = st;
+    }
+    const res = await apiFetch(url, { method: 'POST', body: JSON.stringify(body) });
+    const j   = await res.json().catch(() => ({}));
+    alert(j.message || 'Done');
+    closeAction();
+    loadReport(currentPage);
 }
 
-function viewLog(id){
-    document.getElementById('detailModal').style.display = 'flex';
-    document.getElementById('detailBody').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+// ── Log / Response modal ─────────────────────────────────────────────────────
+function closeLog(){ document.getElementById('log-modal').style.display = 'none'; }
 
-    empFetch(`/api/v1/employee/recharges/${id}`)
-        .then(res => {
-            const payload = res.data || {};
-            const tx = payload.transaction || {};
-            const attempts = payload.attempts || [];
-            const apiLogs = payload.api_logs || [];
+async function openLog(id)     { await loadLog(id, 'Request/Response Log'); }
+async function openResponse(id){ await loadLog(id, 'Response'); }
 
-            const attemptsHtml = attempts.length
-                ? attempts.map(a => `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
-                    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-                        <strong>Attempt #${a.attempt_number}</strong>
-                        <span>Status: ${a.status || '—'} | Code: ${a.response_code || '—'} | ${a.duration_ms || 0} ms</span>
-                    </div>
-                    <div style="font-size:12px;color:#64748b;margin-bottom:6px">${a.request_url || a.api_endpoint || '—'}</div>
-                    ${a.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${a.error_message}</div>` : ''}
-                    <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(a.response_payload || a.request_payload)}</pre>
-                </div>`).join('')
-                : '<div style="color:#64748b">No recharge attempts found.</div>';
+async function loadLog(id, title){
+    document.getElementById('log-title').textContent = title;
+    document.getElementById('log-body').innerHTML    = '<tr><td colspan="8">Loading...</td></tr>';
+    document.getElementById('log-modal').style.display = 'flex';
 
-            const apiLogsHtml = apiLogs.length
-                ? apiLogs.map(l => `<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px">
-                    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
-                        <strong>${l.method} ${l.path}</strong>
-                        <span>${l.status_code} | ${l.response_time_ms || 0} ms</span>
-                    </div>
-                    <div style="font-size:12px;color:#64748b;margin:6px 0">Ref: ${l.reference_id || '—'} | ${fmtDate(l.created_at)}</div>
-                    ${l.error_message ? `<div style="color:#b91c1c;font-size:12px;margin-bottom:6px">${l.error_message}</div>` : ''}
-                    ${l.request_payload ? `<pre style="background:#f8fafc;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(l.request_payload)}</pre>` : ''}
-                </div>`).join('')
-                : '<div style="color:#64748b">No related API logs found.</div>';
+    const res = await apiFetch(`/api/v1/employee/recharges/${id}`);
+    const j   = await res.json();
+    const d   = j.data || {};
+    const tx  = d.transaction || {};
+    const attempts = d.attempts || [];
 
-            document.getElementById('detailBody').innerHTML = `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-                    <div class="card" style="box-shadow:none">
-                        <div class="card-body">
-                            <div style="font-size:13px;font-weight:700;margin-bottom:8px">Transaction</div>
-                            <table style="width:100%">${[
-                                detailRow('Txn ID', '#' + (tx.id || id)),
-                                detailRow('Mobile', tx.mobile || '—'),
-                                detailRow('Operator', tx.operator_code || '—'),
-                                detailRow('Amount', '₹' + fmtMoney(tx.amount || 0)),
-                                detailRow('Status', tx.status || '—'),
-                                detailRow('Seller', tx.seller_name || '—'),
-                                detailRow('Ref ID', tx.operator_ref || tx.api_ref || tx.idempotency_key || '—'),
-                                detailRow('Created', fmtDate(tx.created_at)),
-                            ].join('')}</table>
-                        </div>
-                    </div>
-                    <div class="card" style="box-shadow:none">
-                        <div class="card-body">
-                            <div style="font-size:13px;font-weight:700;margin-bottom:8px">Failure / Response</div>
-                            <div style="font-size:12px;color:#64748b;margin-bottom:8px">${tx.failure_reason || 'No failure reason recorded.'}</div>
-                            <pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px;font-size:11px;overflow:auto;white-space:pre-wrap">${fmtJson(tx.operator_response)}</pre>
-                        </div>
-                    </div>
-                </div>
-                <div style="font-size:13px;font-weight:700;margin-bottom:8px">Recharge Attempts</div>
-                ${attemptsHtml}
-                <div style="font-size:13px;font-weight:700;margin:16px 0 8px">Related API Logs</div>
-                ${apiLogsHtml}
-            `;
-        })
-        .catch(err => {
-            document.getElementById('detailBody').innerHTML = `<div style="color:#ef4444">${err.message || 'Failed to load log detail.'}</div>`;
-        });
+    const logs = attempts.length
+        ? attempts.map(a => {
+            const requestPayload = a.request_payload ? jsonText(a.request_payload) : '';
+            const requestLines = [`[${(a.log_type || 'recharge').toUpperCase()}] ${a.log_label || ''}`.trim()];
+            if (a.request_url) requestLines.push(a.request_url);
+            if (requestPayload) requestLines.push(requestPayload);
+            return {
+                id:       a.id,
+                type:     a.log_type || 'recharge',
+                label:    a.log_label || 'Recharge',
+                api:      `${a.api_provider || a.operator_code || ''}`.trim() || '—',
+                recharge: a.created_at,
+                request:  requestLines.join('\n'),
+                response: a.response_payload ? jsonText(a.response_payload) : (a.error_message || ''),
+            };
+          })
+        : [{ id: '—', type: 'none', label: 'No logs found', api: tx.api_provider || tx.operator_code || '—', recharge: tx.created_at,
+             request:  'No request log found',
+             response: jsonText(tx.operator_response) || tx.failure_reason || '' }];
+
+    document.getElementById('log-body').innerHTML = logs.map(l =>
+        `<tr>
+            <td>${esc(l.id)}</td>
+            <td>${esc(l.type)}</td>
+            <td>${esc(l.label)}</td>
+            <td>${esc(l.api)}</td>
+            <td>${esc(tx.id)}</td>
+            <td>${esc(l.recharge || '')}</td>
+            <td><pre>${esc(l.request)}</pre></td>
+            <td><pre>${esc(l.response)}</pre></td>
+        </tr>`
+    ).join('');
 }
 
-function exportPending(){
-    if (!rawRows.length) { alert('No data to export.'); return; }
-    const headers = ['ID','Mobile','Operator','Amount','Seller','Created At','Age (min)','Status'];
-    const csvRows = rawRows.map(r =>
-        [r.id, r.mobile, r.operator_code, r.amount, r.seller_name, r.created_at, r.age_minutes, r.status].join(',')
-    );
-    const csv = [headers.join(','), ...csvRows].join('\n');
+// ── Live status check (click on status badge) ────────────────────────────────
+function closeStatusModal(){ document.getElementById('status-modal').style.display = 'none'; }
+
+async function checkStatus(id){
+    document.getElementById('status-body').innerHTML =
+        '<div style="text-align:center;padding:20px;color:#64748b">Checking status…</div>';
+    document.getElementById('status-modal').style.display = 'flex';
+
+    const res = await apiFetch(`/api/v1/employee/recharges/${id}`);
+    const j   = await res.json().catch(() => ({}));
+    const tx  = j.data?.transaction || {};
+    const attempts = j.data?.attempts || [];
+    const last = attempts[attempts.length - 1];
+
+    const statusCls = tx.status === 'success' ? 'rr-status-success'
+                    : (tx.status === 'failed' || tx.status === 'refunded') ? 'rr-status-failed'
+                    : tx.status === 'queued' ? 'rr-status-queued'
+                    : tx.status === 'processing' ? 'rr-status-processing'
+                    : 'rr-status-pending';
+
+    document.getElementById('status-body').innerHTML = `
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+            <tr><td style="color:#64748b;padding:7px 0;width:130px;font-weight:600">TXN ID</td>
+                <td style="padding:7px 0;font-weight:700">#${esc(tx.id || id)}</td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Mobile</td>
+                <td style="padding:7px 0">${esc(tx.mobile || '—')}</td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Operator</td>
+                <td style="padding:7px 0">${esc((tx.operator_code || '') + ' ' + (tx.recharge_type || ''))}</td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Amount</td>
+                <td style="padding:7px 0">₹${Number(tx.amount || 0).toFixed(2)}</td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Status</td>
+                <td style="padding:7px 0"><span class="${statusCls}">${esc(tx.status || '—')}</span></td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Operator Ref</td>
+                <td style="padding:7px 0;font-family:monospace">${esc(tx.operator_ref || tx.api_ref || '—')}</td></tr>
+            <tr><td style="color:#64748b;padding:7px 0;font-weight:600">Retry Count</td>
+                <td style="padding:7px 0">${tx.retry_count || 0}</td></tr>
+            ${tx.failure_reason ? `<tr><td style="color:#64748b;padding:7px 0;font-weight:600">Failure</td>
+                <td style="padding:7px 0;color:#b91c1c">${esc(tx.failure_reason)}</td></tr>` : ''}
+            ${last ? `<tr><td style="color:#64748b;padding:7px 0;font-weight:600">Last Attempt</td>
+                <td style="padding:7px 0">${esc(last.status || '—')} — ${esc(last.error_message || 'OK')}</td></tr>` : ''}
+        </table>`;
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+function exportReport(){
+    if (!rows.length){ alert('No data to export.'); return; }
+    const headers = ['ID','Mobile','Operator','Type','Amount','Commission','Status','API','OperatorRef','Agent','Created At'];
+    const csv = [headers.join(','), ...rows.map(r =>
+        [r.id, r.mobile, r.operator_code, r.recharge_type, r.amount, r.commission,
+         r.status, r.api_provider || r.route_name, r.operator_ref, r.seller_name, r.created_at].join(',')
+    )].join('\n');
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    a.download = 'pending_recharges_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.download = 'pending_recharges_' + today + '.csv';
     a.click();
 }
 
-document.addEventListener('DOMContentLoaded', () => loadPending(1));
+document.addEventListener('DOMContentLoaded', bootFilters);
 </script>
 @endpush
-@endsection

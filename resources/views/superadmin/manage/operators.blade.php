@@ -118,7 +118,7 @@ $ops = [
                         ['op'=>'Jio','slot'=>'API-2','provider'=>'Razorpay','ep'=>'api.razorpay.com/jio','success'=>'98.8%','speed'=>'1.3s','status'=>'backup'],
                         ['op'=>'Airtel','slot'=>'API-1','provider'=>'Cashfree','ep'=>'api.cashfree.com/airtel','success'=>'99.5%','speed'=>'0.9s','status'=>'primary'],
                         ['op'=>'Vi','slot'=>'API-1','provider'=>'Instamojo','ep'=>'api.instamojo.com/vi','success'=>'96.1%','speed'=>'2.1s','status'=>'primary'],
-                        ['op'=>'BSNL','slot'=>'API-1','provider'=>'Custom','ep'=>'bsnl-api.rechargerhub.in','success'=>'91.4%','speed'=>'3.2s','status'=>'primary'],
+                        ['op'=>'BSNL','slot'=>'API-1','provider'=>'Custom','ep'=>'bsnl-api.coldpay.in','success'=>'91.4%','speed'=>'3.2s','status'=>'primary'],
                     ];
                     @endphp
                     @foreach($apis as $api)

@@ -39,7 +39,7 @@ class GstController extends Controller
 
         $user     = $request->user();
         $filePath = $request->file('file')
-            ->store("seller_gst/{$user->id}", 'local');
+            ->store("seller_gst/{$user->id}", 'public');
 
         $invoice = SellerGstInvoice::create([
             'user_id'        => $user->id,

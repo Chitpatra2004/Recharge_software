@@ -38,16 +38,23 @@ Route::prefix('seller')->name('seller.')->group(function () {
     Route::get('/login',            fn () => view('seller.auth.login'))->name('login');
     Route::get('/',                 fn () => redirect()->route('seller.dashboard'));
     Route::get('/dashboard',        fn () => view('seller.dashboard'))->name('dashboard');
-    Route::get('/api-config',       fn () => redirect()->route('seller.api-setting'))->name('api-config');
-    Route::get('/api-setting',      fn () => view('seller.api-config'))->name('api-setting');
+    Route::get('/api-config',       fn () => redirect()->route('seller.reports.api-configuration'))->name('api-config');
+    Route::get('/api-setting',      fn () => redirect()->route('seller.reports.api-configuration'))->name('api-setting');
     Route::get('/api-docs',         fn () => view('seller.api-docs'))->name('api-docs');
     Route::get('/sales',            fn () => view('seller.sales'))->name('sales');
     Route::get('/reports/account',  fn () => view('seller.reports.account'))->name('reports.account');
     Route::get('/reports/topup',    fn () => view('seller.reports.topup'))->name('reports.topup');
     Route::get('/reports/operator', fn () => view('seller.reports.operator'))->name('reports.operator');
     Route::get('/reports/ledger',   fn () => view('seller.reports.ledger'))->name('reports.ledger');
+    Route::get('/reports/my-commission', fn () => view('seller.reports.my-commission'))->name('reports.my-commission');
+    Route::get('/reports/api-configuration', fn () => view('seller.api-config'))->name('reports.api-configuration');
     Route::get('/payments',         fn () => view('seller.payments.index'))->name('payments');
     Route::get('/gst',              fn () => view('seller.gst.invoices'))->name('gst');
+    Route::get('/api-tools',        fn () => view('seller.api-tools'))->name('api-tools');
+    Route::get('/documents',        fn () => view('seller.documents'))->name('documents');
+    Route::get('/documents/{type}/view', [\App\Http\Controllers\Seller\DocumentController::class, 'serve'])
+        ->name('document.view')
+        ->middleware('signed');
 });
 
 // ── Super Admin Command Center Routes ────────────────────────────────────
@@ -84,6 +91,14 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     // Config
     Route::get('/settings',       fn () => view('superadmin.config.settings'))->name('settings');
     Route::get('/access-control', fn () => view('superadmin.config.access-control'))->name('access-control');
+
+    // Settings API (JSON)
+    Route::get( '/api/settings',                  [\App\Http\Controllers\Superadmin\SettingsController::class, 'index'])->name('api.settings');
+    Route::post('/api/settings/general',          [\App\Http\Controllers\Superadmin\SettingsController::class, 'saveGeneral'])->name('api.settings.general');
+    Route::post('/api/settings/notifications',    [\App\Http\Controllers\Superadmin\SettingsController::class, 'saveNotifications'])->name('api.settings.notifications');
+    Route::post('/api/settings/finance',          [\App\Http\Controllers\Superadmin\SettingsController::class, 'saveFinance'])->name('api.settings.finance');
+    Route::post('/api/settings/api',              [\App\Http\Controllers\Superadmin\SettingsController::class, 'saveApi'])->name('api.settings.api');
+    Route::post('/api/settings/smtp',             [\App\Http\Controllers\Superadmin\SettingsController::class, 'saveSmtp'])->name('api.settings.smtp');
 
 });
 
@@ -126,8 +141,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Manage
     Route::get('/operators',             fn () => view('admin.manage.operators'))->name('operators');
     Route::get('/employees',             fn () => view('admin.manage.employees'))->name('employees');
+    Route::get('/employees/{id}/permissions', fn ($id) => view('admin.manage.employee-permissions', ['employeeId' => $id]))->name('employees.permissions');
     Route::get('/api-keys',              fn () => view('admin.manage.api-keys'))->name('api-keys');
-    Route::get('/operator-api-settings', fn () => view('admin.manage.operator-api-settings'))->name('operator-api-settings');
+    Route::get('/api-list',              fn () => view('admin.manage.operator-api-settings'))->name('api-list');
+    Route::get('/api-switching',         fn () => view('admin.manage.api-switching'))->name('api-switching');
+    Route::get('/operator-api-settings', fn () => redirect()->route('admin.api-list'))->name('operator-api-settings');
     Route::get('/api-integration-portal', fn () => view('admin.manage.api-integration-portal'))->name('api-integration-portal');
 
     // Commission
@@ -155,7 +173,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Seller / API-user management
     Route::get('/sellers',                  fn () => view('admin.sellers.index'))->name('sellers');
-    Route::get('/sellers/payment-requests', fn () => view('admin.sellers.payment-requests'))->name('sellers.payments');
+    Route::get('/sellers/payment-requests',         fn () => view('admin.sellers.payment-requests'))->name('sellers.payments');
+    Route::get('/sellers/payment-request-history', fn () => view('admin.sellers.payment-request-history'))->name('sellers.payment-history');
+    Route::get('/sellers/{id}/document/{type}', [\App\Http\Controllers\Admin\SellerController::class, 'serveDocument'])
+        ->name('seller.document')
+        ->middleware('signed');
 
     // User payment requests (add-money requests from users)
     Route::get('/user-payments',            fn () => view('admin.reports.user-payments'))->name('user-payments');

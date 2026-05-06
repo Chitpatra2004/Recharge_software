@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 class GenericApiService
 {
     private const TIMEOUT = 20;
+    private const SENSITIVE_KEYS = ['token', 'apitoken', 'api_token', 'password', 'key', 'secret'];
 
     // ── Balance check ─────────────────────────────────────────────────────────
     public function balance(OperatorRoute $route): array
@@ -58,8 +59,11 @@ class GenericApiService
         }
 
         try {
-            $params = $this->buildParams($sa['params'] ?? '', $cfg, ['[order_id]' => $orderId, '[transid]' => $orderId]);
-            $resp   = $this->call($sa['method'] ?? 'GET', $sa['url'], $params);
+            $params     = $this->buildParams($sa['params'] ?? '', $cfg, ['[order_id]' => $orderId, '[transid]' => $orderId]);
+            $safeParams = $this->maskParams($params);
+            $fullUrl    = $this->buildFullUrl($sa['url'], $safeParams, $sa['method'] ?? 'GET');
+
+            $resp = $this->call($sa['method'] ?? 'GET', $sa['url'], $params);
             $data   = $resp->json() ?? [];
 
             return [
@@ -71,6 +75,9 @@ class GenericApiService
                 'amount'     => $data['amount']      ?? null,
                 'operator_id'=> $data['operator_id'] ?? null,
                 'raw'        => $data,
+                // for logging / admin UI
+                'request_url'    => $fullUrl,
+                'request_params' => $safeParams,
             ];
         } catch (\Throwable $e) {
             Log::error('GenericApiService::checkStatus', ['route' => $route->id, 'error' => $e->getMessage()]);
@@ -131,5 +138,31 @@ class GenericApiService
         return strtoupper($method) === 'GET'
             ? $http->get($url, $params)
             : $http->asForm()->post($url, $params);
+    }
+
+    private function buildFullUrl(string $url, array $safeParams, string $method): string
+    {
+        if (strtoupper($method) !== 'GET' || $safeParams === []) {
+            return $url;
+        }
+
+        $qs = http_build_query($safeParams);
+        if ($qs === '') {
+            return $url;
+        }
+
+        return str_contains($url, '?') ? ($url . '&' . $qs) : ($url . '?' . $qs);
+    }
+
+    private function maskParams(array $params): array
+    {
+        $safe = $params;
+        foreach (self::SENSITIVE_KEYS as $k) {
+            if (isset($safe[$k]) && is_scalar($safe[$k])) {
+                $v = (string) $safe[$k];
+                $safe[$k] = strlen($v) <= 4 ? str_repeat('*', strlen($v)) : substr($v, 0, 4) . str_repeat('*', min(strlen($v) - 4, 12));
+            }
+        }
+        return $safe;
     }
 }

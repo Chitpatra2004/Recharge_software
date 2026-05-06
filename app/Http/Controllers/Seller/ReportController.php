@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\Operator;
 use App\Models\SellerPaymentRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -122,6 +123,64 @@ class ReportController extends Controller
             ]);
 
         return response()->json(['operators' => $rows]);
+    }
+
+    /** GET /api/v1/seller/reports/my-commission */
+    public function myCommission(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $settings = DB::table('seller_operator_commissions')
+            ->where('user_id', $user->id)
+            ->get()
+            ->keyBy('operator_code');
+
+        $earned = DB::table('recharge_transactions')
+            ->where('user_id', $user->id)
+            ->when($request->filled('date_from'), fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
+            ->groupBy('operator_code')
+            ->selectRaw('
+                operator_code,
+                COUNT(*) as total_count,
+                SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count,
+                SUM(CASE WHEN status = "success" THEN amount ELSE 0 END) as success_amount,
+                SUM(CASE WHEN status = "success" THEN commission ELSE 0 END) as earned_commission
+            ')
+            ->get()
+            ->keyBy('operator_code');
+
+        $rows = Operator::query()
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'category', 'commission_rate', 'is_active'])
+            ->map(function (Operator $operator) use ($settings, $earned, $user) {
+                $setting = $settings->get($operator->code);
+                $stat = $earned->get($operator->code);
+
+                return [
+                    'operator_code'      => $operator->code,
+                    'operator_name'      => $operator->name,
+                    'category'           => $operator->category,
+                    'commission'         => (float) ($setting->commission ?? $operator->commission_rate ?? $user->commission_rate ?? 0),
+                    'commission_type'    => $setting->commission_type ?? 'percentage',
+                    'is_active'          => (bool) ($setting->is_active ?? $operator->is_active),
+                    'total_count'        => (int) ($stat->total_count ?? 0),
+                    'success_count'      => (int) ($stat->success_count ?? 0),
+                    'success_amount'     => (float) ($stat->success_amount ?? 0),
+                    'earned_commission'  => (float) ($stat->earned_commission ?? 0),
+                ];
+            });
+
+        return response()->json([
+            'data' => $rows,
+            'summary' => [
+                'operators' => $rows->count(),
+                'active' => $rows->where('is_active', true)->count(),
+                'total_success_amount' => round($rows->sum('success_amount'), 2),
+                'total_earned_commission' => round($rows->sum('earned_commission'), 2),
+            ],
+        ]);
     }
 
     /** GET /api/v1/seller/reports/ledger */

@@ -44,7 +44,7 @@
             --primary: var(--accent-blue);
         }
 
-        /* ── Native inputs / selects — force light-mode chrome ─────────── */
+        /* ── Native inputs / selects — light by default, dark when theme is dark ── */
         select,
         input[type="date"],
         input[type="time"],
@@ -53,7 +53,7 @@
         input[type="week"] {
             color-scheme: light;
         }
-        select option { background: #ffffff; color: #1e293b; }
+        select option { background: var(--card-bg, #ffffff); color: var(--text-primary, #1e293b); }
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
@@ -659,6 +659,18 @@
         /* ── DARK MODE OVERRIDES ──────────────────────────────────── */
         /* Applied when data-dark="1" on <html> */
 
+        /* Dropdowns & date pickers — switch to dark native chrome */
+        html[data-dark="1"] select,
+        html[data-dark="1"] input[type="date"],
+        html[data-dark="1"] input[type="time"],
+        html[data-dark="1"] input[type="datetime-local"],
+        html[data-dark="1"] input[type="month"],
+        html[data-dark="1"] input[type="week"] { color-scheme: dark; }
+        html[data-dark="1"] select option {
+            background: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+
         /* Table row hover */
         html[data-dark="1"] tbody tr:hover td { background: rgba(255,255,255,.04) !important; }
 
@@ -742,7 +754,7 @@
             </svg>
         </div>
         <div>
-            <div class="sidebar-brand-name">RechargeHub</div>
+            <div class="sidebar-brand-name">ColdPay</div>
             <div class="sidebar-brand-sub">Admin Panel</div>
         </div>
     </div>
@@ -804,6 +816,12 @@
             Seller Payments
             <span class="nav-badge orange" id="sb-pending-payments" style="display:none">0</span>
         </a>
+        <a href="/admin/sellers/payment-request-history" class="nav-item {{ request()->is('admin/sellers/payment-request-history') ? 'active' : '' }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+            Payment History
+        </a>
         <a href="/admin/user-payments" class="nav-item {{ request()->is('admin/user-payments') ? 'active' : '' }}">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -823,11 +841,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
-        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') ? 'open' : '' }}" id="manage-sub">
+        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/api-list') || request()->is('admin/api-switching') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') ? 'open' : '' }}" id="manage-sub">
             <a href="/admin/operators" class="nav-item {{ request()->is('admin/operators') ? 'active' : '' }}">Operators</a>
             <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees') ? 'active' : '' }}">Employees</a>
             <a href="/admin/api-keys" class="nav-item {{ request()->is('admin/api-keys') ? 'active' : '' }}">API Keys</a>
-            <a href="/admin/operator-api-settings" class="nav-item {{ request()->is('admin/operator-api-settings') ? 'active' : '' }}">API List</a>
+            <a href="/admin/api-list" class="nav-item {{ request()->is('admin/api-list') || request()->is('admin/operator-api-settings') ? 'active' : '' }}">API List</a>
+            <a href="/admin/api-switching" class="nav-item {{ request()->is('admin/api-switching') ? 'active' : '' }}">API Switching</a>
             <a href="/admin/api-integration-portal" class="nav-item {{ request()->is('admin/api-integration-portal') ? 'active' : '' }}">API Integration Portal</a>
         </div>
 
@@ -952,6 +971,7 @@
         <div class="topbar-title">@yield('page-title', 'Dashboard')</div>
         <div class="topbar-actions">
             <div class="topbar-time" id="clock">—</div>
+            <div class="topbar-time" id="session-info" title="Session active time | Time until expiry" style="font-size:11px;cursor:default;letter-spacing:.3px">—</div>
             <button class="topbar-icon-btn" title="Refresh" onclick="window.refreshDashboard && window.refreshDashboard()">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -1052,6 +1072,8 @@ function requireAuth() {
 function _clearAdminSession() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(EMPLOYEE_KEY);
+    localStorage.removeItem(SESSION_START_KEY);
+    sessionStorage.removeItem(LOCK_SESSION_KEY);
 }
 
 function doLogout() {
@@ -1072,30 +1094,35 @@ function confirmLogout() {
 }
 
 // ── SESSION MANAGEMENT ────────────────────────────────────────────
-const LOCK_AFTER_MS   = 15 * 60 * 1000;
-const LOGOUT_AFTER_MS = 30 * 60 * 1000;
-let _lockTimer = null, _logoutTimer = null, _countdownInterval = null;
+// 30 min inactivity → lock. No auto-logout; user must enter password to unlock.
+const LOCK_AFTER_MS    = 30 * 60 * 1000;
+const LOCK_SESSION_KEY = 'admin_screen_locked';
+let _lockTimer = null;
 let _isLocked  = false;
 
 function initSession() {
-    resetIdleTimers();
     ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(e =>
         document.addEventListener(e, resetIdleTimers, { passive: true })
     );
+    if (sessionStorage.getItem(LOCK_SESSION_KEY)) {
+        _isLocked = false;
+        lockScreen();
+    } else {
+        resetIdleTimers();
+    }
 }
 
 function resetIdleTimers() {
     if (_isLocked) return;
     clearTimeout(_lockTimer);
-    clearTimeout(_logoutTimer);
-    _lockTimer   = setTimeout(lockScreen,     LOCK_AFTER_MS);
-    _logoutTimer = setTimeout(_sessionLogout, LOGOUT_AFTER_MS);
+    _lockTimer = setTimeout(lockScreen, LOCK_AFTER_MS);
 }
 
 function lockScreen() {
     if (_isLocked) return;
     _isLocked = true;
     clearTimeout(_lockTimer);
+    sessionStorage.setItem(LOCK_SESSION_KEY, '1');
     const emp = getEmployee();
     document.getElementById('lock-user-name').textContent   = emp.name  || 'Admin';
     document.getElementById('lock-user-email').textContent  = emp.email || '';
@@ -1105,19 +1132,12 @@ function lockScreen() {
     document.getElementById('lock-error').style.display = 'none';
     document.getElementById('lock-overlay').style.display = 'flex';
     document.getElementById('lock-password').focus();
-    let remaining = (LOGOUT_AFTER_MS - LOCK_AFTER_MS) / 1000;
-    clearInterval(_countdownInterval);
-    _countdownInterval = setInterval(() => {
-        remaining--;
-        const m = Math.floor(remaining / 60), s = remaining % 60;
-        const el = document.getElementById('lock-countdown');
-        if (el) el.textContent = `Auto-logout in ${m}:${String(s).padStart(2,'0')}`;
-        if (remaining <= 0) { clearInterval(_countdownInterval); _sessionLogout(); }
-    }, 1000);
+    const cd = document.getElementById('lock-countdown');
+    if (cd) cd.textContent = '';
 }
 
 function _sessionLogout() {
-    clearInterval(_countdownInterval);
+    sessionStorage.removeItem(LOCK_SESSION_KEY);
     _isLocked = false;
     doLogout();
 }
@@ -1142,8 +1162,9 @@ async function unlockScreen() {
             const data = await res.json();
             localStorage.setItem(TOKEN_KEY, data.token);
             if (data.employee) localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
+            localStorage.setItem(SESSION_START_KEY, String(Date.now()));
+            sessionStorage.removeItem(LOCK_SESSION_KEY);
             document.getElementById('lock-overlay').style.display = 'none';
-            clearInterval(_countdownInterval);
             _isLocked = false;
             resetIdleTimers();
         } else {
@@ -1207,12 +1228,38 @@ document.addEventListener('click', function(e) {
     if (wrap && !wrap.contains(e.target)) closeProfileDropdown();
 });
 
-// ── Clock ─────────────────────────────────────────────────────────────────
+// ── Clock + Session Info ───────────────────────────────────────────────────
+const SESSION_START_KEY = 'emp_session_start';
+const SESSION_TTL_MS    = 3 * 60 * 60 * 1000; // 3 hours
+
+function _fmtMs(ms) {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m ${String(s).padStart(2,'0')}s`;
+}
+
+function updateSessionInfo() {
+    const infoEl = document.getElementById('session-info');
+    if (!infoEl) return;
+    const start = parseInt(localStorage.getItem(SESSION_START_KEY) || '0', 10);
+    if (!start) { infoEl.textContent = '—'; return; }
+    const elapsed   = Date.now() - start;
+    const remaining = SESSION_TTL_MS - elapsed;
+    if (remaining <= 0) {
+        infoEl.textContent = 'Session expired';
+        infoEl.style.color = '#ef4444';
+        return;
+    }
+    infoEl.textContent = `🟢 ${_fmtMs(elapsed)} active  ·  ⏱ ${_fmtMs(remaining)} left`;
+    infoEl.style.color = remaining < 10 * 60 * 1000 ? '#f59e0b' : '';
+}
+
 function updateClock() {
     const now = new Date();
     document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN', {
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
     });
+    updateSessionInfo();
 }
 setInterval(updateClock, 1000);
 updateClock();

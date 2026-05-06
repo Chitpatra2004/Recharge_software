@@ -238,7 +238,7 @@
             <div style="width:52px;height:52px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:26px;height:26px"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <div style="font-size:13px;opacity:.8;margin-bottom:4px">RechargeHub</div>
+            <div style="font-size:13px;opacity:.8;margin-bottom:4px">ColdPay</div>
             <div style="font-size:20px;font-weight:800">Transaction Receipt</div>
         </div>
         <div style="padding:24px" id="receipt-body"></div>
@@ -781,7 +781,7 @@ function showReceipt(txn) {
             ${rrow('Date & Time',date)}
             ${rrow('Account',user.name||'—')}
         </div>
-        <div style="text-align:center;margin-top:16px;font-size:11px;color:#9ca3af">Thank you for using RechargeHub</div>`;
+        <div style="text-align:center;margin-top:16px;font-size:11px;color:#9ca3af">Thank you for using ColdPay</div>`;
     const overlay = document.getElementById('receipt-overlay');
     overlay.style.display = 'flex';
     overlay.onclick = e => { if (e.target === overlay) closeReceipt(); };
@@ -791,7 +791,7 @@ function closeReceipt(){ document.getElementById('receipt-overlay').style.displa
 function printReceipt(){
     const u=getUserData(), t=currentReceipt, date=t.created_at?new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}):'—';
     const w=window.open('','_blank','width=480,height=700');
-    w.document.write(`<!DOCTYPE html><html><head><title>Receipt #${t.id}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#111}.brand{font-size:22px;font-weight:800;color:#2563eb;text-align:center;margin-bottom:20px}.amount{font-size:36px;font-weight:900;text-align:center;margin:12px 0}.status{color:#059669;font-weight:600;font-size:14px;text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}.footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}@media print{body{padding:0}}</style></head><body><div class="brand">RechargeHub</div><div class="amount">₹${parseFloat(t.amount||0).toFixed(2)}</div><div class="status">${(t.status||'').toUpperCase()}</div><table><tr><td style="color:#6b7280">Transaction ID</td><td>#${t.id}</td></tr><tr><td style="color:#6b7280">Mobile / Account</td><td>${t.mobile||'—'}</td></tr><tr><td style="color:#6b7280">Operator</td><td>${t.operator_code||'—'}</td></tr><tr><td style="color:#6b7280">Type</td><td>${(t.recharge_type||'—').replace('bbps_','').toUpperCase()}</td></tr><tr><td style="color:#6b7280">Amount</td><td>₹${parseFloat(t.amount||0).toFixed(2)}</td></tr>${t.operator_ref?`<tr><td style="color:#6b7280">Ref</td><td>${t.operator_ref}</td></tr>`:''}<tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr><tr><td style="color:#6b7280">Account</td><td>${u.name||'—'}</td></tr></table><div class="footer">Thank you for using RechargeHub<br>Keep this receipt for your records</div><script>window.onload=()=>{window.print()}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><title>Receipt #${t.id}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#111}.brand{font-size:22px;font-weight:800;color:#2563eb;text-align:center;margin-bottom:20px}.amount{font-size:36px;font-weight:900;text-align:center;margin:12px 0}.status{color:#059669;font-weight:600;font-size:14px;text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}td{padding:10px 0;border-bottom:1px solid #f1f5f9}td:last-child{text-align:right;font-weight:600}.footer{text-align:center;margin-top:24px;font-size:11px;color:#9ca3af}@media print{body{padding:0}}</style></head><body><div class="brand">ColdPay</div><div class="amount">₹${parseFloat(t.amount||0).toFixed(2)}</div><div class="status">${(t.status||'').toUpperCase()}</div><table><tr><td style="color:#6b7280">Transaction ID</td><td>#${t.id}</td></tr><tr><td style="color:#6b7280">Mobile / Account</td><td>${t.mobile||'—'}</td></tr><tr><td style="color:#6b7280">Operator</td><td>${t.operator_code||'—'}</td></tr><tr><td style="color:#6b7280">Type</td><td>${(t.recharge_type||'—').replace('bbps_','').toUpperCase()}</td></tr><tr><td style="color:#6b7280">Amount</td><td>₹${parseFloat(t.amount||0).toFixed(2)}</td></tr>${t.operator_ref?`<tr><td style="color:#6b7280">Ref</td><td>${t.operator_ref}</td></tr>`:''}<tr><td style="color:#6b7280">Date & Time</td><td>${date}</td></tr><tr><td style="color:#6b7280">Account</td><td>${u.name||'—'}</td></tr></table><div class="footer">Thank you for using ColdPay<br>Keep this receipt for your records</div><script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
 }
 

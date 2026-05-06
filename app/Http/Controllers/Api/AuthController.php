@@ -48,14 +48,17 @@ class AuthController extends Controller
             $gstCertificatePath = $request->file('gst_certificate')->store($uploadDir . '/gst', 'private');
         }
 
+        $role       = $request->input('role', 'retailer');
+        $autoApprove = \in_array($role, ['retailer', 'distributor']);
+
         $user = User::create([
             'name'                 => $request->name,
             'email'                => $request->email,
             'mobile'               => $request->mobile,
             'password'             => $request->password,
-            'role'                 => $request->input('role', 'retailer'),
-            'status'               => 'inactive',   // blocked until admin approves
-            'approval_status'      => 'pending',
+            'role'                 => $role,
+            'status'               => $autoApprove ? 'active' : 'inactive',
+            'approval_status'      => $autoApprove ? 'approved' : 'pending',
             'document_path'        => $documentPath,
             'pan_image_path'       => $panImagePath,
             'gst_certificate_path' => $gstCertificatePath,
@@ -63,12 +66,30 @@ class AuthController extends Controller
 
         $this->walletService->getOrCreateWallet($user);
 
-        ActivityLogger::log('auth.register', 'New user registered — pending approval.', $user, [
+        ActivityLogger::log('auth.register', 'New user registered.', $user, [
             'role'            => $user->role,
+            'auto_approved'   => $autoApprove,
             'has_document'    => (bool) $documentPath,
             'has_pan'         => (bool) $panImagePath,
             'has_gst'         => (bool) $gstCertificatePath,
         ], $user->id, $request);
+
+        if ($autoApprove) {
+            $token = $this->authService->issueToken($user, $request->device_name ?? 'web');
+            return response()->json([
+                'message'  => 'Registration successful! Welcome to ColdPay.',
+                'token'    => $token,
+                'redirect' => '/user/dashboard',
+                'status'   => 'active',
+                'user'     => [
+                    'id'     => $user->id,
+                    'name'   => $user->name,
+                    'email'  => $user->email,
+                    'mobile' => $user->mobile,
+                    'role'   => $user->role,
+                ],
+            ], 201);
+        }
 
         return response()->json([
             'message'  => 'Registration submitted successfully. Your account is pending admin approval. You will be notified via email once approved.',
@@ -105,13 +126,13 @@ class AuthController extends Controller
             return response()->json(['message' => 'Incorrect password.'], 401);
         }
 
-        // Account pending approval
-        if ($user->approval_status === 'pending') {
+        // Account pending approval — only api_user requires admin approval
+        if ($user->role === 'api_user' && $user->approval_status === 'pending') {
             return response()->json(['message' => 'Your registration is pending admin approval. You will be notified via email once approved.'], 403);
         }
 
-        // Registration rejected
-        if ($user->approval_status === 'rejected') {
+        // Registration rejected — only api_user can be rejected
+        if ($user->role === 'api_user' && $user->approval_status === 'rejected') {
             return response()->json(['message' => 'Your registration has been rejected. Please contact support for assistance.'], 403);
         }
 
@@ -171,6 +192,21 @@ class AuthController extends Controller
                 'mobile' => $user->mobile,
                 'role'   => $user->role,
             ],
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        return response()->json([
+            'id'                => $user->id,
+            'name'              => $user->name,
+            'email'             => $user->email,
+            'mobile'            => $user->mobile,
+            'role'              => $user->role,
+            'status'            => $user->status,
+            'two_factor_method' => $user->two_factor_method ?? 'none',
+            'totp_enabled'      => (bool) $user->totp_enabled,
         ]);
     }
 

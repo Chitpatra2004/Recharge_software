@@ -190,7 +190,10 @@ class RechargeController extends Controller
             return response()->json(['message' => 'Invalid callback — ref_id and status are required.'], 400);
         }
 
-        $this->rechargeService->handleCallback($operatorRef, $status, $request->all());
+        $payload = $request->all();
+        $payload['_callback_request_ip'] = $request->ip();
+
+        $this->rechargeService->handleCallback($operatorRef, $status, $payload);
 
         return response()->json(['message' => 'Callback received.']);
     }
@@ -218,7 +221,7 @@ class RechargeController extends Controller
                 (int) $orderId,
                 $status,
                 $pdrsRef,
-                $request->all()
+                array_merge($request->all(), ['_callback_request_ip' => $request->ip()])
             );
         } catch (\Throwable $e) {
             Log::error('PDRS callback handler exception', ['error' => $e->getMessage(), 'payload' => $request->all()]);

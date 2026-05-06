@@ -1,235 +1,300 @@
 @extends('layouts.admin')
-@section('title','Seller Payment Requests')
-
-@push('head')
-<style>
-.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-@media(max-width:900px){.summary-strip{grid-template-columns:1fr 1fr}}
-.stat-card{background:var(--card-bg);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow-sm);border-left:4px solid transparent}
-.stat-card.blue{border-color:var(--accent-blue)}
-.stat-card.green{border-color:var(--accent-green)}
-.stat-card.orange{border-color:var(--accent-orange)}
-.stat-card.red{border-color:var(--accent-red)}
-.stat-card .val{font-size:22px;font-weight:700;margin-bottom:2px}
-.stat-card .lbl{font-size:11.5px;color:var(--text-secondary)}
-.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.filter-bar input,.filter-bar select{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff}
-.badge-approved{background:#d1fae5;color:#065f46;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.badge-pending{background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-.badge-rejected{background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
-</style>
-@endpush
+@section('title', 'Payment Request')
+@section('page-title', 'Payment Request')
 
 @section('content')
-<div class="page-header">
-    <div>
-        <h1 class="page-title">Seller Payment Requests</h1>
-        <p class="page-sub">Review and process wallet top-up requests from sellers</p>
-    </div>
-    <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="exportData()">Export CSV</button>
-        <button class="btn btn-primary" onclick="loadData()">Refresh</button>
+<style>
+/* ── Filters ────────────────────────────────────────────── */
+.pr-filters{display:flex;gap:14px;align-items:flex-end;padding:18px 16px 22px;flex-wrap:wrap}
+.pr-field label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.pr-field input,.pr-field select{height:32px;border:1px solid var(--border);padding:3px 10px;font-size:13px;background:var(--card-bg);color:var(--text-primary);border-radius:6px;min-width:110px}
+.pr-btn-search{background:#0068ce;color:#fff;border:none;border-radius:6px;padding:7px 22px;font-weight:700;font-size:13px;cursor:pointer}
+
+/* ── Table — !important to override admin-layout thead th rules ── */
+.pr-table-wrap{overflow-x:auto}
+.pr-table{width:100%;border-collapse:collapse;min-width:1380px}
+.pr-table thead th{
+    color:#fff !important;
+    background:#1a5fb4 !important;
+    font-size:11.5px !important;
+    font-weight:700 !important;
+    padding:11px 10px !important;
+    text-transform:uppercase !important;
+    letter-spacing:.3px !important;
+    border:1px solid #1a4f9c !important;
+    white-space:nowrap;
+    text-align:left !important;
+}
+.pr-table td{font-size:13px;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text-primary)}
+.pr-table tbody tr:hover td{background:#f0f6ff}
+
+/* ── Status badges ─────────────────────────────────────── */
+.pr-badge-pending {background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700}
+.pr-badge-approved{background:#d1fae5;color:#065f46;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700}
+.pr-badge-rejected{background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700}
+
+/* ── Inline inputs in table ────────────────────────────── */
+.pr-inline{height:28px;border:1px solid var(--border);padding:2px 8px;font-size:12px;border-radius:4px;width:100px;background:var(--card-bg);color:var(--text-primary)}
+
+/* ── Action buttons ────────────────────────────────────── */
+.pr-act-approve{background:#16a34a;color:#fff;border:none;border-radius:4px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:block;width:74px;margin-bottom:3px}
+.pr-act-reject {background:#dc2626;color:#fff;border:none;border-radius:4px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:block;width:74px}
+
+/* ── Pager ─────────────────────────────────────────────── */
+.pr-pager{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary)}
+
+/* ── Proof thumb ───────────────────────────────────────── */
+.proof-thumb{width:38px;height:38px;border-radius:4px;object-fit:cover;border:1px solid var(--border);cursor:pointer;vertical-align:middle}
+</style>
+
+{{-- Search Filters --}}
+<div class="card" style="margin-bottom:16px">
+    <div class="card-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Search Filters</div>
+    <div class="pr-filters">
+        <div class="pr-field"><label>From Date</label><input type="date" id="f-from"></div>
+        <div class="pr-field"><label>To Date</label><input type="date" id="f-to"></div>
+        <div class="pr-field"><label>Bank</label>
+            <select id="f-bank"><option value="">ALL</option></select>
+        </div>
+        <button class="pr-btn-search" onclick="loadData(1)">Search</button>
     </div>
 </div>
 
-<div class="summary-strip">
-    <div class="stat-card orange"><div class="val" id="sPendingCount">—</div><div class="lbl">Pending Requests</div></div>
-    <div class="stat-card orange"><div class="val" id="sPendingAmt">—</div><div class="lbl">Pending Amount</div></div>
-    <div class="stat-card green"><div class="val" id="sApprovedToday">—</div><div class="lbl">Approved Today</div></div>
-    <div class="stat-card blue"><div class="val" id="sApprovedAmt">—</div><div class="lbl">Approved Amount Today</div></div>
-</div>
-
-{{-- Pending Requests (action needed) --}}
-<div class="card" style="margin-bottom:18px">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:600;font-size:14px">Pending Requests <span id="pendingBadge" style="background:#fef3c7;color:#92400e;padding:2px 9px;border-radius:20px;font-size:12px;margin-left:6px;font-weight:700">0</span></span>
-        <button class="btn btn-primary btn-sm" onclick="approveAll()">Approve All</button>
+{{-- Table Card --}}
+<div class="card">
+    <div class="card-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+        Payment Request List
     </div>
-    <div class="table-wrap">
-        <table id="pendingTable">
+    <div class="pr-table-wrap">
+        <table class="pr-table">
             <thead>
                 <tr>
-                    <th>Submitted</th>
-                    <th>Seller</th>
+                    <th style="width:44px"></th>
+                    <th>Payment Date</th>
+                    <th>ID</th>
+                    <th>Agent Name</th>
+                    <th>Wallet Type</th>
+                    <th>Ref.Id / Branch</th>
                     <th>Amount</th>
-                    <th>Mode</th>
-                    <th>Reference</th>
-                    <th>Notes</th>
-                    <th>Proof</th>
-                    <th>Actions</th>
+                    <th>Conf.Amount</th>
+                    <th>TXN.PWD</th>
+                    <th>Status</th>
+                    <th>Admin Remark</th>
+                    <th>Action</th>
                 </tr>
             </thead>
-            <tbody id="pendingBody"></tbody>
+            <tbody id="pr-body">
+                <tr><td colspan="12" style="padding:16px;color:var(--text-muted);text-align:center">Loading…</td></tr>
+            </tbody>
         </table>
     </div>
-</div>
-
-{{-- History --}}
-<div class="card">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <span style="font-weight:600;font-size:14px">All Requests</span>
-        <div class="filter-bar">
-            <input type="text" id="searchReq" placeholder="Seller / UTR..." oninput="filterHistory()">
-            <select id="fStatus" onchange="filterHistory()">
-                <option value="">All Status</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-            </select>
-            <select id="fSeller" onchange="filterHistory()">
-                <option value="">All Sellers</option>
-                <option>RajeshTelecom</option><option>PriyaRecharge</option>
-                <option>SunilShop</option><option>AmitStore</option>
-            </select>
-        </div>
-    </div>
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr><th>Submitted</th><th>Seller</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Processed At</th><th>By</th><th>Status</th></tr>
-            </thead>
-            <tbody id="historyBody"></tbody>
-        </table>
-    </div>
+    <div class="pr-pager" id="pr-pager"></div>
 </div>
 
 {{-- Reject Modal --}}
-<div id="rejectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
-    <div class="card" style="width:420px;max-width:95vw;padding:24px">
-        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Reject Request</h3>
+<div id="rejectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;align-items:center;justify-content:center">
+    <div class="card" style="width:440px;max-width:95vw;padding:24px">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary)">Reject Payment Request</h3>
         <input type="hidden" id="rejectId">
-        <div style="margin-bottom:14px">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px">Reason for Rejection *</label>
-            <select id="rejectReason" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-                <option value="">Select reason...</option>
+        <div style="margin-bottom:12px">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--text-secondary)">Reason <span style="color:#dc2626">*</span></label>
+            <select id="rejectReason" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--card-bg);color:var(--text-primary)">
+                <option value="">Select reason…</option>
                 <option>UTR not found in bank statement</option>
                 <option>Incorrect amount entered</option>
                 <option>Duplicate request</option>
                 <option>Cash payment not accepted</option>
+                <option>Payment not received</option>
                 <option>Other</option>
             </select>
         </div>
         <div style="margin-bottom:16px">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px">Additional remarks</label>
-            <textarea id="rejectRemark" rows="3" placeholder="Optional details..." style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical"></textarea>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--text-secondary)">Additional Notes</label>
+            <textarea id="rejectNotes" rows="3" placeholder="Optional…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary)"></textarea>
         </div>
         <div style="display:flex;gap:10px">
             <button class="btn btn-danger" onclick="confirmReject()">Reject Request</button>
-            <button class="btn btn-outline" onclick="document.getElementById('rejectModal').style.display='none'">Cancel</button>
+            <button class="btn btn-outline" onclick="closeReject()">Cancel</button>
         </div>
     </div>
 </div>
 
+{{-- Proof Lightbox --}}
+<div id="proofLightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:800;align-items:center;justify-content:center;padding:20px" onclick="this.style.display='none'">
+    <img id="proofImg" src="" alt="Proof" style="max-width:90vw;max-height:85vh;border-radius:8px">
+</div>
+
 @push('scripts')
 <script>
-const TOKEN = ()=>localStorage.getItem('emp_token');
-const empFetch = (url,method='GET',body=null)=>fetch(url,{method,headers:{'Authorization':'Bearer '+TOKEN(),'Content-Type':'application/json','Accept':'application/json'},...(body?{body:JSON.stringify(body)}:{})}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.message||'Error');return d;});
-function fmtMoney(n){return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
-function badge(s){
-    if(s==='approved')return '<span class="badge-approved">Approved</span>';
-    if(s==='pending') return '<span class="badge-pending">Pending</span>';
-    return '<span class="badge-rejected">Rejected</span>';
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('f-from').value = today;
+document.getElementById('f-to').value   = today;
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let currentPage = 1;
+
+async function bootFilters(){
+    const res = await apiFetch('/api/v1/employee/sellers/payment-requests/list?per_page=1');
+    if (!res) { loadData(1); return; }
+    const d   = await res.json();
+    const banks = d.banks || [];
+    const sel   = document.getElementById('f-bank');
+    sel.innerHTML = '<option value="">ALL</option>' +
+        banks.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    loadData(1);
 }
 
-let histPage=1;
+async function loadData(page){
+    currentPage = page || 1;
+    const from = document.getElementById('f-from').value;
+    const to   = document.getElementById('f-to').value;
+    const bank = document.getElementById('f-bank').value;
+    const p    = new URLSearchParams({ page: currentPage, per_page: 25 });
+    if (from) p.set('date_from', from);
+    if (to)   p.set('date_to', to);
+    if (bank) p.set('bank_name', bank);
 
-function loadData(){
-    empFetch('/api/v1/employee/sellers/payment-requests/list?status=pending&per_page=100').then(data=>{
-        const pending=(data.data&&data.data.data)||[];
-        document.getElementById('pendingBadge').textContent=pending.length;
-        document.getElementById('sPendingCount').textContent=pending.length;
-        document.getElementById('sPendingAmt').textContent='₹'+fmtMoney(pending.reduce((s,r)=>s+(r.amount||0),0));
-        document.getElementById('pendingBody').innerHTML=pending.length
-            ?pending.map(r=>`<tr>
-                <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
-                <td style="font-weight:600">${(r.user&&r.user.name)||'—'}</td>
-                <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
-                <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
-                <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
-                <td style="font-size:12px;color:var(--text-secondary)">${r.notes||'—'}</td>
-                <td>${r.proof_image?`<a href="/storage/${r.proof_image}" target="_blank" style="padding:3px 8px;font-size:11.5px;border:1px solid var(--border);border-radius:5px;background:#fff;text-decoration:none;color:var(--text-primary)">📎 View</a>`:'—'}</td>
-                <td style="display:flex;gap:5px">
-                    <button onclick="approveOne(${r.id})" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;font-weight:600">Approve</button>
-                    <button onclick="showReject(${r.id})" style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff">Reject</button>
-                </td>
-            </tr>`).join('')
-            :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No pending requests</td></tr>';
-    }).catch(e=>{ document.getElementById('pendingBody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444">${e.message||'Failed to load.'}</td></tr>`; });
+    document.getElementById('pr-body').innerHTML =
+        '<tr><td colspan="12" style="padding:18px;color:var(--text-muted);text-align:center">Loading…</td></tr>';
 
-    loadHistory(histPage);
+    const res  = await apiFetch('/api/v1/employee/sellers/payment-requests/list?' + p);
+    if (!res) return;
+    const d    = await res.json();
+    const rows = d.data?.data || [];
+    const meta = d.data || {};
 
-    // Update today stats
-    empFetch('/api/v1/employee/sellers/payment-requests/list?status=approved&per_page=100').then(data=>{
-        const today=new Date().toDateString();
-        const todayRows=((data.data&&data.data.data)||[]).filter(r=>new Date(r.processed_at).toDateString()===today);
-        document.getElementById('sApprovedToday').textContent=todayRows.length;
-        document.getElementById('sApprovedAmt').textContent='₹'+fmtMoney(todayRows.reduce((s,r)=>s+(r.amount||0),0));
-    }).catch(()=>{});
+    renderRows(rows);
+    renderPager(meta);
 }
 
-function loadHistory(page){
-    histPage=page||1;
-    const params=new URLSearchParams({page:histPage});
-    const q=document.getElementById('searchReq').value.trim(), s=document.getElementById('fStatus').value;
-    if(q) params.set('search',q); if(s) params.set('status',s);
-    document.getElementById('historyBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Loading…</td></tr>';
-    empFetch(`/api/v1/employee/sellers/payment-requests/list?${params}`).then(data=>{
-        const pagination=data.data||{};
-        const rows=pagination.data||[];
-        document.getElementById('historyBody').innerHTML=rows.length
-            ?rows.map(r=>`<tr>
-                <td style="font-size:12.5px">${fmtDate(r.created_at)}</td>
-                <td style="font-weight:600">${(r.user&&r.user.name)||'—'}</td>
-                <td style="font-weight:700;color:#10b981">₹${fmtMoney(r.amount)}</td>
-                <td style="text-transform:capitalize">${(r.payment_mode||'—').replace('_',' ')}</td>
-                <td style="font-family:monospace;font-size:12px">${r.reference_number||'—'}</td>
-                <td style="font-size:12px;color:var(--text-secondary)">${fmtDate(r.processed_at)}</td>
-                <td style="font-size:12px;color:var(--text-secondary)">${r.admin_notes||'—'}</td>
-                <td>${badge(r.status)}</td>
-            </tr>`).join('')
-            :'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No requests found</td></tr>';
-    }).catch(()=>{ document.getElementById('historyBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444">Failed to load.</td></tr>'; });
+function modeLabel(m){
+    const map = {bank_transfer:'BANK TRF',upi:'UPI',neft:'NEFT',rtgs:'RTGS',cheque:'CHEQUE',imps:'IMPS'};
+    return map[(m||'').toLowerCase()] || (m||'—').toUpperCase();
+}
+function roleLabel(r){
+    const map = {api_user:'APIUSER',retailer:'RETAILER',distributor:'DISTRIBUTOR',buyer:'BUYER',admin:'ADMIN'};
+    return map[(r||'').toLowerCase()] || (r||'—').toUpperCase();
+}
+function statusBadge(s){
+    if (s==='approved') return '<span class="pr-badge-approved">Approved</span>';
+    if (s==='rejected') return '<span class="pr-badge-rejected">Rejected</span>';
+    return '<span class="pr-badge-pending">Pending</span>';
 }
 
-function filterHistory(){ loadHistory(1); }
+function renderRows(rows){
+    const tbody = document.getElementById('pr-body');
+    if (!rows.length){
+        tbody.innerHTML = `<tr><td colspan="12" style="background:#ef4444;color:#fff;padding:12px 16px;font-weight:600">No Records Found</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const u = r.user || {};
+        const d = r.created_at ? new Date(r.created_at) : null;
+        const dtStr = d
+            ? d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+              + '<br><span style="font-size:11px;color:var(--text-muted)">'
+              + d.toLocaleTimeString('en-IN',{hour12:false}) + '</span>'
+            : '—';
+        const refBranch = [r.reference_number, r.bank_name].filter(Boolean).join(' / ');
+        const proof = r.proof_image
+            ? `<img src="/storage/${esc(r.proof_image)}" class="proof-thumb" onclick="viewProof('/storage/${esc(r.proof_image)}')" onerror="this.style.display='none'">`
+            : '<span style="font-size:11px;color:var(--text-muted)">—</span>';
+        const isPending = r.status === 'pending';
+        const confInput = isPending
+            ? `<input type="text" class="pr-inline" id="conf-${r.id}" value="${esc(r.amount||'')}" placeholder="Conf.Amt">`
+            : `<span style="font-size:12.5px">${Number(r.amount||0).toFixed(2)}</span>`;
+        const txnInput = isPending
+            ? `<input type="text" class="pr-inline" id="txn-${r.id}" placeholder="TXN.PWD">`
+            : `<span style="font-size:11.5px;color:var(--text-muted)">—</span>`;
+        const actions = isPending
+            ? `<button class="pr-act-approve" onclick="approve(${r.id})">Approve</button><button class="pr-act-reject" onclick="openReject(${r.id})">Reject</button>`
+            : `<span style="font-size:11.5px;color:var(--text-muted);font-style:italic">${r.status}</span>`;
 
-function approveOne(id){
-    if(!confirm('Approve this payment request? The seller wallet will be credited automatically.'))return;
-    empFetch(`/api/v1/employee/sellers/payment-requests/${id}/approve`,'POST').then(()=>{ showToast('Payment approved and wallet credited!','success'); loadData(); }).catch(e=>alert(e.message||'Failed.'));
+        return `<tr>
+            <td style="text-align:center">${proof}</td>
+            <td style="font-size:12.5px">${dtStr}</td>
+            <td style="font-weight:700;color:#0068ce">#${r.id}</td>
+            <td>
+                <div style="font-weight:700;font-size:13px;color:var(--text-primary)">${esc(u.name||'—')}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${esc(u.mobile||'')}</div>
+                <div style="font-size:10.5px;color:var(--text-muted)">${roleLabel(u.role)}</div>
+            </td>
+            <td style="font-size:12.5px;font-weight:600">${modeLabel(r.payment_mode)}</td>
+            <td style="font-family:monospace;font-size:12px;color:var(--text-secondary)">${esc(refBranch||'—')}</td>
+            <td style="font-weight:700;color:var(--text-primary)">${Number(r.amount||0).toFixed(2)}</td>
+            <td>${confInput}</td>
+            <td>${txnInput}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td style="font-size:12px;color:var(--text-secondary);max-width:140px;word-break:break-word">${esc(r.admin_notes||'—')}</td>
+            <td style="min-width:80px">${actions}</td>
+        </tr>`;
+    }).join('');
 }
 
-function approveAll(){
-    const pending=document.querySelectorAll('#pendingBody tr').length;
-    if(!confirm(`Approve all pending requests?`))return;
-    // No bulk endpoint — collect IDs and approve sequentially
-    alert('Use individual approve buttons for each request.');
+function renderPager(meta){
+    const pager = document.getElementById('pr-pager');
+    if (!meta.total){ pager.innerHTML = ''; return; }
+    const lp = meta.last_page || 1;
+    let btns = '';
+    for (let i = 1; i <= lp && i <= 15; i++){
+        const active = i === currentPage;
+        btns += `<button onclick="loadData(${i})" style="padding:3px 9px;border-radius:4px;border:1.5px solid ${active?'#0068ce':'var(--border)'};background:${active?'#0068ce':'var(--card-bg)'};color:${active?'#fff':'var(--text-primary)'};font-size:12px;cursor:pointer;margin:0 2px">${i}</button>`;
+    }
+    pager.innerHTML = `<span>Showing ${meta.from||0}–${meta.to||0} of ${meta.total||0} records</span><div>${btns}</div>`;
 }
 
-function showReject(id){
-    document.getElementById('rejectId').value=id;
-    document.getElementById('rejectReason').value='';
-    document.getElementById('rejectRemark').value='';
-    document.getElementById('rejectModal').style.display='flex';
+async function approve(id){
+    const txnRef  = (document.getElementById(`txn-${id}`)?.value || '').trim();
+    const confAmt = (document.getElementById(`conf-${id}`)?.value || '').trim();
+    if (!txnRef){ alert('Please enter TXN.PWD before approving.'); return; }
+    if (!confirm(`Approve payment #${id}?\nTXN REF: ${txnRef}\nConf Amount: ${confAmt || '—'}`)) return;
+
+    const res = await apiFetch(`/api/v1/employee/sellers/payment-requests/${id}/approve`, {
+        method: 'POST', body: JSON.stringify({ txn_ref: txnRef })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok){ showToast(d.message || 'Approved!', 'success'); loadData(currentPage); }
+    else        { alert(d.message || 'Approval failed.'); }
 }
 
-function confirmReject(){
-    const id=document.getElementById('rejectId').value;
-    const reason=document.getElementById('rejectReason').value;
-    const remark=document.getElementById('rejectRemark').value.trim();
-    if(!reason){alert('Please select a rejection reason.');return;}
-    const notes=reason+(remark?' — '+remark:'');
-    empFetch(`/api/v1/employee/sellers/payment-requests/${id}/reject`,'POST',{notes}).then(()=>{ document.getElementById('rejectModal').style.display='none'; showToast('Request rejected.','info'); loadData(); }).catch(e=>alert(e.message||'Failed.'));
+function openReject(id){
+    document.getElementById('rejectId').value     = id;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectNotes').value  = '';
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+function closeReject(){ document.getElementById('rejectModal').style.display = 'none'; }
+
+async function confirmReject(){
+    const id     = document.getElementById('rejectId').value;
+    const reason = document.getElementById('rejectReason').value;
+    const notes  = document.getElementById('rejectNotes').value.trim();
+    if (!reason){ alert('Please select a rejection reason.'); return; }
+    const fullNotes = reason + (notes ? ' — ' + notes : '');
+    const res = await apiFetch(`/api/v1/employee/sellers/payment-requests/${id}/reject`, {
+        method: 'POST', body: JSON.stringify({ notes: fullNotes })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok){ closeReject(); showToast('Request rejected.', 'info'); loadData(currentPage); }
+    else        { alert(d.message || 'Rejection failed.'); }
 }
 
-function showToast(msg,type){
-    const t=document.createElement('div');
-    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13.5px;font-weight:600;color:#fff;background:${type==='success'?'#10b981':'#64748b'};box-shadow:0 4px 20px rgba(0,0,0,.2);animation:slideUp .2s ease`;
-    t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500);
+function viewProof(url){
+    document.getElementById('proofImg').src = url;
+    document.getElementById('proofLightbox').style.display = 'flex';
 }
 
-function exportData(){ window.open('/api/v1/employee/sellers/payment-requests/list?export=csv','_blank'); }
-document.addEventListener('DOMContentLoaded',loadData);
+function showToast(msg, type){
+    const bg = type==='success'?'#16a34a':type==='error'?'#dc2626':'#0068ce';
+    const t  = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25)`;
+    t.textContent   = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+document.addEventListener('DOMContentLoaded', bootFilters);
 </script>
 @endpush
 @endsection

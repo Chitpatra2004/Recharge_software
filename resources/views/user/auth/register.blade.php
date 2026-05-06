@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Account — RechargeHub</title>
+  <title>Create Account — ColdPay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -408,12 +408,12 @@
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
       </svg>
     </div>
-    <div class="brand-name">Recharge<span>Hub</span></div>
+    <div class="brand-name">Cold<span>Pay</span></div>
   </div>
 
   <div class="card">
     <div class="card-title">Create Account</div>
-    <div class="card-subtitle">Join RechargeHub and start earning today</div>
+    <div class="card-subtitle">Join ColdPay and start earning today</div>
 
     <div class="alert alert-success" id="alertSuccess">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -460,7 +460,7 @@
       <div class="form-group">
         <label class="form-label" for="account_type">Account Type <span class="req">*</span></label>
         <div class="input-wrap">
-          <select id="account_type" name="account_type" class="form-input">
+          <select id="account_type" name="account_type" class="form-input" onchange="toggleApprovalNotice(this.value)">
             <option value="retailer" selected>Retailer — I sell recharges to customers</option>
             <option value="distributor">Distributor — I manage a network of retailers</option>
           </select>
@@ -616,8 +616,8 @@
         <div class="field-error" id="gst_certificateError"></div>
       </div>
 
-      {{-- Approval notice --}}
-      <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#fde68a;display:flex;align-items:flex-start;gap:10px">
+      {{-- Approval notice (hidden for retailer, shown for distributor/api_seller) --}}
+      <div id="approval-notice" style="display:none;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#fde68a;display:flex;align-items:flex-start;gap:10px">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;margin-top:1px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <span>After submitting, your account will be <strong>pending admin approval</strong>. You will receive an email notification once your account is approved and you can login.</span>
       </div>
@@ -634,6 +634,12 @@
 </div>
 
 <script>
+  function toggleApprovalNotice(role) {
+    var notice = document.getElementById('approval-notice');
+    if (!notice) return;
+    notice.style.display = (role !== 'retailer') ? 'flex' : 'none';
+  }
+
   (function () {
     'use strict';
 
@@ -845,11 +851,23 @@
         var data   = result.data;
 
         if (status === 201 || (status >= 200 && status < 300)) {
-          document.getElementById('alertSuccessText').textContent = 'Registration submitted! Your account is pending admin approval. You will be notified via email once approved.';
-          document.getElementById('alertSuccess').classList.add('show');
-          submitBtn.disabled = true;
-          submitText.textContent = 'Registration Submitted';
-          setTimeout(function () { window.location.href = '/user/login?registered=1'; }, 4000);
+          if (data.token) {
+            // Retailer: auto-approved — store token and go to dashboard
+            localStorage.setItem('user_token', data.token);
+            if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
+            document.getElementById('alertSuccessText').textContent = 'Registration successful! Redirecting to your dashboard…';
+            document.getElementById('alertSuccess').classList.add('show');
+            submitBtn.disabled = true;
+            submitText.textContent = 'Registration Successful';
+            setTimeout(function () { window.location.href = '/user/dashboard'; }, 1500);
+          } else {
+            // Distributor / API seller: pending admin approval
+            document.getElementById('alertSuccessText').textContent = 'Registration submitted! Your account is pending admin approval. You will be notified via email once approved.';
+            document.getElementById('alertSuccess').classList.add('show');
+            submitBtn.disabled = true;
+            submitText.textContent = 'Registration Submitted';
+            setTimeout(function () { window.location.href = '/user/login?registered=1'; }, 4000);
+          }
         } else {
           if (data.errors) {
             Object.keys(data.errors).forEach(function (field) {

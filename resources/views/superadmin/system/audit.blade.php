@@ -105,7 +105,7 @@
                         ['time'=>'10:14:09 AM','actor'=>'Priya Nair','role'=>'admin','event'=>'User Suspended','detail'=>'Seller "NetZone" account suspended','ip'=>'110.34.22.87','sev'=>'high'],
                         ['time'=>'09:45:31 AM','actor'=>'Super Admin','role'=>'superadmin','event'=>'Operator Switch','detail'=>'Airtel switched from API-2 to API-5','ip'=>'192.168.1.1','sev'=>'medium'],
                         ['time'=>'09:12:00 AM','actor'=>'Kiran Reddy','role'=>'admin','event'=>'Login','detail'=>'Successful login from Chrome/Windows','ip'=>'49.205.110.33','sev'=>'info'],
-                        ['time'=>'08:31:45 AM','actor'=>'Unknown','role'=>'—','event'=>'Failed Login Attempt','detail'=>'3 failed attempts for admin@rechargerhub.in','ip'=>'178.91.45.22','sev'=>'critical'],
+                        ['time'=>'08:31:45 AM','actor'=>'Unknown','role'=>'—','event'=>'Failed Login Attempt','detail'=>'3 failed attempts for admin@coldpay.in','ip'=>'178.91.45.22','sev'=>'critical'],
                     ];
                     @endphp
                     @foreach($logs as $log)

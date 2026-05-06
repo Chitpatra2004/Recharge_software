@@ -42,6 +42,7 @@ class EmployeeProfileController extends Controller
                 'state'              => $emp->state,
                 'pan'                => $emp->pan,
                 'two_factor_enabled' => (bool) $emp->two_factor_enabled,
+                'two_factor_methods' => $emp->enabledTwoFactorMethods(),
                 'permissions'        => array_keys(array_filter($emp->permissions ?? [])),
                 'last_login'         => $emp->last_login_at?->toIso8601String(),
                 'created_at'         => $emp->created_at?->toIso8601String(),
@@ -105,14 +106,22 @@ class EmployeeProfileController extends Controller
     public function sendTfaOtp(Request $request): JsonResponse
     {
         $request->validate([
-            'mobile' => ['required', 'digits:10'],
+            'method' => ['sometimes', 'string', 'in:mobile_otp,email_otp,otp'],
+            'mobile' => ['required_if:method,mobile_otp,otp', 'nullable', 'digits:10'],
         ]);
 
-        $mobile = $request->input('mobile');
+        $method = $request->input('method', 'mobile_otp');
+        $method = $method === 'otp' ? 'mobile_otp' : $method;
+        $emp = $request->user('employee');
+        $identifier = $method === 'email_otp' ? $emp->email : $request->input('mobile');
 
-        $this->otpService->generate($mobile, 'register_verify', null, $request->ip());
+        if (! $identifier) {
+            return response()->json(['message' => 'A valid mobile number or email is required.'], 422);
+        }
 
-        return response()->json(['message' => 'OTP sent to ' . $mobile . '.']);
+        $this->otpService->generate($identifier, $this->setupOtpType($method), null, $request->ip());
+
+        return response()->json(['message' => 'OTP sent to ' . $identifier . '.']);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -121,29 +130,44 @@ class EmployeeProfileController extends Controller
     public function verifyTfaOtp(Request $request): JsonResponse
     {
         $request->validate([
-            'mobile' => ['required', 'digits:10'],
+            'method' => ['sometimes', 'string', 'in:mobile_otp,email_otp,otp'],
+            'mobile' => ['required_if:method,mobile_otp,otp', 'nullable', 'digits:10'],
             'otp'    => ['required', 'digits:6'],
         ]);
 
+        $method = $request->input('method', 'mobile_otp');
+        $method = $method === 'otp' ? 'mobile_otp' : $method;
+        $emp = $request->user('employee');
         $mobile   = $request->input('mobile');
+        $identifier = $method === 'email_otp' ? $emp->email : $mobile;
         $otpInput = $request->input('otp');
 
-        $verified = $this->otpService->verify($mobile, 'register_verify', $otpInput);
+        if (! $identifier) {
+            return response()->json(['message' => 'A valid mobile number or email is required.'], 422);
+        }
+
+        $verified = $this->otpService->verify($identifier, $this->setupOtpType($method), $otpInput);
         if (! $verified) {
             return response()->json(['message' => 'Invalid or expired OTP.'], 422);
         }
-
-        $emp = $request->user('employee');
 
         $backupCodes = collect(range(1, 8))
             ->map(fn () => strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)))
             ->toArray();
 
-        $emp->update([
+        $methods = $this->addTwoFactorMethod($emp->enabledTwoFactorMethods(), $method);
+        $updates = [
             'two_factor_enabled' => true,
-            'mobile'             => $mobile,
+            'two_factor_methods' => $methods,
+            'two_factor_method'  => in_array('mobile_otp', $methods, true) ? 'otp' : ($emp->two_factor_method ?: 'none'),
             'backup_codes'       => $backupCodes,
-        ]);
+        ];
+
+        if ($method === 'mobile_otp') {
+            $updates['mobile'] = $mobile;
+        }
+
+        $emp->update($updates);
 
         $this->auditLog($emp->id, 'profile.2fa_enabled', 'Employee enabled 2FA.', $request);
 
@@ -159,12 +183,18 @@ class EmployeeProfileController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function setupTotp(Request $request): JsonResponse
     {
+        $request->validate([
+            'method' => ['sometimes', 'string', 'in:google_authenticator,microsoft_authenticator,totp'],
+        ]);
+
         $emp    = $request->user('employee');
-        $secret = $this->totpService->generateSecret();
+        $secret = $emp->totp_secret ?: $this->totpService->generateSecret();
         $label  = $emp->email ?: $emp->mobile;
         $qrDataUri = $this->totpService->getQrImageDataUri($secret, $label);
 
-        $emp->update(['totp_secret' => $secret]);
+        if (! $emp->totp_secret) {
+            $emp->update(['totp_secret' => $secret]);
+        }
 
         return response()->json([
             'secret'  => $secret,
@@ -180,9 +210,14 @@ class EmployeeProfileController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function enableTotp(Request $request): JsonResponse
     {
-        $request->validate(['code' => ['required', 'digits:6']]);
+        $request->validate([
+            'code'   => ['required', 'digits:6'],
+            'method' => ['sometimes', 'string', 'in:google_authenticator,microsoft_authenticator,totp'],
+        ]);
 
         $emp = $request->user('employee');
+        $method = $request->input('method', 'google_authenticator');
+        $method = $method === 'totp' ? 'google_authenticator' : $method;
 
         if (! $emp->totp_secret) {
             return response()->json(['message' => 'Run TOTP setup first.'], 422);
@@ -192,10 +227,13 @@ class EmployeeProfileController extends Controller
             return response()->json(['message' => 'Invalid code. Make sure your device clock is correct.'], 422);
         }
 
+        $methods = $this->addTwoFactorMethod($emp->enabledTwoFactorMethods(), $method);
+
         $emp->update([
             'totp_enabled'       => true,
             'two_factor_enabled' => true,
             'two_factor_method'  => 'totp',
+            'two_factor_methods' => $methods,
         ]);
 
         $this->auditLog($emp->id, 'profile.totp_enabled', 'Employee enabled TOTP 2FA.', $request);
@@ -214,6 +252,7 @@ class EmployeeProfileController extends Controller
             'totp_enabled'       => false,
             'totp_secret'        => null,
             'two_factor_method'  => 'none',
+            'two_factor_methods' => null,
             'backup_codes'       => null,
         ]);
 
@@ -351,5 +390,17 @@ class EmployeeProfileController extends Controller
         } catch (\Throwable) {
             // Audit logging must never break the main flow
         }
+    }
+
+    private function setupOtpType(string $method): string
+    {
+        return $method === 'email_otp' ? 'setup_2fa_email' : 'setup_2fa_mobile';
+    }
+
+    private function addTwoFactorMethod(array $methods, string $method): array
+    {
+        $methods[] = $method;
+
+        return array_values(array_unique(array_filter($methods)));
     }
 }

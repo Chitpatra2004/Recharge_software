@@ -1,5 +1,5 @@
 @extends('layouts.user')
-@section('title','Help & Support — RechargeHub')
+@section('title','Help & Support — ColdPay')
 @section('page-title','Help & Support')
 
 @push('head')

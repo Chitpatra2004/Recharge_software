@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RechargeHub — Fast & Reliable Recharge Platform</title>
+    <title>ColdPay — Fast & Reliable Recharge Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -600,7 +600,7 @@
         <div class="nav-brand-icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-        <span class="nav-brand-name">Recharge<span>Hub</span></span>
+        <span class="nav-brand-name">Cold<span>Pay</span></span>
     </a>
     <div class="nav-links">
         <a href="#features">Features</a>
@@ -819,7 +819,7 @@
             <div class="code-body">
 <span class="cc">// Initiate a mobile recharge</span><br>
 <span class="ck">curl</span> <span class="cs">-X POST</span> <span class="cp">\</span><br>
-&nbsp; <span class="cs">"https://rechargechub.in/api/v1/buyer/recharge"</span> <span class="cp">\</span><br>
+&nbsp; <span class="cs">"https://web.coldpay.in/api/v1/buyer/recharge"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-H</span> <span class="cs">"X-API-Key: rh_live_xxxxxxxxxxxxxxxx"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-H</span> <span class="cs">"Content-Type: application/json"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-d</span> <span class="cp">{</span><br>
@@ -873,7 +873,7 @@
     <div style="text-align:center;max-width:560px;margin:0 auto">
         <div class="section-tag">Testimonials</div>
         <h2 class="section-title">Trusted by retailers & distributors</h2>
-        <p class="section-sub" style="margin:0 auto">From small retailers to large distribution networks, RechargeHub powers recharge businesses of all sizes.</p>
+        <p class="section-sub" style="margin:0 auto">From small retailers to large distribution networks, ColdPay powers recharge businesses of all sizes.</p>
     </div>
     <div class="testi-grid">
         <div class="testi-card">
@@ -910,7 +910,7 @@
         Platform is live and accepting partners
     </div>
     <h2>Ready to scale your recharge business?</h2>
-    <p>Join thousands of retailers and distributors already on RechargeHub.<br>Get started in minutes — no setup fees, no contracts.</p>
+    <p>Join thousands of retailers and distributors already on ColdPay.<br>Get started in minutes — no setup fees, no contracts.</p>
     <div class="cta-btns">
         <a href="/admin/login" class="btn-cta-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
@@ -931,7 +931,7 @@
                 <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--blue-dk),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(99,102,241,.35)">
                     <svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </div>
-                <div class="f-brand-name">Recharge<span>Hub</span></div>
+                <div class="f-brand-name">Cold<span>Pay</span></div>
             </div>
             <p class="f-desc">India's most reliable recharge and bill payment platform. Powering retailers, distributors, and API partners since 2024.</p>
             <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
@@ -970,7 +970,7 @@
         </div>
     </div>
     <div class="f-bottom">
-        <div class="f-copy">© {{ date('Y') }} RechargeHub. All rights reserved. Built with Laravel.</div>
+        <div class="f-copy">© {{ date('Y') }} ColdPay. All rights reserved. Built with Laravel.</div>
         <div class="f-badge">Systems Operational</div>
     </div>
 </footer>

@@ -7,17 +7,31 @@
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
     <div>
-        <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">Users</h1>
+        <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">App Users</h1>
         <div class="breadcrumb" style="margin-bottom:0;margin-top:3px">
             <a href="/admin/dashboard">Dashboard</a>
             <svg class="breadcrumb-sep" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            <span>Users</span>
+            <span>App Users</span>
         </div>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="loadUsers()">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        Refresh
-    </button>
+    <div style="display:flex;gap:10px;align-items:center">
+        <a href="/admin/sellers" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:8px;font-size:12.5px;font-weight:600;text-decoration:none">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            API Sellers
+        </a>
+        <button class="btn btn-outline btn-sm" onclick="loadUsers()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+{{-- Seller redirect notice --}}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#1e40af">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span>This page shows <strong>Retailers, Distributors &amp; Buyers</strong>. API sellers are managed separately in
+        <a href="/admin/sellers" style="color:#1d4ed8;font-weight:700;text-decoration:none">API Sellers &rarr;</a>
+    </span>
 </div>
 
 {{-- Filter Bar --}}
@@ -27,12 +41,10 @@
             <div>
                 <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Role</label>
                 <select id="f-role" style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text-primary);background:#fff;outline:none;min-width:130px">
-                    <option value="">All Roles</option>
+                    <option value="">All Users</option>
                     <option value="retailer">Retailer</option>
-                    <option value="buyer">Buyer</option>
                     <option value="distributor">Distributor</option>
-                    <option value="api_user">API User</option>
-                    <option value="admin">Admin</option>
+                    <option value="buyer">Buyer</option>
                 </select>
             </div>
             <div>
@@ -136,8 +148,11 @@ let currentPage = 1;
 let totalPages  = 1;
 
 function getFilters() {
+    const role = document.getElementById('f-role').value;
     return {
-        role:   document.getElementById('f-role').value,
+        // When no specific role selected, restrict to non-seller roles
+        role:           role || '',
+        exclude_sellers: role ? undefined : '1',
         status: document.getElementById('f-status').value,
         search: document.getElementById('f-search').value,
         page:   currentPage,
@@ -145,7 +160,7 @@ function getFilters() {
 }
 
 function buildQuery(p) {
-    return Object.entries(p).filter(([,v]) => v !== '' && v != null).map(([k,v]) => k+'='+encodeURIComponent(v)).join('&');
+    return Object.entries(p).filter(([,v]) => v !== '' && v != null && v !== undefined).map(([k,v]) => k+'='+encodeURIComponent(v)).join('&');
 }
 
 function clearFilters() {

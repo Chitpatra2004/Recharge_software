@@ -149,7 +149,7 @@
                         ['op'=>'Jio','slot'=>'API-2','prov'=>'Razorpay','url'=>'api.razorpay.com/jio','succ'=>'98.8%','resp'=>'1.3s','req'=>'412','prio'=>2,'status'=>'backup'],
                         ['op'=>'Airtel','slot'=>'API-1','prov'=>'Cashfree','url'=>'api.cashfree.com/air','succ'=>'99.5%','resp'=>'0.9s','req'=>'2,880','prio'=>1,'status'=>'active'],
                         ['op'=>'Vi','slot'=>'API-1','prov'=>'Instamojo','url'=>'api.instamojo.com/vi','succ'=>'96.1%','resp'=>'2.1s','req'=>'1,540','prio'=>1,'status'=>'active'],
-                        ['op'=>'BSNL','slot'=>'API-1','prov'=>'Custom','url'=>'bsnl-api.rechargerhub.in','succ'=>'91.4%','resp'=>'3.2s','req'=>'890','prio'=>1,'status'=>'degraded'],
+                        ['op'=>'BSNL','slot'=>'API-1','prov'=>'Custom','url'=>'bsnl-api.coldpay.in','succ'=>'91.4%','resp'=>'3.2s','req'=>'890','prio'=>1,'status'=>'degraded'],
                     ];
                     @endphp
                     @foreach($gatewayApis as $g)

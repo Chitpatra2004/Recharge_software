@@ -51,7 +51,7 @@ class ApiRequestLogger
             'user_id'          => $user?->id,
             'method'           => $request->method(),
             'path'             => '/' . ltrim($request->path(), '/'),
-            'query_string'     => $request->getQueryString() ?: null,
+            'query_string'     => $this->buildQueryString($request),
             'status_code'      => $response->getStatusCode(),
             'response_time_ms' => (int) ((microtime(true) - $startTime) * 1000),
             'ip_address'       => $request->ip(),
@@ -145,6 +145,17 @@ class ApiRequestLogger
         }
 
         return substr($json, 0, 5000);
+    }
+
+    private function buildQueryString(Request $request): ?string
+    {
+        $query = $request->query->all();
+
+        if ($query === []) {
+            return null;
+        }
+
+        return substr(http_build_query($this->maskSensitiveValues($query)), 0, 1000) ?: null;
     }
 
     private function maskSensitiveValues(array $payload): array

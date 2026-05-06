@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>API User Registration — RechargeHub</title>
+    <title>API User Registration — ColdPay</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -134,7 +134,7 @@
         <div class="brand-icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
         </div>
-        <span class="brand-name">Recharge<span>Hub</span></span>
+        <span class="brand-name">Cold<span>Pay</span></span>
     </a>
 
     <div class="api-badge">
@@ -143,7 +143,7 @@
     </div>
 
     <h2>Developer / API Access</h2>
-    <p class="sub">Create an account to integrate RechargeHub into your platform</p>
+    <p class="sub">Create an account to integrate ColdPay into your platform</p>
 
     <!-- Feature highlights -->
     <div class="features">
@@ -223,32 +223,32 @@
         <div class="field">
             <div class="field-label">Intended Use Case <span class="req">*</span></div>
             <div class="use-cases" id="use-cases">
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="mobile_recharge">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     Mobile Recharge
                 </label>
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="dth_recharge">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     DTH Recharge
                 </label>
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="wallet_topup">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     Wallet Top-up
                 </label>
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="bill_payment">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     Bill Payment
                 </label>
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="b2b_reseller">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     B2B Reseller
                 </label>
-                <label class="uc-item" onclick="toggleUc(this)">
+                <label class="uc-item" onclick="toggleUc(this, event)">
                     <input type="checkbox" value="other">
                     <div class="uc-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
                     Other
@@ -365,7 +365,8 @@ function showAlert(type, msg) {
 }
 
 // Use case toggles
-function toggleUc(el) {
+function toggleUc(el, e) {
+    if (e) e.preventDefault();
     el.classList.toggle('selected');
     el.querySelector('input').checked = el.classList.contains('selected');
     hideE('usecase-err');

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Super Admin Login — RechargeHub Command Center</title>
+    <title>Super Admin Login — ColdPay Command Center</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -714,7 +714,7 @@
                 <div class="brand-mark">
                     <div class="brand-icon">⚡</div>
                     <div class="brand-text">
-                        <h1>RechargeHub</h1>
+                        <h1>ColdPay</h1>
                         <span>Command Center</span>
                     </div>
                 </div>
@@ -722,7 +722,7 @@
                 <!-- Heading -->
                 <div class="left-heading">
                     <h2>Platform <span>Command</span> Access</h2>
-                    <p>Secure gateway to the RechargeHub super admin control panel. Full platform oversight with real-time intelligence.</p>
+                    <p>Secure gateway to the ColdPay super admin control panel. Full platform oversight with real-time intelligence.</p>
                 </div>
 
                 <!-- Features -->
@@ -815,7 +815,7 @@
                                 id="email"
                                 name="email"
                                 class="form-input"
-                                placeholder="superadmin@rechargeshub.com"
+                                placeholder="superadmin@coldpay.in"
                                 autocomplete="email"
                                 required
                             >

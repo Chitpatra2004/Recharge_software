@@ -10,22 +10,42 @@
 </div>
 
 <!-- Balance + Summary Banner -->
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px" id="summary-cards">
-    <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:14px;padding:18px 20px;color:#fff">
-        <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Current Balance</div>
-        <div id="card-balance" style="font-size:24px;font-weight:800">—</div>
+<div class="stats-grid" id="summary-cards">
+    <div class="stat-card blue">
+        <div class="stat-icon" style="background:rgba(37,99,235,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--blue)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-label">Current Balance</div>
+            <div class="stat-value" id="card-balance">—</div>
+        </div>
     </div>
-    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:14px;padding:18px 20px;color:#fff">
-        <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Total Recharge (period)</div>
-        <div id="card-recharge" style="font-size:24px;font-weight:800">—</div>
+    <div class="stat-card orange">
+        <div class="stat-icon" style="background:rgba(245,158,11,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--orange)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-label">Total Recharge (period)</div>
+            <div class="stat-value" id="card-recharge">—</div>
+        </div>
     </div>
-    <div style="background:linear-gradient(135deg,#10b981,#0d9488);border-radius:14px;padding:18px 20px;color:#fff">
-        <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Total Discount Earned</div>
-        <div id="card-discount" style="font-size:24px;font-weight:800">—</div>
+    <div class="stat-card green">
+        <div class="stat-icon" style="background:rgba(16,185,129,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--green)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-label">Total Discount Earned</div>
+            <div class="stat-value" id="card-discount">—</div>
+        </div>
     </div>
-    <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:14px;padding:18px 20px;color:#fff">
-        <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Net Debit (after discount)</div>
-        <div id="card-net" style="font-size:24px;font-weight:800">—</div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(124,58,237,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="#7c3aed" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-label">Net Debit (after discount)</div>
+            <div class="stat-value" id="card-net" style="color:var(--purple)">—</div>
+        </div>
     </div>
 </div>
 
@@ -66,15 +86,10 @@
 </div>
 
 <style>
-.ledger-table { width:100%; border-collapse:collapse; font-size:13px; }
-.ledger-table th { background:#f8fafc; color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:10px 14px; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
-.ledger-table td { padding:10px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
-.ledger-table tr:last-child td { border-bottom:none; }
-.ledger-table tr:hover td { background:#f8fafc; }
 .badge-type-credit { background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
 .badge-type-debit  { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
-.amt-credit { color:#10b981; font-weight:700; }
-.amt-debit  { color:#ef4444; font-weight:700; }
+.amt-credit { color:var(--green); font-weight:700; }
+.amt-debit  { color:var(--red); font-weight:700; }
 .mono { font-family:monospace; font-size:11.5px; color:#94a3b8; }
 </style>
 
@@ -131,7 +146,7 @@ function loadLedger(page) {
         const meta = data.meta || data;
         document.getElementById('entry-count').textContent = `${meta.total || rows.length} entries`;
 
-        let html = `<table class="ledger-table">
+        let html = `<table>
             <thead><tr>
                 <th>Date &amp; Time</th>
                 <th>Mobile / Description</th>

@@ -1,5 +1,5 @@
 @extends('layouts.user')
-@section('title','Add Money — RechargeHub')
+@section('title','Add Money — ColdPay')
 @section('page-title','Add Money')
 
 @push('head')
@@ -170,7 +170,7 @@
             </div>
             <div class="info-box">
                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:8px">Bank Account</div>
-                <div class="info-row"><span class="info-lbl">Account Name</span><span class="info-val">RechargeHub Pvt Ltd</span></div>
+                <div class="info-row"><span class="info-lbl">Account Name</span><span class="info-val">ColdPay Pvt Ltd</span></div>
                 <div class="info-row"><span class="info-lbl">Account No.</span><span class="info-val" style="font-family:monospace">1234567890123</span></div>
                 <div class="info-row"><span class="info-lbl">IFSC Code</span><span class="info-val" style="font-family:monospace">HDFC0001234</span></div>
                 <div class="info-row"><span class="info-lbl">Bank</span><span class="info-val">HDFC Bank</span></div>

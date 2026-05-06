@@ -38,10 +38,25 @@
 </div>
 
 <!-- Summary -->
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px" id="summary-cards">
-    <div class="stat-card"><div class="stat-body"><div class="stat-label">Total Requests</div><div class="stat-value" id="sc-total">—</div></div></div>
-    <div class="stat-card"><div class="stat-body"><div class="stat-label">Approved Amount</div><div class="stat-value" id="sc-approved">—</div></div></div>
-    <div class="stat-card"><div class="stat-body"><div class="stat-label">Pending Amount</div><div class="stat-value" id="sc-pending">—</div></div></div>
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px" id="summary-cards">
+    <div class="stat-card blue">
+        <div class="stat-icon" style="background:rgba(37,99,235,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--blue)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div class="stat-body"><div class="stat-label">Total Requests</div><div class="stat-value" id="sc-total">—</div></div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon" style="background:rgba(16,185,129,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--green)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="stat-body"><div class="stat-label">Approved Amount</div><div class="stat-value" id="sc-approved">—</div></div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon" style="background:rgba(245,158,11,.12)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="var(--orange)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="stat-body"><div class="stat-label">Pending Amount</div><div class="stat-value" id="sc-pending">—</div></div>
+    </div>
 </div>
 
 <div class="card">

@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 </div>
                 <p style="font-size:13.5px;font-weight:600;color:#1e293b;margin-bottom:6px">No Integration Request</p>
                 <p style="font-size:12.5px;color:#64748b;margin-bottom:16px">Submit your website details to get API access</p>
-                <a href="/seller/api-config" style="display:inline-flex;align-items:center;gap:6px;background:#10b981;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">
+                <a href="/seller/reports/api-configuration" style="display:inline-flex;align-items:center;gap:6px;background:#10b981;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Submit Integration Request
                 </a>
@@ -123,8 +123,8 @@ document.addEventListener('DOMContentLoaded', function(){
                     <span style="font-size:13px;color:#64748b">Submitted</span>
                     <span style="font-size:13px;color:#1e293b">${fmtDate(intg.created_at)}</span>
                 </div>
-                ${intg.status==='approved'?`<a href="/seller/api-config" style="display:block;text-align:center;background:#10b981;color:#fff;padding:8px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:4px">View API Configuration →</a>`:''}
-                ${intg.status==='rejected'?`<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#be123c">${intg.admin_notes||'Request rejected by admin.'}</div><a href="/seller/api-config" style="display:block;text-align:center;border:1.5px solid #10b981;color:#10b981;padding:8px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:4px">Re-submit Request</a>`:''}
+                ${intg.status==='approved'?`<a href="/seller/reports/api-configuration" style="display:block;text-align:center;background:#10b981;color:#fff;padding:8px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:4px">View API Configuration →</a>`:''}
+                ${intg.status==='rejected'?`<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#be123c">${intg.admin_notes||'Request rejected by admin.'}</div><a href="/seller/reports/api-configuration" style="display:block;text-align:center;border:1.5px solid #10b981;color:#10b981;padding:8px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:4px">Re-submit Request</a>`:''}
             </div>`;
         }
         document.getElementById('integration-card-body').innerHTML = ibody;

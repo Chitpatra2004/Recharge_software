@@ -856,7 +856,7 @@ const VENDORS = [
         id:'V004', name:'BSNL Custom API', code:'BSNL', color:'#d97706',
         category:'Mobile Recharge', status:'degraded',
         success:'91.4%', speed:'3.2s', today:'890',
-        baseUrl:'https://bsnl-api.rechargerhub.in', purchaseEp:'/recharge', statusEp:'/status',
+        baseUrl:'https://bsnl-api.coldpay.in', purchaseEp:'/recharge', statusEp:'/status',
         method:'POST', format:'form', authType:'API Key (Body param)',
         contentType:'application/x-www-form-urlencoded', timeout:'45s',
         fieldMap:[

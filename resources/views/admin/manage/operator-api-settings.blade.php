@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'API Configuration')
-@section('page-title', 'API Configuration')
+@section('title', 'API List')
+@section('page-title', 'API List')
 
 @section('content')
 
@@ -91,13 +91,13 @@ html[data-dark="1"] .cfg-info-box input[readonly]{color:var(--text-primary)}
 {{-- Header --}}
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
     <div>
-        <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">API Configuration</h1>
+        <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">API List</h1>
         <div class="breadcrumb" style="margin-bottom:0;margin-top:3px">
             <a href="/admin/dashboard">Dashboard</a>
             <svg class="breadcrumb-sep" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             <span>Developers Options</span>
             <svg class="breadcrumb-sep" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            <span>API Configuration</span>
+            <span>API List</span>
         </div>
     </div>
 </div>
@@ -167,23 +167,6 @@ html[data-dark="1"] .cfg-info-box input[readonly]{color:var(--text-primary)}
                 <label>API Partner / Company *</label>
                 <input type="text" id="add-provider" placeholder="e.g. Pdrs For Tradgo">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div class="field">
-                    <label>Operator Code *</label>
-                    <input type="text" id="add-opcode" placeholder="e.g. JIO">
-                </div>
-                <div class="field">
-                    <label>Recharge Type *</label>
-                    <select id="add-rtype">
-                        <option value="prepaid">Prepaid</option>
-                        <option value="postpaid">Postpaid</option>
-                        <option value="dth">DTH</option>
-                        <option value="bbps">BBPS</option>
-                        <option value="fastag">Fastag</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-            </div>
             <div class="field">
                 <label>Validity Till</label>
                 <input type="date" id="add-validity">
@@ -207,10 +190,23 @@ html[data-dark="1"] .cfg-info-box input[readonly]{color:var(--text-primary)}
 <div id="cfg-modal" class="api-modal-overlay cfg-modal">
     <div class="api-modal">
         <div class="cfg-banner" id="cfg-banner">API Settings</div>
+        {{-- Red parameter reference bar --}}
+        <div style="background:#c62828;color:#fff;padding:10px 20px;font-size:12px;font-weight:500;line-height:1.6">
+            <strong>Parameters:</strong>
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[number]</code> Recharge Number &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[amount]</code> Recharge Amount &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[opcode]</code> Operator Code &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[transid]</code> Your Unique Id &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[username]</code> Username &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[apitoken]</code> API Token &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[circlecode]</code> Circle &nbsp;
+            <code style="background:rgba(255,255,255,.18);border-radius:3px;padding:1px 5px;font-size:11px;margin:0 3px">[order_id]</code> Order ID
+        </div>
         <div class="cfg-info-box">
             <div class="info-row">
                 <label>Callback URL</label>
                 <input type="text" id="cfg-callback-url" readonly>
+                <button onclick="copyField('cfg-callback-url')" style="background:none;border:none;cursor:pointer;color:#2e7d32;font-size:11px;font-weight:700;white-space:nowrap">COPY</button>
             </div>
             <div class="info-row">
                 <label>IP Address</label>
@@ -454,8 +450,6 @@ function openAddModal() {
     document.getElementById('add-modal-title').textContent = 'Add API Provider';
     document.getElementById('add-name').value = '';
     document.getElementById('add-provider').value = '';
-    document.getElementById('add-opcode').value = '';
-    document.getElementById('add-rtype').value = 'prepaid';
     document.getElementById('add-validity').value = '';
     document.getElementById('add-purchase').value = 'active';
     document.getElementById('add-modal').classList.add('open');
@@ -468,8 +462,6 @@ function openEditModal(id) {
     document.getElementById('add-modal-title').textContent = 'Update API Provider';
     document.getElementById('add-name').value = r.name;
     document.getElementById('add-provider').value = r.api_provider;
-    document.getElementById('add-opcode').value = r.operator_code || '';
-    document.getElementById('add-rtype').value = r.recharge_type || 'prepaid';
     document.getElementById('add-validity').value = r.validity_till !== '0000-00-00' ? r.validity_till : '';
     document.getElementById('add-purchase').value = r.purchase || 'active';
     document.getElementById('add-modal').classList.add('open');
@@ -483,12 +475,10 @@ async function saveApi() {
     const body = {
         name:          document.getElementById('add-name').value.trim(),
         api_provider:  document.getElementById('add-provider').value.trim(),
-        operator_code: document.getElementById('add-opcode').value.trim(),
-        recharge_type: document.getElementById('add-rtype').value,
         validity_till: document.getElementById('add-validity').value || null,
         purchase:      document.getElementById('add-purchase').value,
     };
-    if (!body.name || !body.operator_code) { alert('Name and Operator Code are required.'); return; }
+    if (!body.name) { alert('API Name is required.'); return; }
 
     const btn = document.getElementById('add-save-btn');
     btn.disabled = true; btn.textContent = 'Saving…';
@@ -520,31 +510,42 @@ async function deleteProvider(id, name) {
 async function openCfgModal(id) {
     document.getElementById('cfg-id').value = id;
     const r2 = _allRoutes.find(x => x.id === id);
-    document.getElementById('cfg-banner').textContent = (r2 ? r2.name : 'API') + ' — Settings';
-    document.getElementById('cfg-callback-url').value = `${location.origin}/api/v1/recharge/callback?api_id=${id}`;
+    document.getElementById('cfg-banner').textContent = (r2 ? r2.name : 'API') + ' — Recharge API Settings';
+    document.getElementById('cfg-callback-url').value = `${location.origin}/api/v1/recharge/pdrs-callback`;
     document.getElementById('cfg-modal').classList.add('open');
 
+    // reset fields while loading
+    ['cfg-username','cfg-url','cfg-params','cfg-sep','cfg-status-key','cfg-txnid-key','cfg-live-id-key','cfg-balance-key','cfg-success','cfg-pending','cfg-failure'].forEach(i => {
+        const el = document.getElementById(i);
+        if (el) el.value = '';
+    });
+    document.getElementById('cfg-apitoken').value = '';
+    document.getElementById('cfg-method').value  = 'GET';
+    document.getElementById('cfg-rtype').value   = 'JSON';
+
     try {
-        const r = await fetch(`${API_BASE}/operator-routes/${id}/api-setting`, {headers:{'Authorization':'Bearer '+_token(),'Accept':'application/json'}});
+        const r = await fetch(`${API_BASE}/api-providers/${id}/full-config`, {headers:{'Authorization':'Bearer '+_token(),'Accept':'application/json'}});
         const d = await r.json();
         if (!r.ok) return;
-        const c = d.config;
-        document.getElementById('cfg-username').value   = c.username || '';
-        document.getElementById('cfg-apitoken').value   = '';           // never pre-fill passwords
-        document.getElementById('cfg-method').value     = c.method;
-        document.getElementById('cfg-url').value        = d.route.api_endpoint;
-        document.getElementById('cfg-params').value     = c.request_params;
-        document.getElementById('cfg-rtype').value      = c.response_type;
-        document.getElementById('cfg-sep').value        = c.separator;
-        document.getElementById('cfg-status-key').value   = c.status_key;
-        document.getElementById('cfg-txnid-key').value    = c.txnid_key;
-        document.getElementById('cfg-live-id-key').value  = c.live_id_key;
-        document.getElementById('cfg-balance-key').value  = c.balance_key;
-        document.getElementById('cfg-success').value    = c.success_val;
-        document.getElementById('cfg-pending').value    = c.pending_val;
-        document.getElementById('cfg-failure').value    = c.failure_val;
+        const creds = d.credentials   || {};
+        const ra    = d.recharge_api  || {};
+        const ba    = d.balance_api   || {};
+        document.getElementById('cfg-username').value      = creds.username    || '';
+        document.getElementById('cfg-apitoken').value      = '';                  // never pre-fill token
+        document.getElementById('cfg-method').value        = ra.method          || 'GET';
+        document.getElementById('cfg-url').value           = ra.url             || '';
+        document.getElementById('cfg-params').value        = ra.params          || '';
+        document.getElementById('cfg-rtype').value         = ra.response_type   || 'JSON';
+        document.getElementById('cfg-sep').value           = ra.separator       || '';
+        document.getElementById('cfg-status-key').value    = ra.status_key      || 'status';
+        document.getElementById('cfg-txnid-key').value     = ra.txnid_key       || 'tid';
+        document.getElementById('cfg-live-id-key').value   = ra.live_id_key     || '';
+        document.getElementById('cfg-balance-key').value   = ba.balance_key     || 'balance';
+        document.getElementById('cfg-success').value       = ra.success_val     || 'Success';
+        document.getElementById('cfg-pending').value       = ra.pending_val     || 'Pending';
+        document.getElementById('cfg-failure').value       = ra.failure_val     || 'Failure';
         toggleSep();
-    } catch(e) {}
+    } catch(e) { console.error('Config load error', e); }
 }
 
 function closeCfgModal() { document.getElementById('cfg-modal').classList.remove('open'); }
@@ -555,40 +556,63 @@ function toggleSep() {
 }
 
 async function saveCfg() {
-    const id  = document.getElementById('cfg-id').value;
-    const tokenVal = document.getElementById('cfg-apitoken').value;
-    const body = {
-        api_endpoint:   document.getElementById('cfg-url').value.trim(),
-        method:         document.getElementById('cfg-method').value,
-        request_params: document.getElementById('cfg-params').value,
-        response_type:  document.getElementById('cfg-rtype').value,
-        separator:      document.getElementById('cfg-sep').value,
-        username:       document.getElementById('cfg-username').value.trim(),
-        api_token:      tokenVal || undefined,   // only send if changed
-        status_key:     document.getElementById('cfg-status-key').value.trim(),
-        txnid_key:      document.getElementById('cfg-txnid-key').value.trim(),
-        live_id_key:    document.getElementById('cfg-live-id-key').value.trim(),
-        balance_key:    document.getElementById('cfg-balance-key').value.trim(),
-        success_val:    document.getElementById('cfg-success').value.trim(),
-        pending_val:    document.getElementById('cfg-pending').value.trim(),
-        failure_val:    document.getElementById('cfg-failure').value.trim(),
-    };
-    if (!body.api_token) delete body.api_token;   // don't overwrite with empty string
-    if (!body.api_endpoint || !body.status_key || !body.txnid_key) {
-        alert('URL, Status Key, and TxnId Key are required.');
+    const id       = document.getElementById('cfg-id').value;
+    const tokenVal = document.getElementById('cfg-apitoken').value.trim();
+    const url      = document.getElementById('cfg-url').value.trim();
+    const statusKey= document.getElementById('cfg-status-key').value.trim();
+    const txnidKey = document.getElementById('cfg-txnid-key').value.trim();
+
+    if (!url || !statusKey || !txnidKey) {
+        alert('Website URL, Status Key, and API TxnId Key are required.');
         return;
     }
+
     const btn = document.getElementById('cfg-save-btn');
     btn.disabled = true; btn.textContent = 'Saving…';
+
+    const hdrs = {'Authorization':'Bearer '+_token(),'Content-Type':'application/json','Accept':'application/json'};
+
     try {
-        const r = await fetch(`${API_BASE}/operator-routes/${id}/api-setting`, {
-            method:'PUT', headers:{'Authorization':'Bearer '+_token(),'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify(body)
-        });
-        const d = await r.json();
-        if (!r.ok) { alert(d.message || 'Failed.'); return; }
+        // 1) Save credentials (only if username or token is provided)
+        const username = document.getElementById('cfg-username').value.trim();
+        if (username || tokenVal) {
+            const credBody = {};
+            if (username)  credBody.username  = username;
+            if (tokenVal)  credBody.api_token = tokenVal;
+            const cr = await fetch(`${API_BASE}/api-providers/${id}/credentials`, {method:'PUT', headers:hdrs, body:JSON.stringify(credBody)});
+            if (!cr.ok) { const e = await cr.json(); alert(e.message || 'Credentials save failed.'); return; }
+        }
+
+        // 2) Save recharge API settings
+        const raBody = {
+            method:        document.getElementById('cfg-method').value,
+            url,
+            params:        document.getElementById('cfg-params').value,
+            response_type: document.getElementById('cfg-rtype').value,
+            separator:     document.getElementById('cfg-sep').value,
+            status_key:    statusKey,
+            txnid_key:     txnidKey,
+            live_id_key:   document.getElementById('cfg-live-id-key').value.trim(),
+            success_val:   document.getElementById('cfg-success').value.trim() || 'Success',
+            pending_val:   document.getElementById('cfg-pending').value.trim(),
+            failure_val:   document.getElementById('cfg-failure').value.trim() || 'Failure',
+        };
+        const rr = await fetch(`${API_BASE}/api-providers/${id}/recharge-api`, {method:'PUT', headers:hdrs, body:JSON.stringify(raBody)});
+        const rd = await rr.json();
+        if (!rr.ok) { alert(rd.message || 'Failed to save API settings.'); return; }
+
+        // 3) Save balance key in balance-api section
+        const balKey = document.getElementById('cfg-balance-key').value.trim();
+        if (balKey) {
+            await fetch(`${API_BASE}/api-providers/${id}/balance-api`, {
+                method:'PUT', headers:hdrs,
+                body: JSON.stringify({method:'GET', url:'', params:'', balance_key: balKey})
+            }).catch(() => {});
+        }
+
         closeCfgModal();
-        showToast('API settings saved.');
-    } catch(e) { alert('Request failed.'); }
+        showToast('API settings saved successfully.');
+    } catch(e) { alert('Request failed: ' + e.message); }
     finally { btn.disabled = false; btn.textContent = 'Update'; }
 }
 
@@ -604,7 +628,7 @@ async function saveMargin() {
     const id  = document.getElementById('margin-id').value;
     const val = document.getElementById('margin-val').value;
     try {
-        const r = await fetch(`${API_BASE}/operator-routes/${id}/margin`, {
+        const r = await fetch(`${API_BASE}/api-providers/${id}/margin`, {
             method:'PUT', headers:{'Authorization':'Bearer '+_token(),'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({margin: val})
         });
         const d = await r.json();
@@ -621,7 +645,7 @@ async function checkBalance(id, btn) {
     const orig = btn.textContent;
     btn.disabled = true; btn.textContent = '…';
     try {
-        const r = await fetch(`${API_BASE}/pdrs/${id}/balance`, {headers:{'Authorization':'Bearer '+_token(),'Accept':'application/json'}});
+        const r = await fetch(`${API_BASE}/api-providers/${id}/test-balance`, {headers:{'Authorization':'Bearer '+_token(),'Accept':'application/json'}});
         const d = await r.json();
         if (!r.ok) { showToast((d.message || 'Balance check failed.'), true); return; }
         const route = _allRoutes.find(x => x.id === id);
@@ -637,6 +661,12 @@ async function checkBalance(id, btn) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function copyField(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard.writeText(el.value || el.textContent).then(() => showToast('Copied!'));
+}
 
 function showToast(msg, isError = false) {
     const t = document.createElement('div');

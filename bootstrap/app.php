@@ -6,6 +6,7 @@ use App\Exceptions\OperatorUnavailableException;
 use App\Exceptions\WalletFrozenException;
 use App\Http\Middleware\ApiKeyAuth;
 use App\Http\Middleware\ApiRequestLogger;
+use App\Http\Middleware\BlockSuspiciousRequests;
 use App\Http\Middleware\DetectBruteForce;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\LogEmployeeActivity;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // ── Global middleware (every request) ─────────────────────────
+        $middleware->append(BlockSuspiciousRequests::class);
         $middleware->append(SecurityHeaders::class);
 
         // ── API group middleware ───────────────────────────────────────
@@ -44,8 +46,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'seller.role'   => \App\Http\Middleware\SellerRole::class,
         ]);
 
-        // Trust proxies for correct IP detection behind load balancers
-        $middleware->trustProxies(at: '*');
+        $trustedProxies = array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))));
+        if ($trustedProxies !== []) {
+            $middleware->trustProxies(at: $trustedProxies);
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return JSON for known domain exceptions on API requests

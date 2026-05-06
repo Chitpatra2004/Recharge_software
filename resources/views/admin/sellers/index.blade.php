@@ -26,6 +26,14 @@ tr.pending-row:hover td{background:#fef3c7!important}
 .seller-email{font-size:11.5px;color:#64748b;margin-top:1px}
 .seller-joined{font-size:11px;color:#94a3b8;margin-top:1px}
 
+/* Login As column */
+th:nth-child(10),td:nth-child(10){background:#f0f9ff!important;border-left:2px solid #bae6fd;text-align:center}
+thead th:nth-child(10){color:#0369a1!important}
+.seller-action-list{display:flex;flex-direction:column;align-items:stretch;gap:5px;width:116px}
+.seller-action-list button{width:100%;text-align:center}
+.seller-login-cell{min-width:105px;text-align:center}
+.seller-login-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:92px;padding:5px 8px;border-radius:7px;font-size:11.5px;cursor:pointer;border:1px solid #475569;background:#f8fafc;color:#1e293b;font-weight:600;white-space:nowrap}
+
 /* ── TABS ── */
 .role-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px}
 .role-tab{padding:10px 22px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text-secondary);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:8px;font-family:inherit}
@@ -33,6 +41,29 @@ tr.pending-row:hover td{background:#fef3c7!important}
 .role-tab.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue)}
 .role-tab .tab-count{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#64748b}
 .role-tab.active .tab-count{background:#dbeafe;color:#2563eb}
+.legacy-edit-card{width:calc(100vw - 56px);max-width:1580px;background:#fff;border:1px solid #d7dde5;border-radius:3px;max-height:94vh;overflow:auto;color:#000}
+.legacy-edit-card h3{display:none}
+.legacy-section-title{height:44px;display:flex;align-items:center;padding:0 22px;border-bottom:1px solid #d7dde5;font-size:14px;font-weight:800;text-transform:uppercase}
+.legacy-registration{display:grid;grid-template-columns:1fr 1fr;column-gap:150px;row-gap:28px;padding:36px 90px 42px}
+.legacy-field{display:grid;grid-template-columns:170px 1fr;align-items:center;gap:12px}
+.legacy-field label{text-align:right;font-size:16px;font-weight:400;color:#000}
+.legacy-field input,.legacy-field select,.legacy-field textarea{height:30px;border:1px solid #8a8a8a;border-radius:0;padding:3px 5px;font-size:16px;background:#fff;color:#000;width:100%}
+.legacy-field textarea{height:54px;resize:vertical}
+.legacy-registration div:not([style*="display:contents"]){display:grid!important;grid-template-columns:170px 1fr!important;align-items:center!important;gap:12px!important}
+.legacy-registration label{text-align:right!important;font-size:16px!important;font-weight:400!important;color:#000!important;margin:0!important;display:block!important}
+.legacy-registration input,.legacy-registration select,.legacy-registration textarea{height:30px!important;border:1px solid #8a8a8a!important;border-radius:0!important;padding:3px 5px!important;font-size:16px!important;background:#fff!important;color:#000!important;width:100%!important}
+.legacy-registration textarea{height:54px!important}
+.legacy-commission-head{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #d7dde5;border-bottom:1px solid #d7dde5;min-height:58px}
+.legacy-commission-tools{display:flex;gap:4px;align-items:center;padding-right:10px}
+.legacy-commission-tools select,.legacy-commission-tools input{height:32px;border:1px solid #666;border-radius:3px;padding:3px 8px;font-size:14px;background:#fff;color:#000}
+.legacy-submit{height:32px;background:#00c51a;color:#fff;border:0;border-radius:4px;padding:0 12px;font-weight:700;cursor:pointer}
+.legacy-service-title{font-size:28px;font-weight:800;color:#8b91a3;margin:24px 0 18px 3px}
+.seller-commission-table{width:100%;border-collapse:collapse;font-size:16px;color:#000}
+.seller-commission-table th{padding:8px 16px 18px;text-align:left;font-size:16px;font-weight:400;background:#fff;border:0;color:#000}
+.seller-commission-table td{padding:12px 16px;border:0;vertical-align:middle}
+.seller-commission-table input,.seller-commission-table select{height:30px;border:1px solid #8a8a8a;border-radius:0;padding:2px 4px;font-size:16px;background:#fff;color:#000;width:136px;max-width:100%}
+.row-submit{background:#0868c7;color:#fff;border:0;border-radius:4px;padding:7px 12px;font-size:14px;cursor:pointer}
+@media(max-width:980px){.legacy-registration{grid-template-columns:1fr;padding:24px}.legacy-field{grid-template-columns:130px 1fr}.legacy-field label{text-align:left}.legacy-commission-head{align-items:flex-start;flex-direction:column}.legacy-commission-tools{padding:10px;flex-wrap:wrap}}
 </style>
 @endpush
 
@@ -54,15 +85,8 @@ tr.pending-row:hover td{background:#fef3c7!important}
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
         </svg>
-        API Users
+        API Sellers
         <span class="tab-count" id="tab-count-api_user">—</span>
-    </button>
-    <button class="role-tab" id="tab-retailer" onclick="switchTab('retailer')">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-        </svg>
-        Retailers
-        <span class="tab-count" id="tab-count-retailer">—</span>
     </button>
 </div>
 
@@ -102,10 +126,11 @@ tr.pending-row:hover td{background:#fef3c7!important}
                     <th>API Setting</th>
                     <th>Status</th>
                     <th>Actions</th>
+                    <th>Login As</th>
                 </tr>
             </thead>
             <tbody id="sellerBody">
-                <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr>
+                <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr>
             </tbody>
         </table>
     </div>
@@ -136,7 +161,8 @@ tr.pending-row:hover td{background:#fef3c7!important}
 {{-- Add Seller Modal --}}
 <div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
     <div class="card" style="width:480px;max-width:95vw;padding:24px;max-height:90vh;overflow-y:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#e3e8ee;border-bottom:1px solid #cfd6df;padding:10px 18px">
+            <div style="font-size:13px;color:#4b5563">Dashboard &nbsp; / &nbsp; APIUSER &nbsp; / &nbsp; <strong style="color:#1f2937">APIUSER Edit</strong></div>
             <h3 style="font-size:16px;font-weight:700">Add New Seller</h3>
             <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted)">&times;</button>
         </div>
@@ -220,88 +246,124 @@ tr.pending-row:hover td{background:#fef3c7!important}
     </div>
 </div>
 
-{{-- Generate API Key Modal --}}
-<div id="genKeyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
-    <div class="card" style="width:480px;max-width:95vw;padding:26px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-            <h3 style="font-size:16px;font-weight:700">Generate API Key</h3>
-            <button onclick="closeGenKeyModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
+
+{{-- Edit Profile Modal --}}
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
+    <div class="legacy-edit-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#e3e8ee;border-bottom:1px solid #cfd6df;padding:10px 18px">
+            <div style="font-size:13px;color:#4b5563">Dashboard &nbsp; / &nbsp; APIUSER &nbsp; / &nbsp; <strong style="color:#1f2937">APIUSER Edit</strong></div>
+            <h3 style="font-size:16px;font-weight:700">Edit Profile — <span id="editSellerName"></span></h3>
+            <button onclick="closeEditModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
         </div>
-        <div style="background:#f8fafc;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px">
-            <div style="color:var(--text-secondary);margin-bottom:3px">Seller</div>
-            <div id="genKeySellerName" style="font-weight:700;font-size:15px"></div>
+        <input type="hidden" id="editSellerId">
+        <input type="hidden" id="editCommission">
+        <div class="legacy-section-title">Registration Form</div>
+        <div class="legacy-registration">
+            <div><label>APIUSER Name :</label><input id="editName" type="text"></div>
+            <div><label>APIUSER Login No. :</label><input id="editLoginNo" type="text"></div>
+            <div><label>Postal Address :</label><textarea id="editAddress"></textarea></div>
+            <div><label>Pin Code :</label><input id="editPincode" type="text"></div>
+            <div><label>State :</label><select id="editState">
+                <option value="">Select State</option>
+                <option>Andaman and Nicobar Islands</option>
+                <option>Andhra Pradesh</option>
+                <option>Arunachal Pradesh</option>
+                <option>Assam</option>
+                <option>Bihar</option>
+                <option>Chandigarh</option>
+                <option>Chhattisgarh</option>
+                <option>Dadra and Nagar Haveli and Daman and Diu</option>
+                <option>Delhi</option>
+                <option>Goa</option>
+                <option>Gujarat</option>
+                <option>Haryana</option>
+                <option>Himachal Pradesh</option>
+                <option>Jammu and Kashmir</option>
+                <option>Jharkhand</option>
+                <option>Karnataka</option>
+                <option>Kerala</option>
+                <option>Ladakh</option>
+                <option>Lakshadweep</option>
+                <option>Madhya Pradesh</option>
+                <option>Maharashtra</option>
+                <option>Manipur</option>
+                <option>Meghalaya</option>
+                <option>Mizoram</option>
+                <option>Nagaland</option>
+                <option>Odisha</option>
+                <option>Puducherry</option>
+                <option>Punjab</option>
+                <option>Rajasthan</option>
+                <option>Sikkim</option>
+                <option>Tamil Nadu</option>
+                <option>Telangana</option>
+                <option>Tripura</option>
+                <option>Uttar Pradesh</option>
+                <option>Uttarakhand</option>
+                <option>West Bengal</option>
+            </select></div>
+            <div><label>City/District :</label><input id="editCity" type="text" placeholder="Enter City / District"></div>
+            <div><label>Mobile No :</label><input id="editMobile" type="tel"></div>
+            <div><label>Email :</label><input id="editEmail" type="email"></div>
+            <div><label>Pan No :</label><input id="editPan" type="text"></div>
+            <div><label>Contact Person :</label><input id="editContactPerson" type="text" placeholder="Enter Contact No."></div>
+            <div><label>Aadhar No :</label><input id="editAadhar" type="text"></div>
+            <div><label>GST Number :</label><input id="editGstNumber" type="text" placeholder="Enter GST Number."></div>
         </div>
-        <div id="genKeyResult" style="display:none;margin-bottom:18px">
-            <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:8px">Generated API Key (copy now — shown only once):</div>
-            <div style="background:#1e293b;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-                <span id="genKeyValue" style="font-family:monospace;font-size:12.5px;color:#e2e8f0;flex:1;word-break:break-all"></span>
-                <button onclick="copyGenKey()" style="background:rgba(255,255,255,.15);border:none;color:#94a3b8;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer">Copy</button>
+        <div class="legacy-commission-head">
+            <div class="legacy-section-title" style="border:0;height:58px">Commission Settings</div>
+            <div class="legacy-commission-tools">
+                <select id="bulkService" onchange="filterCommissionRows()">
+                    <option value="">Mobile</option>
+                </select>
+                <input id="bulkCommission" type="number" min="0" step="0.001" placeholder="0.00" style="width:185px">
+                <select id="bulkType" style="width:145px">
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="flat">Flat (Rs.)</option>
+                </select>
+                <button type="button" class="legacy-submit" onclick="applyBulkCommission()">Submit</button>
             </div>
+        </div>
+        <div id="commissionSettingsWrap" style="padding-bottom:18px;overflow:auto">
+            <div style="padding:24px;text-align:center;color:#64748b">Loading commission settings...</div>
         </div>
         <div style="display:flex;gap:10px">
-            <button id="genKeySubmitBtn" onclick="submitGenKey()" style="flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Generate Key</button>
-            <button onclick="closeGenKeyModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Close</button>
-        </div>
-    </div>
-</div>
-
-{{-- API Config Modal (admin view/update seller's integration) --}}
-<div id="apiCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center">
-    <div class="card" style="width:580px;max-width:95vw;padding:26px;max-height:90vh;overflow-y:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-            <h3 style="font-size:16px;font-weight:700">API Config — <span id="apiCfgSellerName"></span></h3>
-            <button onclick="closeApiCfgModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted)">&times;</button>
-        </div>
-
-        {{-- Server Info Box --}}
-        <div id="apiCfgServerInfo" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:10px;padding:14px 16px;margin-bottom:18px;color:#fff;font-size:13px">
-            <div style="font-size:10.5px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Platform Credentials for This Seller</div>
-            <div style="margin-bottom:6px">
-                <span style="opacity:.7;font-size:11px">Server IP:</span>
-                <span id="apiCfgServerIp" style="font-family:monospace;font-weight:600;margin-left:8px"></span>
-            </div>
-            <div>
-                <span style="opacity:.7;font-size:11px">Unique Callback URL:</span>
-                <span id="apiCfgCallbackUrl" style="font-family:monospace;font-weight:600;margin-left:8px;font-size:11.5px;word-break:break-all"></span>
-            </div>
-        </div>
-
-        <div id="apiCfgLoading" style="text-align:center;padding:20px;color:#64748b">Loading integration details…</div>
-        <div id="apiCfgForm" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px">
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Website URL *</label>
-                    <input id="cfg-website" type="url" placeholder="https://yourdomain.com" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Seller Callback URL * <span style="font-size:11px;color:#94a3b8">(we call this to notify seller)</span></label>
-                    <input id="cfg-callback" type="url" placeholder="https://yourdomain.com/recharge/callback" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Status Check URL *</label>
-                    <input id="cfg-status-check" type="url" placeholder="https://yourdomain.com/recharge/status" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Dispute URL *</label>
-                    <input id="cfg-dispute" type="url" placeholder="https://yourdomain.com/recharge/dispute" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Allowed IPs *</label>
-                    <textarea id="cfg-ips" rows="3" placeholder="203.0.113.42&#10;198.51.100.0/24" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical"></textarea>
-                </div>
-            </div>
-            <div style="display:flex;gap:10px">
-                <button id="apiCfgSaveBtn" onclick="saveApiCfg()" style="flex:1;padding:10px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Save Config</button>
-                <button onclick="closeApiCfgModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Cancel</button>
-            </div>
+            <button id="editSaveBtn" onclick="submitEdit()" style="flex:1;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Save Changes</button>
+            <button onclick="closeEditModal()" style="padding:10px 18px;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;background:#fff">Cancel</button>
         </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
-const TOKEN = ()=>localStorage.getItem('emp_token');
-const empFetch = (url,method='GET',body=null)=>fetch(url,{method,headers:{'Authorization':'Bearer '+TOKEN(),'Content-Type':'application/json','Accept':'application/json'},...(body?{body:JSON.stringify(body)}:{})}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.message||'Error');return d;});
+const TOKEN = () => localStorage.getItem('emp_token');
+const empFetch = async (url, method = 'GET', body = null) => {
+    const token = TOKEN();
+    if (!token) {
+        window.location.href = '/admin/login';
+        throw new Error('Please login again.');
+    }
+
+    const r = await fetch(url, {
+        method,
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 401) {
+        localStorage.removeItem('emp_token');
+        localStorage.removeItem('emp_data');
+        window.location.href = '/admin/login';
+        throw new Error('Please login again.');
+    }
+    if (!r.ok) throw new Error(d.message || 'Error');
+    return d;
+};
 
 const COLORS=['#2563eb','#10b981','#f59e0b','#ef4444','#7c3aed','#0891b2'];
 let allSellers=[], currentPage=1, activeTab='api_user';
@@ -366,13 +428,24 @@ function settingToggleBadge(field, value, row){
 function renderTable(sellers){
     const tbody=document.getElementById('sellerBody');
     if(!sellers.length){
-        tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">No records found</td></tr>';
+        tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted)">No records found</td></tr>';
         return;
     }
     tbody.innerHTML=sellers.map((r,i)=>{
         const bg=COLORS[i%COLORS.length];
         const init=(r.name||'?').charAt(0).toUpperCase();
         const isPending = r.approval_status==='pending' || r.status==='inactive';
+        const isActiveApi = r.status==='active' && r.role==='api_user';
+        const nm = r.name.replace(/'/g,"\\'");
+
+        /* Login As column */
+        const loginAsTool = isActiveApi ? `
+            <button onclick="loginAsSeller(${r.id},'${nm}')"
+                class="seller-login-btn">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                Login As
+            </button>` : `<span style="font-size:12px;color:#94a3b8">—</span>`;
+
         return `<tr class="${isPending?'pending-row':''}">
             <td>
                 <div style="display:flex;align-items:center;gap:10px">
@@ -397,61 +470,52 @@ function renderTable(sellers){
             </td>
             <td>${statusBadge(r)}</td>
             <td>
-                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <div class="seller-action-list">
                     ${isPending ? `
-                        <button onclick="openApproveModal(${r.id},'${r.name.replace(/'/g,"\\'")}','approve',${JSON.stringify(r)})"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#fff;background:#10b981;font-weight:600">
+                        <button onclick="openApproveModal(${r.id},'approve')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#fff;background:#10b981;font-weight:600;white-space:nowrap">
                             ✓ Approve
                         </button>
-                        <button onclick="openApproveModal(${r.id},'${r.name.replace(/'/g,"\\'")}','reject',${JSON.stringify(r)})"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff;font-weight:600">
+                        <button onclick="openApproveModal(${r.id},'reject')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff;font-weight:600;white-space:nowrap">
                             ✗ Reject
                         </button>
                     ` : ''}
                     ${r.status==='active' ? `
-                        <button onclick="suspendSeller(${r.id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #f59e0b;color:#f59e0b;background:#fff">
-                            Suspend
+                        <button onclick="suspendSeller(${r.id},'${nm}')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #f59e0b;color:#f59e0b;background:#fff;white-space:nowrap">
+                            Deactivate
                         </button>
                     ` : ''}
-                    ${r.status==='suspended' && r.approval_status==='rejected' ? `
-                        <button onclick="approveSeller(${r.id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff">
-                            Re-Activate
+                    ${r.status==='suspended' ? `
+                        <button onclick="approveSeller(${r.id},'${nm}')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;white-space:nowrap">
+                            Activate
                         </button>
                     ` : ''}
                     ${r.integration_status==='pending' ? `
-                        <button onclick="openIntgDecision(${r.id},${r.integration_id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #7c3aed;color:#7c3aed;background:#fff">
-                            API Req
+                        <button onclick="openIntgDecision(${r.id},${r.integration_id},'${nm}')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #7c3aed;color:#7c3aed;background:#fff;white-space:nowrap">
+                            API Request
                         </button>
                     ` : ''}
+                    <button onclick="openEditModal(${r.id},'${nm}')"
+                        style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #2563eb;color:#2563eb;background:#fff;font-weight:600;white-space:nowrap">
+                        Edit Profile
+                    </button>
                     ${r.status==='active' ? `
-                        <button onclick="openWalletModal(${r.id},'${r.name.replace(/'/g,"\\'")}',${r.wallet_balance||0},'credit')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;font-weight:600">
+                        <button onclick="openWalletModal(${r.id},'${nm}',${r.wallet_balance||0},'credit')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #10b981;color:#10b981;background:#fff;font-weight:600;white-space:nowrap">
                             + Balance
                         </button>
-                        <button onclick="openWalletModal(${r.id},'${r.name.replace(/'/g,"\\'")}',${r.wallet_balance||0},'debit')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff">
+                        <button onclick="openWalletModal(${r.id},'${nm}',${r.wallet_balance||0},'debit')"
+                            style="padding:4px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #ef4444;color:#ef4444;background:#fff;white-space:nowrap">
                             ↩ Reverse
-                        </button>
-                    ` : ''}
-                    ${r.status==='active' && r.role==='api_user' ? `
-                        <button onclick="loginAsSeller(${r.id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-primary)">
-                            Login As
-                        </button>
-                        <button onclick="openGenKeyModal(${r.id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #7c3aed;color:#7c3aed;background:#fff;font-weight:600">
-                            Gen Key
-                        </button>
-                        <button onclick="openApiCfgModal(${r.id},'${r.name.replace(/'/g,"\\'")}')"
-                            style="padding:4px 9px;border-radius:6px;font-size:11.5px;cursor:pointer;border:1px solid #0891b2;color:#0891b2;background:#fff;font-weight:600">
-                            API Cfg
                         </button>
                     ` : ''}
                 </div>
             </td>
+            <td class="seller-login-cell">${loginAsTool}</td>
         </tr>`;
     }).join('');
 }
@@ -463,7 +527,7 @@ function loadData(page){
     const s = document.getElementById('fStatus').value;
     if(q) params.set('search',q);
     if(s) params.set('status',s);
-    document.getElementById('sellerBody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted)">Loading…</td></tr>';
+    document.getElementById('sellerBody').innerHTML='<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted)">Loading…</td></tr>';
     empFetch(`/api/v1/employee/sellers?${params}`).then(data=>{
         const pagination = data.data || {};
         allSellers = pagination.data || [];
@@ -478,12 +542,11 @@ function loadData(page){
         // Update tab counts from full stats
         const allStats = data.stats || {};
         document.getElementById('tab-count-api_user').textContent  = (allStats.api_user||{}).total || 0;
-        document.getElementById('tab-count-retailer').textContent  = (allStats.retailer||{}).total || 0;
 
         renderTable(allSellers);
         renderPagination(pagination);
     }).catch(err=>{
-        document.getElementById('sellerBody').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:30px;color:#ef4444">${err.message||'Failed to load.'}</td></tr>`;
+        document.getElementById('sellerBody').innerHTML=`<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444">${err.message||'Failed to load.'}</td></tr>`;
     });
 }
 
@@ -517,18 +580,31 @@ function suspendSeller(id,name){
         .catch(e=>alert(e.message||'Failed.'));
 }
 
+// ── Document viewer ───────────────────────────────────────────────────────
+function openDoc(id, type){
+    empFetch(`/api/v1/employee/sellers/${id}/document/${type}`)
+        .then(data => window.open(data.url, '_blank'))
+        .catch(e => alert('Could not load document: ' + (e.message || 'Error')));
+}
+
 // ── Approve/Reject modal ──────────────────────────────────────────────────
 let approveModalSellerId=null, approveModalAction=null;
-function openApproveModal(id,name,action,rowData){
+function openApproveModal(id, action){
+    const rowData = allSellers.find(s => s.id === id) || {};
     approveModalSellerId=id; approveModalAction=action;
     document.getElementById('approveModalTitle').textContent = action==='approve' ? '✓ Approve Registration' : '✗ Reject Registration';
-    document.getElementById('approveModalName').textContent = name;
+    document.getElementById('approveModalName').textContent = rowData.name || id;
     let docHtml='';
-    if(rowData.has_pan)  docHtml+='<span class="doc-badge doc-yes">✓ PAN uploaded</span>';
-    else                  docHtml+='<span class="doc-badge doc-no">✗ PAN missing</span>';
-    if(rowData.has_gst)  docHtml+='<span class="doc-badge doc-yes">✓ GST uploaded</span>';
-    else                  docHtml+='<span class="doc-badge doc-no">✗ GST missing</span>';
-    if(rowData.has_document) docHtml+='<span class="doc-badge doc-yes">✓ Document uploaded</span>';
+    if(rowData.has_pan)
+        docHtml+=`<span class="doc-badge doc-yes">✓ PAN</span> <button onclick="openDoc(${id},'pan')" style="font-size:11px;color:#2563eb;font-weight:600;background:none;border:none;cursor:pointer;padding:0">View</button>&nbsp;`;
+    else
+        docHtml+='<span class="doc-badge doc-no">✗ PAN missing</span>&nbsp;';
+    if(rowData.has_gst)
+        docHtml+=`<span class="doc-badge doc-yes">✓ GST</span> <button onclick="openDoc(${id},'gst')" style="font-size:11px;color:#2563eb;font-weight:600;background:none;border:none;cursor:pointer;padding:0">View</button>&nbsp;`;
+    else
+        docHtml+='<span class="doc-badge doc-no">✗ GST missing</span>&nbsp;';
+    if(rowData.has_document)
+        docHtml+=`<span class="doc-badge doc-yes">✓ Doc</span> <button onclick="openDoc(${id},'doc')" style="font-size:11px;color:#2563eb;font-weight:600;background:none;border:none;cursor:pointer;padding:0">View</button>`;
     document.getElementById('approveModalDocs').innerHTML=docHtml;
     const notesWrap=document.getElementById('approveNotesWrap');
     notesWrap.style.display = action==='reject' ? 'block' : 'none';
@@ -631,77 +707,161 @@ function showAddModal(){ document.getElementById('addModal').style.display='flex
 function submitAdd(){ document.getElementById('addModal').style.display='none'; }
 function exportSellers(){ window.open('/api/v1/employee/sellers?export=csv&role='+activeTab+'&'+new URLSearchParams({search:document.getElementById('searchSeller').value,status:document.getElementById('fStatus').value}),'_blank'); }
 
-// ── Generate API Key Modal ─────────────────────────────────────────────────
-let genKeySellerId = null;
-function openGenKeyModal(id, name){
-    genKeySellerId = id;
-    document.getElementById('genKeySellerName').textContent = name;
-    document.getElementById('genKeyResult').style.display   = 'none';
-    document.getElementById('genKeyValue').textContent      = '';
-    document.getElementById('genKeySubmitBtn').disabled     = false;
-    document.getElementById('genKeySubmitBtn').textContent  = 'Generate Key';
-    document.getElementById('genKeyModal').style.display    = 'flex';
-}
-function closeGenKeyModal(){ document.getElementById('genKeyModal').style.display='none'; }
-function copyGenKey(){
-    navigator.clipboard.writeText(document.getElementById('genKeyValue').textContent.trim());
-}
-function submitGenKey(){
-    const btn = document.getElementById('genKeySubmitBtn');
-    btn.disabled = true; btn.textContent = 'Generating…';
-    empFetch(`/api/v1/employee/sellers/${genKeySellerId}/api-config/generate-key`, 'POST')
-        .then(data=>{
-            document.getElementById('genKeyValue').textContent    = data.api_key || '';
-            document.getElementById('genKeyResult').style.display = 'block';
-            btn.textContent = 'Regenerate';
-            btn.disabled    = false;
-            loadData(currentPage);
-        })
-        .catch(e=>{ alert(e.message||'Failed to generate key.'); btn.disabled=false; btn.textContent='Generate Key'; });
-}
 
-// ── API Config Modal ───────────────────────────────────────────────────────
-let apiCfgSellerId = null;
-function openApiCfgModal(id, name){
-    apiCfgSellerId = id;
-    document.getElementById('apiCfgSellerName').textContent = name;
-    document.getElementById('apiCfgLoading').style.display  = 'block';
-    document.getElementById('apiCfgForm').style.display     = 'none';
-    document.getElementById('apiCfgServerIp').textContent   = '';
-    document.getElementById('apiCfgCallbackUrl').textContent = window.location.origin + '/api/v1/recharge/callback/' + id;
-    document.getElementById('apiCfgModal').style.display    = 'flex';
-
-    empFetch(`/api/v1/employee/sellers/${id}`).then(({data})=>{
-        const intg = data.integration || {};
-        document.getElementById('cfg-website').value     = intg.website_url     || '';
-        document.getElementById('cfg-callback').value    = intg.callback_url    || '';
-        document.getElementById('cfg-status-check').value = intg.status_check_url || '';
-        document.getElementById('cfg-dispute').value     = intg.dispute_url     || '';
-        document.getElementById('cfg-ips').value         = intg.allowed_ips     || '';
-        document.getElementById('apiCfgLoading').style.display = 'none';
-        document.getElementById('apiCfgForm').style.display    = 'block';
-    }).catch(()=>{
-        document.getElementById('apiCfgLoading').textContent = 'Failed to load integration details.';
+// ── Edit Profile Modal ─────────────────────────────────────────────────────
+let editCommissionRows = [];
+function openEditModal(id, name){
+    document.getElementById('editSellerId').value = id;
+    document.getElementById('editSellerName').textContent = name || '…';
+    // Clear all fields while loading
+    ['editName','editLoginNo','editAddress','editPincode','editMobile','editEmail',
+     'editPan','editContactPerson','editAadhar','editGstNumber','editCity'].forEach(f => {
+        const el = document.getElementById(f);
+        if(el) el.value = '';
+    });
+    document.getElementById('editState').value = '';
+    document.getElementById('editCommission').value = '';
+    document.getElementById('editModal').style.display = 'flex';
+    // Fetch full seller data to populate form
+    empFetch(`/api/v1/employee/sellers/${id}`).then(({data}) => {
+        const u = data.user || {};
+        document.getElementById('editSellerName').textContent = u.name || name;
+        document.getElementById('editName').value           = u.name || '';
+        document.getElementById('editLoginNo').value        = u.mobile || '';
+        document.getElementById('editMobile').value         = u.mobile || '';
+        document.getElementById('editEmail').value          = u.email || '';
+        document.getElementById('editAddress').value        = u.address || '';
+        document.getElementById('editPincode').value        = u.pincode || '';
+        document.getElementById('editCity').value           = u.city || '';
+        document.getElementById('editPan').value            = u.pan_no || '';
+        document.getElementById('editAadhar').value         = u.aadhar_no || '';
+        document.getElementById('editGstNumber').value      = u.gst_number || '';
+        document.getElementById('editContactPerson').value  = u.contact_person || '';
+        document.getElementById('editCommission').value     = u.commission_rate || '';
+        // Set state dropdown
+        const stateEl = document.getElementById('editState');
+        const stateVal = u.state || '';
+        for(let i = 0; i < stateEl.options.length; i++){
+            if(stateEl.options[i].value === stateVal || stateEl.options[i].text === stateVal){
+                stateEl.selectedIndex = i; break;
+            }
+        }
+    }).catch(e => console.warn('Could not load seller details:', e.message));
+    loadCommissionSettings(id);
+}
+function closeEditModal(){ document.getElementById('editModal').style.display='none'; }
+function loadCommissionSettings(id){
+    editCommissionRows = [];
+    document.getElementById('commissionSettingsWrap').innerHTML = '<div style="padding:24px;text-align:center;color:#64748b">Loading commission settings...</div>';
+    empFetch(`/api/v1/employee/sellers/${id}/commissions`).then(d => {
+        editCommissionRows = d.data || [];
+        renderServiceOptions(editCommissionRows);
+        renderCommissionSettings();
+    }).catch(e => {
+        document.getElementById('commissionSettingsWrap').innerHTML = `<div style="padding:24px;text-align:center;color:#ef4444">${e.message || 'Failed to load commission settings.'}</div>`;
     });
 }
-function closeApiCfgModal(){ document.getElementById('apiCfgModal').style.display='none'; }
-function saveApiCfg(){
-    const btn = document.getElementById('apiCfgSaveBtn');
-    const body = {
-        website_url:      document.getElementById('cfg-website').value.trim(),
-        callback_url:     document.getElementById('cfg-callback').value.trim(),
-        status_check_url: document.getElementById('cfg-status-check').value.trim(),
-        dispute_url:      document.getElementById('cfg-dispute').value.trim(),
-        allowed_ips:      document.getElementById('cfg-ips').value.trim(),
-    };
-    if(!body.website_url||!body.callback_url||!body.status_check_url||!body.dispute_url||!body.allowed_ips){
-        alert('All fields are required.'); return;
+function renderServiceOptions(rows){
+    const services = [...new Set(rows.map(r => r.category).filter(Boolean))].sort();
+    document.getElementById('bulkService').innerHTML = services.map(s => `<option value="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('') || '<option value="">Mobile</option>';
+}
+function renderCommissionSettings(){
+    const selectedService = document.getElementById('bulkService').value;
+    const rows = selectedService ? editCommissionRows.filter(r => r.category === selectedService) : editCommissionRows;
+    if(!rows.length){
+        document.getElementById('commissionSettingsWrap').innerHTML = '<div style="padding:24px;text-align:center;color:#64748b">No operators found.</div>';
+        return;
     }
+    const title = selectedService ? selectedService.charAt(0).toUpperCase() + selectedService.slice(1) : 'Mobile';
+    let html = `<div class="legacy-service-title">${title}</div><table class="seller-commission-table"><thead><tr>
+        <th style="width:60px">Sr.</th><th>Operator Name</th><th style="width:160px">Commission</th><th style="width:170px">Type</th><th style="width:170px">Api1</th><th style="width:120px">Limit Txn</th><th style="width:150px">Limit Amount</th><th style="width:180px">Blocked Amounts</th><th style="width:100px"></th>
+    </tr></thead><tbody>`;
+    rows.forEach((r, idx) => {
+        const masterIdx = editCommissionRows.findIndex(x => x.operator_code === r.operator_code);
+        html += `<tr data-service="${r.category || ''}">
+            <td>${idx + 1}</td>
+            <td>${r.operator_name || r.operator_code}</td>
+            <td><input type="number" min="0" step="0.001" value="${Number(r.commission || 0).toFixed(3)}" onchange="editCommissionRows[${masterIdx}].commission=this.value"></td>
+            <td><select onchange="editCommissionRows[${masterIdx}].commission_type=this.value">
+                <option value="percentage" ${r.commission_type === 'percentage' ? 'selected' : ''}>Percentage (%)</option>
+                <option value="flat" ${r.commission_type === 'flat' ? 'selected' : ''}>Flat (Rs.)</option>
+            </select></td>
+            <td><input type="text" value="${r.api1 || ''}" onchange="editCommissionRows[${masterIdx}].api1=this.value"></td>
+            <td><input type="number" min="0" step="1" value="${r.limit_txn || 0}" onchange="editCommissionRows[${masterIdx}].limit_txn=this.value" style="width:68px"></td>
+            <td><input type="number" min="0" step="0.01" value="${r.limit_amount || 0}" onchange="editCommissionRows[${masterIdx}].limit_amount=this.value" style="width:90px"></td>
+            <td><input type="text" value="${r.blocked_amounts || ''}" onchange="editCommissionRows[${masterIdx}].blocked_amounts=this.value"></td>
+            <td><button type="button" class="row-submit" onclick="submitSingleCommission(${masterIdx})">Submit</button></td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('commissionSettingsWrap').innerHTML = html;
+}
+function filterCommissionRows(){ renderCommissionSettings(); }
+function applyBulkCommission(){
+    const service = document.getElementById('bulkService').value;
+    const commission = document.getElementById('bulkCommission').value;
+    const type = document.getElementById('bulkType').value;
+    if(commission === ''){ alert('Enter commission value.'); return; }
+    editCommissionRows = editCommissionRows.map(r => (!service || r.category === service)
+        ? {...r, commission, commission_type:type, is_active:true}
+        : r
+    );
+    renderCommissionSettings();
+}
+function commissionPayload(rows){
+    return rows.map(r => ({
+        operator_code: r.operator_code,
+        commission: r.commission || 0,
+        commission_type: r.commission_type || 'percentage',
+        api1: r.api1 || null,
+        limit_txn: r.limit_txn || 0,
+        limit_amount: r.limit_amount || 0,
+        blocked_amounts: r.blocked_amounts || null,
+        is_active: !!r.is_active
+    }));
+}
+function submitSingleCommission(index){
+    const id = document.getElementById('editSellerId').value;
+    const row = editCommissionRows[index];
+    if(!id || !row) return;
+    empFetch(`/api/v1/employee/sellers/${id}/commissions`,'PUT',{commissions: commissionPayload([row])})
+        .then(d=>alert(d.message || 'Commission saved.'))
+        .catch(e=>alert(e.message || 'Failed.'));
+}
+function submitEdit(){
+    const id             = document.getElementById('editSellerId').value;
+    const name           = document.getElementById('editName').value.trim();
+    const email          = document.getElementById('editEmail').value.trim();
+    const mobile         = document.getElementById('editMobile').value.trim();
+    const comm           = document.getElementById('editCommission').value.trim();
+    const address        = document.getElementById('editAddress').value.trim();
+    const pincode        = document.getElementById('editPincode').value.trim();
+    const state          = document.getElementById('editState').value.trim();
+    const city           = document.getElementById('editCity').value.trim();
+    const pan_no         = document.getElementById('editPan').value.trim();
+    const aadhar_no      = document.getElementById('editAadhar').value.trim();
+    const gst_number     = document.getElementById('editGstNumber').value.trim();
+    const contact_person = document.getElementById('editContactPerson').value.trim();
+    if(!name||!email||!mobile){ alert('Name, email and mobile are required.'); return; }
+    const btn = document.getElementById('editSaveBtn');
     btn.disabled=true; btn.textContent='Saving…';
-    empFetch(`/api/v1/employee/sellers/${apiCfgSellerId}/api-config/integration`,'PUT',body)
-        .then(d=>{ alert(d.message||'Saved.'); closeApiCfgModal(); })
+    const payload = {
+        name, email, mobile,
+        commission_rate: comm || null,
+        address: address || null,
+        pincode: pincode || null,
+        state: state || null,
+        city: city || null,
+        pan_no: pan_no || null,
+        aadhar_no: aadhar_no || null,
+        gst_number: gst_number || null,
+        contact_person: contact_person || null,
+    };
+    empFetch(`/api/v1/employee/sellers/${id}`,'PATCH', payload)
+        .then(d=>empFetch(`/api/v1/employee/sellers/${id}/commissions`,'PUT',{commissions: commissionPayload(editCommissionRows)}).then(()=>d))
+        .then(d=>{ closeEditModal(); alert(d.message||'Saved.'); loadData(currentPage); })
         .catch(e=>alert(e.message||'Failed.'))
-        .finally(()=>{ btn.disabled=false; btn.textContent='Save Config'; });
+        .finally(()=>{ btn.disabled=false; btn.textContent='Save Changes'; });
 }
 
 // ── Wallet Adjust ─────────────────────────────────────────────────────────

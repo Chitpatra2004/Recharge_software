@@ -1,107 +1,158 @@
 @extends('layouts.admin')
 
-@section('title', 'Manage Operators')
-@section('page-title', 'Manage Operators')
+@section('title', 'Operator Settings')
+@section('page-title', 'Operator Settings')
 
 @section('content')
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div>
-        <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">Manage Operators</h1>
-        <div class="breadcrumb" style="margin-bottom:0;margin-top:3px">
-            <a href="/admin/dashboard">Dashboard</a>
-            <svg class="breadcrumb-sep" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            <span>Manage</span>
-            <svg class="breadcrumb-sep" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            <span>Operators</span>
-        </div>
+<style>
+.op-toolbar{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:18px}
+.op-toolbar-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.op-filters{display:flex;gap:10px;padding:14px 18px;flex-wrap:wrap}
+.op-filters input,.op-filters select{border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:13px;background:#fff;color:var(--text-primary);outline:none}
+.op-table-card{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.op-group-title{background:#343a40;color:#fff;font-size:28px;font-weight:700;line-height:1;padding:8px 12px}
+.op-table-wrap{overflow:auto}
+.op-table{width:100%;border-collapse:collapse;min-width:1180px}
+.op-table th{padding:12px 12px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#1f2937;background:#fff;border-bottom:1px solid var(--border)}
+.op-table td{padding:12px;border-bottom:1px solid var(--border);font-size:14px;color:#111827;vertical-align:middle}
+.op-table tbody tr:nth-child(odd) td{background:#f1f1f1}
+.op-table input,.op-table select{border:1px solid #222;border-radius:3px;padding:7px 8px;font-size:14px;background:#fff;color:#000;min-width:88px}
+.op-table select{min-width:100px}
+.op-name{color:#005fd1;font-weight:800}
+.op-actions{display:flex;gap:8px;align-items:center}
+.op-link{border:none;background:transparent;color:#0068d9;font-weight:700;cursor:pointer;padding:4px}
+.op-switch{position:relative;display:inline-block;width:68px;height:38px}
+.op-switch input{display:none}
+.op-slider{position:absolute;inset:0;cursor:pointer;background:#b91c1c;border-radius:999px;transition:.2s}
+.op-slider:before{content:'';position:absolute;width:30px;height:30px;left:4px;top:4px;background:#fff;border-radius:50%;transition:.2s}
+.op-switch input:checked + .op-slider{background:#078b06}
+.op-switch input:checked + .op-slider:before{transform:translateX(30px)}
+.op-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:center;justify-content:center;padding:18px}
+.op-modal-overlay.open{display:flex}
+.op-modal{width:520px;max-width:96vw;background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(0,0,0,.25)}
+.op-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.op-modal-title{font-size:16px;font-weight:800}
+.op-modal-body{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.op-field.full{grid-column:1/-1}
+.op-field label{display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase}
+.op-field input,.op-field select{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;background:#fff}
+.op-modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.op-alert{display:none;margin:0 20px 16px;padding:10px 12px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px}
+@media(max-width:760px){.op-group-title{font-size:22px}.op-modal-body{grid-template-columns:1fr}}
+</style>
+
+<div class="op-toolbar">
+    <div class="op-toolbar-head">
+        <div style="font-size:13px;font-weight:800;color:#111827;text-transform:uppercase">Search Filters</div>
+        <button class="btn btn-primary btn-sm" style="background:#10b900" onclick="openOperatorModal()">Add Operator</button>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openModal()">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-        Add Operator
-    </button>
+    <div class="op-filters">
+        <input id="op-search" type="text" placeholder="Search operator..." oninput="filterOperators()">
+        <select id="op-category-filter" onchange="filterOperators()">
+            <option value="">All Services</option>
+            <option value="mobile">Mobile</option>
+            <option value="dth">DTH</option>
+            <option value="broadband">Broadband</option>
+            <option value="electricity">Electricity</option>
+            <option value="gas">Gas</option>
+            <option value="water">Water</option>
+            <option value="insurance">Insurance</option>
+            <option value="landline">Landline</option>
+            <option value="loan">Loan EMI</option>
+            <option value="fastag">FASTag</option>
+            <option value="credit_card">Credit Card</option>
+            <option value="municipal_tax">Municipal Tax</option>
+            <option value="education">Education</option>
+            <option value="subscription">Subscription</option>
+        </select>
+    </div>
 </div>
 
-{{-- Operators Table --}}
-<div class="card">
-    <div class="card-header" style="justify-content:space-between">
-        <div class="card-title">Operators</div>
-        <div style="display:flex;gap:10px;align-items:center">
-            <input type="text" id="f-search" placeholder="Search operators…" oninput="filterTable()" style="border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text-primary);background:#fff;outline:none;width:200px">
-            <button class="btn btn-outline btn-sm" onclick="loadOperators()">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                Refresh
-            </button>
-        </div>
-    </div>
-    <div class="card-body" style="padding:0">
-        <div id="ops-loading" class="loading-overlay"><div class="spinner"></div> Loading operators…</div>
-        <div class="table-wrap" id="ops-table-wrap" style="display:none">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Category</th>
-                        <th>Status</th>
-                        <th>Success Rate</th>
-                        <th>Commission %</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="ops-tbody"></tbody>
-            </table>
-        </div>
+<div class="op-table-card">
+    <div class="op-group-title" id="op-group-title">Mobile</div>
+    <div id="op-loading" class="loading-overlay"><div class="spinner"></div> Loading operators...</div>
+    <div class="op-table-wrap" id="op-table-wrap" style="display:none">
+        <table class="op-table">
+            <thead>
+                <tr>
+                    <th>Operator Name</th>
+                    <th>OP Code</th>
+                    <th>Service Name</th>
+                    <th>Status</th>
+                    <th>Reroot Count</th>
+                    <th>API</th>
+                    <th>Min Comm</th>
+                    <th>Max Comm</th>
+                    <th>Min Amt</th>
+                    <th>Maxamt</th>
+                    <th>Act</th>
+                </tr>
+            </thead>
+            <tbody id="op-tbody"></tbody>
+        </table>
     </div>
 </div>
 
-{{-- Add/Edit Modal --}}
-<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:var(--radius);padding:28px;width:480px;max-width:95vw;box-shadow:var(--shadow-lg);position:relative">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-            <h2 style="font-size:16px;font-weight:700" id="modal-title">Add Operator</h2>
-            <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px" onmouseover="this.style.background='var(--bg-page)'" onmouseout="this.style.background='none'">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+<div id="op-modal" class="op-modal-overlay">
+    <div class="op-modal">
+        <div class="op-modal-head">
+            <div class="op-modal-title">Add Operator</div>
+            <button onclick="closeOperatorModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:22px;line-height:1">&times;</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:14px">
-            <input type="hidden" id="edit-id">
-            <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px">Operator Name *</label>
-                <input type="text" id="op-name" placeholder="e.g. Jio Mobile" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;color:var(--text-primary)">
+        <div class="op-modal-body">
+            <div class="op-field full">
+                <label>Operator Name *</label>
+                <input id="new-name" type="text" placeholder="Airtel prepaid">
             </div>
-            <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px">Operator Code *</label>
-                <input type="text" id="op-code" placeholder="e.g. JIO" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;color:var(--text-primary)">
+            <div class="op-field">
+                <label>OP Code *</label>
+                <input id="new-code" type="text" placeholder="ATL">
             </div>
-            <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px">Category *</label>
-                <select id="op-category" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;color:var(--text-primary);background:#fff">
-                    <option value="">Select category</option>
-                    <option value="prepaid">Prepaid</option>
-                    <option value="postpaid">Postpaid</option>
+            <div class="op-field">
+                <label>Service *</label>
+                <select id="new-category">
+                    <option value="mobile">Mobile</option>
                     <option value="dth">DTH</option>
                     <option value="broadband">Broadband</option>
+                    <option value="electricity">Electricity</option>
+                    <option value="gas">Gas</option>
+                    <option value="water">Water</option>
+                    <option value="insurance">Insurance</option>
                     <option value="landline">Landline</option>
+                    <option value="loan">Loan EMI</option>
+                    <option value="fastag">FASTag</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="municipal_tax">Municipal Tax</option>
+                    <option value="education">Education</option>
+                    <option value="subscription">Subscription</option>
                 </select>
             </div>
-            <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px">Status</label>
-                <select id="op-status" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;color:var(--text-primary);background:#fff">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="maintenance">Maintenance</option>
-                </select>
+            <div class="op-field">
+                <label>Min Comm</label>
+                <input id="new-min-comm" type="number" step="0.01" value="0">
+            </div>
+            <div class="op-field">
+                <label>Max Comm</label>
+                <input id="new-max-comm" type="number" step="0.01" value="0">
+            </div>
+            <div class="op-field">
+                <label>Min Amt</label>
+                <input id="new-min-amt" type="number" step="0.01" value="10">
+            </div>
+            <div class="op-field">
+                <label>Max Amt</label>
+                <input id="new-max-amt" type="number" step="0.01" value="100000">
+            </div>
+            <div class="op-field full">
+                <label>API</label>
+                <select id="new-api"></select>
             </div>
         </div>
-        <div id="modal-error" style="display:none;background:#fee2e2;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:14px"></div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-            <button class="btn btn-outline btn-sm" onclick="closeModal()">Cancel</button>
-            <button class="btn btn-primary btn-sm" id="save-btn" onclick="saveOperator()">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                Save Operator
-            </button>
+        <div id="op-modal-error" class="op-alert"></div>
+        <div class="op-modal-foot">
+            <button class="btn btn-outline btn-sm" onclick="closeOperatorModal()">Cancel</button>
+            <button class="btn btn-primary btn-sm" id="op-save-btn" onclick="addOperator()">Save</button>
         </div>
     </div>
 </div>
@@ -110,134 +161,183 @@
 
 @push('scripts')
 <script>
-let allOperators = [];
+const OP_API = '/api/v1/employee/operator-settings';
+let operators = [];
+let apiProviders = [];
+
+function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function serviceName(category) {
+    const map = {mobile:'Mobile', dth:'DTH', broadband:'Broadband', electricity:'Electricity', gas:'Gas', water:'Water', insurance:'Insurance', landline:'Landline', loan:'Loan EMI', fastag:'FASTag', credit_card:'Credit Card', municipal_tax:'Municipal Tax', education:'Education', subscription:'Subscription'};
+    return map[category] || category || '-';
+}
 
 async function loadOperators() {
-    document.getElementById('ops-loading').style.display = 'flex';
-    document.getElementById('ops-table-wrap').style.display = 'none';
-
-    const res = await apiFetch('/api/v1/operators');
+    document.getElementById('op-loading').style.display = 'flex';
+    document.getElementById('op-table-wrap').style.display = 'none';
+    const res = await apiFetch(OP_API);
     if (!res) return;
     const json = await res.json();
-    allOperators = json.data || json.operators || json || [];
-
-    document.getElementById('ops-loading').style.display = 'none';
-    document.getElementById('ops-table-wrap').style.display = 'block';
-    renderTable(allOperators);
+    operators = json.operators || [];
+    apiProviders = json.api_providers || [];
+    fillApiSelect(document.getElementById('new-api'));
+    document.getElementById('op-loading').style.display = 'none';
+    document.getElementById('op-table-wrap').style.display = 'block';
+    filterOperators();
 }
 
-function filterTable() {
-    const q = document.getElementById('f-search').value.toLowerCase();
-    const filtered = allOperators.filter(op =>
-        (op.name || '').toLowerCase().includes(q) ||
-        (op.code || '').toLowerCase().includes(q) ||
-        (op.category || '').toLowerCase().includes(q)
-    );
-    renderTable(filtered);
+function fillApiSelect(select, selected = '') {
+    select.innerHTML = '<option value="">Select</option>' + apiProviders.map(p => `<option value="${esc(p)}" ${p === selected ? 'selected' : ''}>${esc(p)}</option>`).join('');
 }
 
-function renderTable(ops) {
-    const tbody = document.getElementById('ops-tbody');
-    if (!ops.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">No operators found</td></tr>';
+function filterOperators() {
+    const q = document.getElementById('op-search').value.toLowerCase();
+    const cat = document.getElementById('op-category-filter').value;
+    const rows = operators.filter(op => {
+        const hit = [op.name, op.code, op.category].some(v => String(v || '').toLowerCase().includes(q));
+        return hit && (!cat || op.category === cat);
+    });
+    document.getElementById('op-group-title').textContent = cat ? serviceName(cat) : (rows[0] ? serviceName(rows[0].category) : 'Operators');
+    renderOperators(rows);
+}
+
+function renderOperators(rows) {
+    const tbody = document.getElementById('op-tbody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text-muted)">No operators found.</td></tr>';
         return;
     }
-    tbody.innerHTML = ops.map((op, i) => {
-        const st = (op.status || 'active').toLowerCase();
-        const stBg = st === 'active' ? '#d1fae5' : st === 'inactive' ? '#fee2e2' : '#fef3c7';
-        const stC  = st === 'active' ? '#059669' : st === 'inactive' ? '#dc2626' : '#d97706';
-        const rate = op.success_rate ?? 0;
-        const rc = rate >= 90 ? '#10b981' : rate >= 70 ? '#f59e0b' : '#ef4444';
-        return `<tr>
-            <td style="color:var(--text-muted)">${i+1}</td>
-            <td><strong>${op.name || '—'}</strong></td>
-            <td><code style="background:var(--bg-page);padding:2px 6px;border-radius:4px;font-size:12px">${op.code || '—'}</code></td>
-            <td><span style="background:var(--bg-page);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${op.category || '—'}</span></td>
-            <td><span style="background:${stBg};color:${stC};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${st}</span></td>
-            <td><span style="color:${rc};font-weight:600">${Number(rate).toFixed(1)}%</span></td>
-            <td>${op.commission_percent != null ? Number(op.commission_percent).toFixed(2)+'%' : '—'}</td>
+
+    tbody.innerHTML = rows.map(op => `
+        <tr id="op-row-${op.id}">
+            <td><input type="hidden" data-field="category" value="${esc(op.category)}"><span class="op-name">${esc(op.name)}</span></td>
+            <td>${esc(op.code)}</td>
+            <td>${esc(serviceName(op.category))}</td>
             <td>
-                <div style="display:flex;gap:6px">
-                    <button class="btn btn-outline btn-sm" onclick="editOperator(${JSON.stringify(op).replace(/"/g,'&quot;')})">Edit</button>
-                    <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;cursor:pointer;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600" onclick="toggleStatus(${op.id}, '${st}')">
-                        ${st === 'active' ? 'Disable' : 'Enable'}
-                    </button>
+                <label class="op-switch">
+                    <input type="checkbox" data-field="is_active" ${op.is_active ? 'checked' : ''}>
+                    <span class="op-slider"></span>
+                </label>
+            </td>
+            <td><input data-field="reroot_count" type="number" value="${Number(op.reroot_count || 0)}" readonly></td>
+            <td><select data-field="api_provider"><option value="">Select</option>${apiProviders.map(p => `<option value="${esc(p)}" ${p === op.api_provider ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
+            <td><input data-field="min_comm" type="number" step="0.01" value="${Number(op.min_comm || 0).toFixed(2)}"></td>
+            <td><input data-field="max_comm" type="number" step="0.01" value="${Number(op.max_comm || 0).toFixed(2)}"></td>
+            <td><input data-field="min_amount" type="number" step="0.01" value="${Number(op.min_amount || 0)}"></td>
+            <td><input data-field="max_amount" type="number" step="0.01" value="${Number(op.max_amount || 0)}"></td>
+            <td>
+                <div class="op-actions">
+                    <button class="op-link" onclick="saveRow(${op.id})">Edit</button>
                 </div>
             </td>
-        </tr>`;
-    }).join('');
+        </tr>
+    `).join('');
 }
 
-function openModal(op) {
-    document.getElementById('modal-title').textContent = op ? 'Edit Operator' : 'Add Operator';
-    document.getElementById('edit-id').value     = op?.id || '';
-    document.getElementById('op-name').value     = op?.name || '';
-    document.getElementById('op-code').value     = op?.code || '';
-    document.getElementById('op-category').value = op?.category || '';
-    document.getElementById('op-status').value   = op?.status || 'active';
-    document.getElementById('modal-error').style.display = 'none';
-    document.getElementById('modal-overlay').style.display = 'flex';
+function rowPayload(id) {
+    const op = operators.find(x => x.id === id);
+    const row = document.getElementById('op-row-' + id);
+    const val = field => row.querySelector(`[data-field="${field}"]`);
+    return {
+        name: op.name,
+        code: op.code,
+        category: op.category,
+        is_active: val('is_active').checked,
+        api_provider: val('api_provider').value,
+        min_comm: val('min_comm').value,
+        max_comm: val('max_comm').value,
+        min_amount: val('min_amount').value,
+        max_amount: val('max_amount').value,
+    };
 }
 
-function editOperator(op) { openModal(op); }
-
-function closeModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
+async function saveRow(id) {
+    const res = await apiFetch(`${OP_API}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(rowPayload(id)),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        alert(json.message || 'Operator update failed.');
+        return;
+    }
+    showToast(json.message || 'Operator updated.');
+    await loadOperators();
 }
 
-async function saveOperator() {
-    const id   = document.getElementById('edit-id').value;
-    const name = document.getElementById('op-name').value.trim();
-    const code = document.getElementById('op-code').value.trim();
-    const cat  = document.getElementById('op-category').value;
-    const stat = document.getElementById('op-status').value;
+function openOperatorModal() {
+    document.getElementById('new-name').value = '';
+    document.getElementById('new-code').value = '';
+    document.getElementById('new-category').value = 'mobile';
+    document.getElementById('new-min-comm').value = '0';
+    document.getElementById('new-max-comm').value = '0';
+    document.getElementById('new-min-amt').value = '10';
+    document.getElementById('new-max-amt').value = '100000';
+    fillApiSelect(document.getElementById('new-api'));
+    document.getElementById('op-modal-error').style.display = 'none';
+    document.getElementById('op-modal').classList.add('open');
+}
 
-    if (!name || !code || !cat) {
-        document.getElementById('modal-error').textContent = 'Name, Code and Category are required.';
-        document.getElementById('modal-error').style.display = 'block';
+function closeOperatorModal() {
+    document.getElementById('op-modal').classList.remove('open');
+}
+
+async function addOperator() {
+    const body = {
+        name: document.getElementById('new-name').value.trim(),
+        code: document.getElementById('new-code').value.trim(),
+        category: document.getElementById('new-category').value,
+        is_active: true,
+        api_provider: document.getElementById('new-api').value,
+        min_comm: document.getElementById('new-min-comm').value,
+        max_comm: document.getElementById('new-max-comm').value,
+        min_amount: document.getElementById('new-min-amt').value,
+        max_amount: document.getElementById('new-max-amt').value,
+    };
+
+    if (!body.name || !body.code) {
+        showModalError('Operator name and OP code are required.');
         return;
     }
 
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true; btn.textContent = 'Saving…';
-
-    const method = id ? 'PUT' : 'POST';
-    const url    = id ? `/api/v1/operators/${id}` : '/api/v1/operators';
-
+    const btn = document.getElementById('op-save-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
     try {
-        const res = await apiFetch(url, {
-            method,
-            body: JSON.stringify({ name, code, category: cat, status: stat }),
-        });
-        if (!res) return;
-        if (res.ok) {
-            closeModal();
-            loadOperators();
-        } else {
-            const err = await res.json();
-            document.getElementById('modal-error').textContent = err.message || 'Failed to save.';
-            document.getElementById('modal-error').style.display = 'block';
+        const res = await apiFetch(OP_API, {method:'POST', body:JSON.stringify(body)});
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showModalError(json.message || 'Operator save failed.');
+            return;
         }
+        closeOperatorModal();
+        showToast(json.message || 'Operator added.');
+        await loadOperators();
     } finally {
-        btn.disabled = false; btn.textContent = 'Save Operator';
+        btn.disabled = false;
+        btn.textContent = 'Save';
     }
 }
 
-async function toggleStatus(id, currentStatus) {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    if (!confirm(`Set operator status to ${newStatus}?`)) return;
-    const res = await apiFetch(`/api/v1/operators/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-    });
-    if (res?.ok) loadOperators();
+function showModalError(message) {
+    const el = document.getElementById('op-modal-error');
+    el.textContent = message;
+    el.style.display = 'block';
 }
 
-// Close modal on overlay click
-document.getElementById('modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-});
+function showToast(message) {
+    const t = document.createElement('div');
+    t.textContent = message;
+    Object.assign(t.style, {position:'fixed',right:'22px',bottom:'22px',background:'#166534',color:'#fff',padding:'10px 16px',borderRadius:'8px',fontWeight:'700',fontSize:'13px',zIndex:9999});
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
 
+document.getElementById('op-modal').addEventListener('click', e => {
+    if (e.target.id === 'op-modal') closeOperatorModal();
+});
 document.addEventListener('DOMContentLoaded', loadOperators);
 </script>
 @endpush
