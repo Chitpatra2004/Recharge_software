@@ -7,5 +7,11 @@ use Illuminate\Http\Request;
 
 class PdrsAdminController extends Controller
 {
-    // PDRS Admin Controller methods will be implemented here
+    /**
+     * PDRS Admin Dashboard
+     */
+    public function index()
+    {
+        return view('admin.pdrs.index');
+    }
 }

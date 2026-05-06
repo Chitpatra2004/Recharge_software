@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class BlockSuspiciousRequests
@@ -44,7 +45,8 @@ class BlockSuspiciousRequests
     {
         $allowedHosts = config('security.allowed_hosts', []);
 
-        if ($allowedHosts === []) {
+        // If no allowed hosts configured, allow all hosts
+        if (!$allowedHosts || empty($allowedHosts)) {
             return false;
         }
 
@@ -62,6 +64,8 @@ class BlockSuspiciousRequests
             }
         }
 
+        // Log the rejected host for debugging
+        Log::warning('Blocked host: ' . $host . '. Allowed hosts: ' . json_encode($allowedHosts));
         return true;
     }
 }
