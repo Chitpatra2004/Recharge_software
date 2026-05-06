@@ -68,13 +68,16 @@ Artisan::command('live:check', function () {
     }
 
     $requiredSellerColumns = [
+        'api_name',
+        'low_balance_notification',
+        'low_balance_limit',
+        'notification_types',
         'recharge_api',
         'status_api',
         'balance_api',
         'dispute_api',
         'callback_config',
         'op_code_map',
-        'notification_types',
     ];
 
     $checks[6][1] = Schema::hasTable('seller_integration_requests')
