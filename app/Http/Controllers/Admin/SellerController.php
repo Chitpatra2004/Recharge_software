@@ -726,7 +726,7 @@ class SellerController extends Controller
         return response()->json([
             'message'       => 'Impersonation token created.',
             'token'         => $token,
-            'seller_portal' => url('/seller/dashboard'),
+            'seller_portal' => '/seller/dashboard',
             'user'          => [
                 'id'    => $seller->id,
                 'name'  => $seller->name,

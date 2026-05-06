@@ -844,7 +844,7 @@ async function loadConfiguration() {
         fillPage(data);
         updateView(data);
     } catch (err) {
-        showAlert('error', 'Failed to load configuration.');
+        showAlert('error', err.message || 'Failed to load configuration.');
     }
 }
 

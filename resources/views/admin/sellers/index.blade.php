@@ -681,16 +681,7 @@ function loginAsSeller(id,name){
             return;
         }
 
-        const tab = window.open(data.seller_portal || '/seller/dashboard','_blank');
         const payload = { type:'rh_seller_impersonate', token:data.token, user:data.user };
-
-        if(tab){
-            try {
-                setTimeout(() => {
-                    tab.postMessage(payload, window.location.origin);
-                }, 700);
-            } catch (_) {}
-        }
 
         try {
             localStorage.setItem('rh_seller_impersonate_token', JSON.stringify({
@@ -699,6 +690,16 @@ function loginAsSeller(id,name){
                 exp: Date.now() + 7200000,
             }));
         } catch (_) {}
+
+        const tab = window.open(data.seller_portal || '/seller/dashboard','_blank');
+
+        if(tab){
+            try {
+                setTimeout(() => {
+                    tab.postMessage(payload, window.location.origin);
+                }, 700);
+            } catch (_) {}
+        }
     }).catch(e=>alert(e.message||'Failed.'));
 }
 

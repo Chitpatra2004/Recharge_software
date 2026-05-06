@@ -20,8 +20,6 @@ class ApiConfigController extends Controller
      */
     public function config(Request $request): JsonResponse
     {
-        DefaultOperatorCatalog::ensure();
-
         $user = $request->user();
 
         // Active API key info

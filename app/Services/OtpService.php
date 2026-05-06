@@ -23,9 +23,11 @@ class OtpService
         ?int   $userId = null,
         string $ip = ''
     ): array {
+        $storageType = $this->storageType($type);
+
         // Invalidate any prior unused OTPs for same identifier+type
         Otp::where('identifier', $identifier)
-            ->where('type', $type)
+            ->where('type', $storageType)
             ->whereNull('used_at')
             ->update(['used_at' => now()]);
 
@@ -36,7 +38,7 @@ class OtpService
             'user_id'       => $userId,
             'identifier'    => $identifier,
             'otp_hash'      => Hash::make($rawOtp),
-            'type'          => $type,
+            'type'          => $storageType,
             'pending_token' => $pendingToken,
             'expires_at'    => now()->addMinutes(self::TTL_MINUTES),
             'ip_address'    => $ip ?: null,
@@ -58,7 +60,7 @@ class OtpService
     public function verify(string $identifier, string $type, string $rawOtp): Otp|false
     {
         $record = Otp::where('identifier', $identifier)
-            ->where('type', $type)
+            ->where('type', $this->storageType($type))
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->latest()
@@ -86,6 +88,17 @@ class OtpService
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->first();
+    }
+
+    private function storageType(string $type): string
+    {
+        return match ($type) {
+            'login_2fa_mobile',
+            'login_2fa_email',
+            'setup_2fa_mobile',
+            'setup_2fa_email' => 'login_2fa',
+            default => $type,
+        };
     }
 
     /** Simulate SMS sending — logs to Laravel log in development */

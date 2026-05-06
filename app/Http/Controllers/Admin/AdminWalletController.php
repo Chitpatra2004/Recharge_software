@@ -100,7 +100,7 @@ class AdminWalletController extends Controller
         return response()->json([
             'message'      => 'Impersonation token created.',
             'token'        => $token,
-            'user_portal'  => url('/user/dashboard'),
+            'user_portal'  => '/user/dashboard',
             'user'         => [
                 'id'    => $user->id,
                 'name'  => $user->name,
