@@ -3,7 +3,7 @@
 return [
     'allowed_hosts' => array_filter(array_map(
         'trim',
-        explode(',', (string) env('SECURITY_ALLOWED_HOSTS', 'coldpay.in,.coldpay.in,127.0.0.1,localhost'))
+        explode(',', (string) env('SECURITY_ALLOWED_HOSTS', ''))
     )),
 
     'blocked_extensions' => [

@@ -45,8 +45,7 @@ class BlockSuspiciousRequests
     {
         $allowedHosts = config('security.allowed_hosts', []);
 
-        // If no allowed hosts configured, allow all hosts
-        if (!$allowedHosts || empty($allowedHosts)) {
+        if ($allowedHosts === []) {
             return false;
         }
 
@@ -64,8 +63,6 @@ class BlockSuspiciousRequests
             }
         }
 
-        // Log the rejected host for debugging
-        Log::warning('Blocked host: ' . $host . '. Allowed hosts: ' . json_encode($allowedHosts));
         return true;
     }
 }
