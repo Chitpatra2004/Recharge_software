@@ -9,6 +9,42 @@
     <span>API Logs</span>
 </div>
 
+<style>
+.txn-log-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-sm);margin-bottom:18px}
+.txn-log-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border)}
+.txn-log-title{font-size:15px;font-weight:800;color:var(--text-primary)}
+.txn-log-form{display:grid;grid-template-columns:180px minmax(220px,1fr) auto;gap:12px;padding:18px}
+.txn-log-field label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px}
+.txn-log-field input{width:100%;height:38px;border:1px solid var(--border);border-radius:7px;background:var(--card-bg);color:var(--text-primary);padding:0 12px;font-size:13px}
+.txn-log-result{padding:0 18px 18px}
+.txn-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.txn-summary-item{display:flex;gap:12px;align-items:center;border:1px solid var(--border);border-radius:8px;background:var(--bg-page);padding:13px}
+.txn-summary-icon{width:36px;height:36px;border-radius:8px;background:#eef2ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:900}
+.txn-summary-label{font-size:11px;color:var(--text-muted);font-weight:700}.txn-summary-value{font-size:13px;color:var(--text-primary);font-weight:800;margin-top:2px;word-break:break-word}
+.txn-timeline{display:flex;gap:18px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:22px 18px;margin-bottom:18px}
+.txn-timeline-item{min-width:165px;text-align:center}.txn-dot{width:13px;height:13px;border-radius:50%;background:#67e8f9;margin:0 auto 8px;box-shadow:0 0 0 8px rgba(103,232,249,.22)}
+.txn-time{display:inline-block;background:#06a7d6;color:#fff;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:800}.txn-label{margin-top:8px;border:1px solid #06a7d6;color:#0284c7;border-radius:5px;padding:6px 8px;font-size:11px;font-weight:700;background:rgba(6,182,212,.08)}
+.txn-attempt{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;background:var(--card-bg)}
+.txn-attempt-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,#5b6ff0,#7c3aed);color:#fff;padding:12px 14px}.txn-chip{border-radius:5px;padding:4px 8px;font-size:11px;font-weight:800;background:rgba(255,255,255,.18)}.txn-chip.orange{background:#fb923c;color:#111827}.txn-log-id{margin-left:auto;background:#fff;color:#111827;border-radius:5px;padding:4px 9px;font-size:11px;font-weight:800}
+.txn-panes{display:grid;grid-template-columns:1fr 1fr}.txn-pane{padding:16px;border-right:1px solid var(--border)}.txn-pane:last-child{border-right:0}.txn-pane-title{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:900;margin-bottom:10px}.txn-pane.req .txn-pane-title{color:#3b82f6}.txn-pane.res .txn-pane-title{color:#22c55e}.txn-copy{border:1px solid currentColor;background:transparent;color:inherit;border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer}.txn-code{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.55;color:var(--text-primary);margin:0}
+@media(max-width:720px){.txn-log-form{grid-template-columns:1fr}.txn-summary{grid-template-columns:1fr}.txn-panes{grid-template-columns:1fr}.txn-pane{border-right:0;border-bottom:1px solid var(--border)}.txn-pane:last-child{border-bottom:0}}
+</style>
+
+<div class="txn-log-card">
+    <div class="txn-log-head">
+        <div>
+            <div class="txn-log-title">Transaction Full API Log Search</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Search by date and mobile number or transaction ID to view complete request/response logs.</div>
+        </div>
+    </div>
+    <div class="txn-log-form">
+        <div class="txn-log-field"><label>Date</label><input id="txn-log-date" type="date"></div>
+        <div class="txn-log-field"><label>Mobile Number / Transaction ID</label><input id="txn-log-q" type="text" placeholder="e.g. 9876543210 or 138751251"></div>
+        <button class="btn btn-primary btn-sm" style="height:38px;align-self:end" onclick="searchTransactionLog()">Search Full Log</button>
+    </div>
+    <div class="txn-log-result" id="txn-log-result"></div>
+</div>
+
 <div class="card" style="margin-bottom:18px">
     <div class="card-body" style="padding:14px 18px">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -152,6 +188,118 @@ function escHtml(value){
         .replace(/'/g, '&#39;');
 }
 
+function jsonPretty(v) {
+    if (!v) return '';
+    try { return JSON.stringify(typeof v === 'string' ? JSON.parse(v) : v, null, 2); }
+    catch (e) { return String(v); }
+}
+
+function fmtLogDate(s) {
+    if (!s) return 'N/A';
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+}
+
+function copyTxnLog(id) {
+    const el = document.getElementById(id);
+    if (el) navigator.clipboard?.writeText(el.textContent || '');
+}
+
+function normalizeAttempt(a, tx, i) {
+    const req = [];
+    if (a.request_url) req.push(a.request_url);
+    if (a.request_payload) req.push(jsonPretty(a.request_payload));
+    return {
+        id: a.id || 'N/A',
+        number: i + 1,
+        label: a.log_label || (i ? 'Status Check' : 'Initial Request'),
+        api: `${a.api_provider || tx.api_provider || tx.route_name || tx.operator_code || ''}`.trim() || 'N/A',
+        date: a.created_at || tx.created_at,
+        request: req.join('\n') || 'No request log found',
+        response: a.response_payload ? jsonPretty(a.response_payload) : (a.error_message || tx.failure_reason || 'No response captured'),
+        status: a.status || tx.status || 'pending'
+    };
+}
+
+function renderTransactionLog(tx, attempts, apiLogs) {
+    const logs = attempts.length ? attempts.map((a, i) => normalizeAttempt(a, tx, i)) : [{
+        id: 'N/A', number: 1, label: 'No recharge attempts found', api: tx.api_provider || tx.operator_code || 'N/A',
+        date: tx.created_at, request: 'No request log found', response: jsonPretty(tx.operator_response) || tx.failure_reason || 'No response captured', status: tx.status || 'pending'
+    }];
+    const first = logs[0] || {};
+    const last = logs[logs.length - 1] || {};
+    const timeline = logs.map(l => `<div class="txn-timeline-item"><div class="txn-dot"></div><div class="txn-time">${escHtml(fmtLogDate(l.date))}</div><div class="txn-label">${escHtml(l.label)} · ${escHtml(l.status)}</div></div>`).join('');
+    const cards = logs.map((l, i) => {
+        const reqId = `txn-req-${tx.id}-${i}`;
+        const resId = `txn-res-${tx.id}-${i}`;
+        return `<div class="txn-attempt">
+            <div class="txn-attempt-head"><strong>Log #${l.number}</strong><span class="txn-chip">${escHtml(fmtLogDate(l.date))}</span><span class="txn-chip">${escHtml(l.label)}</span><span class="txn-chip orange">${escHtml(l.status)}</span><span class="txn-log-id"># ID: ${escHtml(l.id)}</span></div>
+            <div class="txn-panes">
+                <div class="txn-pane req"><div class="txn-pane-title"><span>Request</span><button class="txn-copy" onclick="copyTxnLog('${reqId}')">Copy</button></div><pre class="txn-code" id="${reqId}">${escHtml(l.request)}</pre></div>
+                <div class="txn-pane res"><div class="txn-pane-title"><span>Response</span><button class="txn-copy" onclick="copyTxnLog('${resId}')">Copy</button></div><pre class="txn-code" id="${resId}">${escHtml(l.response)}</pre></div>
+            </div>
+        </div>`;
+    }).join('');
+    const apiNote = apiLogs?.length ? `<div style="font-size:12px;color:var(--text-muted);margin:6px 0 16px">Related platform API request logs: ${apiLogs.length}</div>` : '';
+
+    return `<div class="txn-summary">
+        <div class="txn-summary-item"><div class="txn-summary-icon">ID</div><div><div class="txn-summary-label">Transaction ID</div><div class="txn-summary-value">${escHtml(tx.id)}</div></div></div>
+        <div class="txn-summary-item"><div class="txn-summary-icon">☎</div><div><div class="txn-summary-label">Mobile</div><div class="txn-summary-value">${escHtml(tx.mobile || 'N/A')}</div></div></div>
+        <div class="txn-summary-item"><div class="txn-summary-icon">API</div><div><div class="txn-summary-label">API</div><div class="txn-summary-value">${escHtml(first.api || 'N/A')}</div></div></div>
+        <div class="txn-summary-item"><div class="txn-summary-icon">DT</div><div><div class="txn-summary-label">Created Date</div><div class="txn-summary-value">${escHtml(fmtLogDate(tx.created_at || first.date))}</div></div></div>
+    </div><div class="txn-timeline">${timeline}</div>${apiNote}${cards}`;
+}
+
+async function searchTransactionLog() {
+    const date = document.getElementById('txn-log-date').value;
+    const q = document.getElementById('txn-log-q').value.trim();
+    const box = document.getElementById('txn-log-result');
+    if (!q) {
+        box.innerHTML = '<div style="color:#dc2626;font-size:13px">Enter mobile number or transaction ID.</div>';
+        return;
+    }
+    box.innerHTML = '<div style="padding:18px;color:var(--text-muted)">Loading transaction logs...</div>';
+
+    let txnId = null;
+    if (/^\d+$/.test(q)) {
+        const directRes = await apiFetch('/api/v1/employee/recharges/' + encodeURIComponent(q));
+        if (directRes.ok) {
+            const directJson = await directRes.json().catch(() => ({}));
+            const d = directJson.data || {};
+            box.innerHTML = renderTransactionLog(d.transaction || {}, d.attempts || [], d.api_logs || []);
+            return;
+        }
+    }
+
+    {
+        const p = new URLSearchParams({ per_page: 1 });
+        if (/^\d{10,15}$/.test(q)) p.set('mobile', q);
+        else p.set('mobile', q);
+        if (date) {
+            p.set('date_from', date);
+            p.set('date_to', date);
+        }
+        const lookupRes = await apiFetch('/api/v1/employee/reports/recharges?' + p.toString());
+        const lookupJson = await lookupRes.json().catch(() => ({}));
+        const first = lookupJson.transactions?.data?.[0];
+        txnId = first?.id;
+    }
+
+    if (!txnId) {
+        box.innerHTML = '<div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:13px">No transaction found for the selected date and search value.</div>';
+        return;
+    }
+
+    const res = await apiFetch('/api/v1/employee/recharges/' + encodeURIComponent(txnId));
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        box.innerHTML = `<div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:13px">${escHtml(json.message || 'Transaction log not found.')}</div>`;
+        return;
+    }
+    const d = json.data || {};
+    box.innerHTML = renderTransactionLog(d.transaction || {}, d.attempts || [], d.api_logs || []);
+}
+
 async function loadApiLogs(page = 1) {
     document.getElementById('api-log-tbody').innerHTML =
         '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> Loading...</div></td></tr>';
@@ -273,6 +421,8 @@ function clearApiLogFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const d = new Date();
+    document.getElementById('txn-log-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     loadApiLogs();
 });
 </script>
