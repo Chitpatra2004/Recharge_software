@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('employees', function (Blueprint $table) {
-            $table->json('two_factor_methods')->nullable()->after('two_factor_method');
+            if (! Schema::hasColumn('employees', 'two_factor_methods')) {
+                $table->json('two_factor_methods')->nullable()->after('two_factor_method');
+            }
         });
     }
 

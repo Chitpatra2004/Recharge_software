@@ -412,6 +412,25 @@ function toggleSidebar() {
 
 /* ── Session lock ── */
 // 30 min inactivity → lock. No auto-logout; user must enter password to unlock.
+function closeOpenSellerModal() {
+    document.querySelectorAll('.modal-overlay.open, .modal-overlay.show').forEach(modal => {
+        modal.classList.remove('open', 'show');
+    });
+}
+
+document.addEventListener('click', e => {
+    const modal = e.target.closest?.('.modal-overlay');
+    if (modal && e.target === modal) {
+        modal.classList.remove('open', 'show');
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeOpenSellerModal();
+    }
+});
+
 const SELLER_LOCK_SESSION_KEY = 'seller_screen_locked';
 const SELLER_LOCK_AFTER_MS    = 30 * 60 * 1000;
 let _sLockTimer = null;

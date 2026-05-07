@@ -12,13 +12,13 @@
 {{-- ═══════════════════════════════════════════════════════════════════════════
      SERVICE PANEL
 ═══════════════════════════════════════════════════════════════════════════ --}}
-<div class="card" style="margin-bottom:18px">
+<div class="card" id="service-panel" style="margin-bottom:18px">
 
     {{-- Service Tabs --}}
     <div style="display:flex;border-bottom:1px solid var(--border2);padding:0 18px">
-        <button class="svc-tab active" id="tab-btn-mobile"  onclick="switchSvc('mobile')">📱 Mobile</button>
-        <button class="svc-tab"        id="tab-btn-dth"     onclick="switchSvc('dth')">📺 DTH</button>
-        <button class="svc-tab"        id="tab-btn-bbps"    onclick="switchSvc('bbps')">🏦 Bill Pay</button>
+        <button class="svc-tab active" id="tab-btn-mobile"  onclick="switchSvc('mobile')">Mobile</button>
+        <button class="svc-tab"        id="tab-btn-dth"     onclick="switchSvc('dth')">DTH</button>
+        <button class="svc-tab"        id="tab-btn-bbps"    onclick="switchSvc('bbps')">Bill Pay</button>
     </div>
 
     {{-- ── MOBILE RECHARGE ─────────────────────────────────────────────── --}}
@@ -210,7 +210,7 @@
         </div>
     </div>
     <div class="table-wrap">
-        <table>
+        <table class="recharge-history-table">
             <thead>
                 <tr>
                     <th>Txn ID</th>
@@ -253,7 +253,8 @@
 .flbl { font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px }
 .finp { width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;font-family:inherit;box-sizing:border-box;color-scheme:dark }
 .finp:focus { border-color:var(--primary) }
-.finp option { background:var(--card2,#1e2538);color:var(--text,#e2e8f0) }
+.finp option { background:#111827;color:#f1f5f9 }
+html[data-scheme="light"] .finp option{background:#ffffff;color:#0f172a}
 .svc-tab { background:none;border:none;padding:12px 20px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-family:inherit }
 .svc-tab.active { color:var(--primary);border-bottom-color:var(--primary) }
 .type-btn { background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit }
@@ -263,6 +264,30 @@
 .plan-card { background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative }
 .plan-card:hover,.plan-card.selected { border-color:var(--primary);background:rgba(99,102,241,.08) }
 .plan-card .tag { position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(245,158,11,.2);color:#f59e0b }
+#service-panel,#bbps-step2{scroll-margin-top:72px}
+
+@media(max-width:720px){
+    .svc-tab{flex:1;padding:12px 8px;text-align:center}
+    .svc-pane{padding:14px!important}
+    .svc-pane > div[style*="grid-template-columns"]{grid-template-columns:1fr!important}
+    .svc-pane > div[style*="align-items:flex-end"]{flex-direction:column;align-items:stretch!important}
+    .svc-pane > div[style*="display:flex"][style*="gap:10px"] .btn{width:100%;justify-content:center}
+    #bbps-step1 > div[style*="grid-template-columns"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    .recharge-history-table{min-width:0!important}
+    .recharge-history-table thead{display:none}
+    .recharge-history-table,
+    .recharge-history-table tbody,
+    .recharge-history-table tr,
+    .recharge-history-table td{display:block;width:100%}
+    .recharge-history-table tr{border-bottom:1px solid var(--border);padding:12px 0}
+    .recharge-history-table tr:last-child{border-bottom:none}
+    .recharge-history-table td{border-bottom:none;padding:5px 12px!important;white-space:normal!important}
+    .recharge-history-table td[data-label]{display:grid;grid-template-columns:104px minmax(0,1fr);gap:10px;align-items:start}
+    .recharge-history-table td[data-label]::before{content:attr(data-label);font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted2)}
+    .txn-status-cell{min-width:0}
+    .txn-failure-reason{display:block;margin-top:4px;font-size:11px!important;line-height:1.35;white-space:normal;overflow-wrap:anywhere;word-break:break-word;color:#f87171!important}
+    .recharge-history-table .badge{width:max-content;max-width:100%}
+}
 </style>
 @endsection
 
@@ -462,12 +487,17 @@ let detectTimer    = null;
 // ═══════════════════════════════════════════════════════════════════
 //  SERVICE TABS
 // ═══════════════════════════════════════════════════════════════════
-function switchSvc(svc) {
+function switchSvc(svc, shouldScroll = false) {
     currentSvc = svc;
     ['mobile','dth','bbps'].forEach(s => {
         document.getElementById('tab-btn-' + s).classList.toggle('active', s === svc);
         document.getElementById('pane-' + s).style.display = s === svc ? 'block' : 'none';
     });
+    if (shouldScroll) {
+        requestAnimationFrame(() => {
+            document.getElementById('service-panel')?.scrollIntoView({ behavior:'smooth', block:'start' });
+        });
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -610,6 +640,9 @@ function selectBbpsCategory(cat) {
     document.getElementById('bbps-category-title').textContent = cfg.title;
     document.getElementById('b-consumer-label').textContent = cfg.label + ' *';
     document.getElementById('b-biller').dataset.cat = cat;
+    requestAnimationFrame(() => {
+        document.getElementById('bbps-step2')?.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
     const sel = document.getElementById('b-biller');
     sel.innerHTML = '<option value="">Choose biller…</option>' +
         cfg.list.map(b => `<option value="${b}">${b}</option>`).join('');
@@ -729,16 +762,16 @@ async function loadTxns(page = 1) {
     document.getElementById('txn-tbody').innerHTML = txns.map(t => {
         const sc  = t.status === 'success' ? 'success' : t.status === 'failed' ? 'failure' : 'pending';
         const dt  = t.created_at ? new Date(t.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}) : '—';
-        const reason = t.failure_reason ? `<div style="font-size:10px;color:#ef4444;margin-top:2px">${t.failure_reason}</div>` : '';
+        const reason = t.failure_reason ? `<div class="txn-failure-reason">${t.failure_reason}</div>` : '';
         return `<tr>
-            <td style="font-family:monospace;font-size:11px;color:var(--muted)">#${t.id||'—'}</td>
-            <td style="font-weight:600">${t.mobile||'—'}</td>
-            <td>${t.operator_code||'—'}</td>
-            <td style="font-size:12px;text-transform:capitalize">${(t.recharge_type||'—').replace('bbps_','')}</td>
-            <td style="font-weight:700">₹${parseFloat(t.amount||0).toFixed(2)}</td>
-            <td><span class="badge ${sc}">${t.status||'—'}</span>${reason}</td>
-            <td style="font-size:11px;color:var(--muted)">${dt}</td>
-            <td>${t.status==='success'||t.status==='refunded'
+            <td data-label="Txn ID" style="font-family:monospace;font-size:11px;color:var(--muted)">#${t.id||'—'}</td>
+            <td data-label="Mobile / Account" style="font-weight:600">${t.mobile||'—'}</td>
+            <td data-label="Operator / Biller">${t.operator_code||'—'}</td>
+            <td data-label="Type" style="font-size:12px;text-transform:capitalize">${(t.recharge_type||'—').replace('bbps_','')}</td>
+            <td data-label="Amount" style="font-weight:700">₹${parseFloat(t.amount||0).toFixed(2)}</td>
+            <td data-label="Status" class="txn-status-cell"><span class="badge ${sc}">${t.status||'—'}</span>${reason}</td>
+            <td data-label="Date" style="font-size:11px;color:var(--muted)">${dt}</td>
+            <td data-label="Receipt">${t.status==='success'||t.status==='refunded'
                 ? `<button onclick="showReceipt(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:rgba(16,185,129,.15);border:none;color:#34d399;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer">Receipt</button>`
                 : '<span style="font-size:11px;color:var(--muted2)">—</span>'}</td>
         </tr>`;
@@ -795,6 +828,10 @@ function printReceipt(){
     w.document.close();
 }
 
-document.addEventListener('DOMContentLoaded', () => loadTxns());
+document.addEventListener('DOMContentLoaded', () => {
+    const service = new URLSearchParams(window.location.search).get('service');
+    if (['mobile','dth','bbps'].includes(service)) switchSvc(service, true);
+    loadTxns();
+});
 </script>
 @endpush

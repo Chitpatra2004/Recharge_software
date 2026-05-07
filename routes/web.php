@@ -121,13 +121,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/pending',        fn () => view('admin.reports.pending'))->name('pending');
         Route::get('/recharges',      fn () => view('admin.reports.recharges'))->name('recharges');
         Route::get('/operators',      fn () => view('admin.reports.operators'))->name('operators');
         Route::get('/failures',       fn () => view('admin.reports.failures'))->name('failures');
         Route::get('/payments',       fn () => view('admin.reports.payments'))->name('payments');
         Route::get('/wallets',        fn () => view('admin.reports.wallets'))->name('wallets');
         Route::get('/complaints',     fn () => view('admin.reports.complaints'))->name('complaints');
-        Route::get('/pending',        fn () => view('admin.reports.pending'))->name('pending');
         Route::get('/operator-codes', fn () => view('admin.reports.operator-codes'))->name('operator-codes');
         Route::get('/bank-accounts',  fn () => view('admin.reports.bank-accounts'))->name('bank-accounts');
         Route::get('/account',        fn () => view('admin.reports.account'))->name('account');

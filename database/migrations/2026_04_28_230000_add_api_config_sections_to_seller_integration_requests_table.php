@@ -9,12 +9,29 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('seller_integration_requests', function (Blueprint $table) {
-            $table->json('recharge_api')->nullable()->after('allowed_ips');
-            $table->json('status_api')->nullable()->after('recharge_api');
-            $table->json('balance_api')->nullable()->after('status_api');
-            $table->json('dispute_api')->nullable()->after('balance_api');
-            $table->json('callback_config')->nullable()->after('dispute_api');
-            $table->json('op_code_map')->nullable()->after('callback_config');
+            if (! Schema::hasColumn('seller_integration_requests', 'recharge_api')) {
+                $table->json('recharge_api')->nullable()->after('allowed_ips');
+            }
+
+            if (! Schema::hasColumn('seller_integration_requests', 'status_api')) {
+                $table->json('status_api')->nullable()->after('recharge_api');
+            }
+
+            if (! Schema::hasColumn('seller_integration_requests', 'balance_api')) {
+                $table->json('balance_api')->nullable()->after('status_api');
+            }
+
+            if (! Schema::hasColumn('seller_integration_requests', 'dispute_api')) {
+                $table->json('dispute_api')->nullable()->after('balance_api');
+            }
+
+            if (! Schema::hasColumn('seller_integration_requests', 'callback_config')) {
+                $table->json('callback_config')->nullable()->after('dispute_api');
+            }
+
+            if (! Schema::hasColumn('seller_integration_requests', 'op_code_map')) {
+                $table->json('op_code_map')->nullable()->after('callback_config');
+            }
         });
     }
 

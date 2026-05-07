@@ -9,11 +9,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('system_settings', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->text('value')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('system_settings')) {
+            Schema::create('system_settings', function (Blueprint $table) {
+                $table->string('key')->primary();
+                $table->text('value')->nullable();
+                $table->timestamps();
+            });
+        }
 
         // Seed defaults
         $defaults = [
@@ -52,12 +54,14 @@ return new class extends Migration
 
         $now = now();
         foreach ($defaults as $key => $value) {
-            DB::table('system_settings')->insert([
-                'key'        => $key,
-                'value'      => $value,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            DB::table('system_settings')->updateOrInsert(
+                ['key' => $key],
+                [
+                    'value'      => $value,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
         }
     }
 

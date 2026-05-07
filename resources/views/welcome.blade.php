@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#070f2b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.webmanifest">
     <title>ColdPay — Fast & Reliable Recharge Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -101,6 +105,15 @@
             box-shadow: 0 4px 16px rgba(99,102,241,.3);
         }
         .btn-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,.45); }
+        .btn-install {
+            padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+            color: #04111f; background: linear-gradient(135deg, #f8fafc, #bfdbfe);
+            border: none; cursor: pointer; text-decoration: none; transition: all .2s;
+            display: inline-flex; align-items: center; gap: 6px;
+            box-shadow: 0 4px 16px rgba(191,219,254,.24);
+            font-family: inherit;
+        }
+        .btn-install:hover { transform: translateY(-1px); box-shadow: 0 7px 22px rgba(191,219,254,.36); }
 
         /* ── HERO ─────────────────────────────────────────── */
         .hero {
@@ -199,6 +212,16 @@
             transition: all .2s; backdrop-filter: blur(10px);
         }
         .btn-hero-secondary:hover { border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.1); transform: translateY(-2px); }
+        .btn-hero-install {
+            padding: 15px 30px; border-radius: 12px;
+            font-size: 15px; font-weight: 800; color: #04111f;
+            background: linear-gradient(135deg, #f8fafc 0%, #bfdbfe 100%);
+            border: none; cursor: pointer; text-decoration: none;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: all .2s; box-shadow: 0 8px 28px rgba(191,219,254,.28);
+            font-family: inherit;
+        }
+        .btn-hero-install:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(191,219,254,.42); }
 
         /* Hero stats */
         .hero-stats {
@@ -555,6 +578,7 @@
         }
         @media (max-width: 768px) {
             .nav-links { display: none; }
+            .nav-actions .btn-ghost { display:none; }
             .features-grid { grid-template-columns: 1fr; }
             .ops-grid       { grid-template-columns: repeat(3, 1fr); }
             .testi-grid     { grid-template-columns: 1fr; }
@@ -613,12 +637,16 @@
         <button class="btn-theme" onclick="openThemePanel()" title="Switch Theme">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
         </button>
+        <button class="btn-install install-now-btn" type="button" onclick="installColdPayApp()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+            Install Now
+        </button>
         <a href="/user/login" class="btn-ghost">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             User Login
         </a>
-        <a href="/admin/login" class="btn-solid">
-            Admin Login
+        <a href="/user/register" class="btn-solid">
+            Register
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
         </a>
     </div>
@@ -643,14 +671,18 @@
     </p>
 
     <div class="hero-actions">
-        <a href="/admin/login" class="btn-hero-primary">
+        <a href="/user/login" class="btn-hero-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-            Admin Login
+            Retailer Login
         </a>
         <a href="#api" class="btn-hero-secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
             View API Docs
         </a>
+        <button class="btn-hero-install install-now-btn" type="button" onclick="installColdPayApp()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+            Install Now
+        </button>
     </div>
 
     <div class="hero-stats">
@@ -912,14 +944,18 @@
     <h2>Ready to scale your recharge business?</h2>
     <p>Join thousands of retailers and distributors already on ColdPay.<br>Get started in minutes — no setup fees, no contracts.</p>
     <div class="cta-btns">
-        <a href="/admin/login" class="btn-cta-primary">
+        <a href="/user/login" class="btn-cta-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-            Admin Login
+            Retailer Login
         </a>
         <a href="/user/register" class="btn-cta-ghost">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
             Get Started
         </a>
+        <button class="btn-cta-ghost install-now-btn" type="button" onclick="installColdPayApp()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+            Install Now
+        </button>
     </div>
 </div>
 
@@ -943,8 +979,7 @@
         <div>
             <div class="f-col-title">Platform</div>
             <div class="f-links">
-                <a href="/admin/login">Admin Login</a>
-                <a href="/user/login">User Login</a>
+                <a href="/user/login">Retailer Login</a>
                 <a href="/user/register">Register</a>
             </div>
         </div>
@@ -965,7 +1000,7 @@
                 <a href="#">Pricing</a>
                 <a href="#">Terms of Service</a>
                 <a href="#">Privacy Policy</a>
-                <a href="/admin/login">Admin Login</a>
+                <a href="#contact">Contact</a>
             </div>
         </div>
     </div>
@@ -992,6 +1027,40 @@
 </div>
 
 <script>
+let coldPayInstallPrompt = null;
+const COLDPAY_RETAILER_APK = '/downloads/coldpay-retailer.apk';
+
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    coldPayInstallPrompt = e;
+});
+
+window.addEventListener('appinstalled', function() {
+    coldPayInstallPrompt = null;
+    document.querySelectorAll('.install-now-btn').forEach(function(btn) {
+        btn.textContent = 'Installed';
+        btn.disabled = true;
+    });
+});
+
+async function installColdPayApp() {
+    try {
+        const res = await fetch(COLDPAY_RETAILER_APK, { method: 'HEAD', cache: 'no-store' });
+        if (res.ok) {
+            window.location.href = COLDPAY_RETAILER_APK;
+            return;
+        }
+    } catch(e) {}
+
+    alert('The retailer APK is not uploaded yet. Upload it to public/downloads/coldpay-retailer.apk, then this button will open it.');
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js').catch(function() {});
+    });
+}
+
 /* ── Unified Theme Engine ─────────────────────────────────────────────── */
 // Shared localStorage key: 'rh_theme' — stores just the theme NAME.
 // Each layout has its own mapping from unified name → layout-specific CSS vars.

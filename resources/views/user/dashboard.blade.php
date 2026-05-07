@@ -66,41 +66,188 @@
 .plan-chip-val  { font-size:10px; font-weight:600; color:var(--blue); margin:2px 0; }
 .plan-chip-desc { font-size:10px; color:var(--muted); line-height:1.4; }
 .plans-empty    { text-align:center; color:var(--muted); font-size:12px; padding:16px 0; grid-column:span 2; }
+
+.app-home{display:flex;flex-direction:column;gap:16px;width:100%;max-width:100%}
+.app-home > *{width:100%;min-width:0}
+.app-hero{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:stretch}
+.app-welcome{border:1px solid var(--border);border-radius:18px;padding:22px;background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(16,185,129,.08));overflow:hidden;position:relative}
+.app-welcome::after{content:'';position:absolute;right:-42px;top:-54px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.app-welcome h1{font-size:24px;font-weight:800;color:var(--text);letter-spacing:0;margin-bottom:6px}
+.app-welcome p{font-size:13px;color:var(--muted);max-width:520px}
+.app-balance{border:1px solid var(--border);border-radius:18px;padding:18px;background:var(--card);display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.app-balance-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.app-balance-value{font-size:30px;font-weight:850;color:#fff;letter-spacing:0}
+.app-balance-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.app-balance-actions .btn{width:100%;justify-content:center}
+.service-section{border:1px solid var(--border);border-radius:18px;background:var(--card);padding:18px}
+.section-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.section-row h2{font-size:15px;font-weight:800;color:var(--text)}
+.section-row span{font-size:12px;color:var(--muted)}
+.service-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.service-tile{min-height:116px;border:1px solid var(--border);border-radius:16px;background:var(--card2);color:var(--text);text-decoration:none;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:inherit;transition:transform .15s,border-color .15s,background .15s;position:relative;overflow:hidden}
+.service-tile:hover{transform:translateY(-2px);border-color:var(--blue);background:rgba(59,130,246,.1)}
+.service-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.service-icon svg{width:24px;height:24px;color:#fff}
+.service-title{font-size:12.5px;font-weight:800;text-align:center;line-height:1.25;color:var(--text)}
+.service-sub{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.25}
+.si-mobile{background:linear-gradient(135deg,#2563eb,#06b6d4)}
+.si-dth{background:linear-gradient(135deg,#7c3aed,#ec4899)}
+.si-bill{background:linear-gradient(135deg,#059669,#14b8a6)}
+.si-wallet{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.si-add{background:linear-gradient(135deg,#10b981,#22c55e)}
+.si-history{background:linear-gradient(135deg,#64748b,#0f172a)}
+.si-complaint{background:linear-gradient(135deg,#ef4444,#f97316)}
+.si-support{background:linear-gradient(135deg,#0ea5e9,#6366f1)}
+.app-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.app-stat{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:14px}
+.app-stat .stat-label{margin-bottom:8px}
+.app-stat .stat-value{font-size:22px;letter-spacing:0}
+.dashboard-workspace{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}
+.quick-card{min-width:0;overflow:hidden}
+.quick-card .card-body{min-width:0}
+.quick-card input,.quick-card button,.quick-card .cs-wrap,.quick-card .cs-trigger,.quick-card .type-tabs{min-width:0;max-width:100%}
+.quick-card .btn-primary{min-width:0;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;overflow:hidden}
+.quick-card .btn-primary svg{flex:0 0 15px}
+.quick-card .btn-primary .btn-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-scheme="light"] .app-welcome{background:linear-gradient(135deg,#dbeafe,#f0fdfa);border-color:#93c5fd}
+html[data-scheme="light"] .app-welcome::after{background:rgba(37,99,235,.08)}
+html[data-scheme="light"] .app-welcome h1{color:#0f172a}
+html[data-scheme="light"] .app-welcome p{color:#475569}
+html[data-scheme="light"] .app-balance,
+html[data-scheme="light"] .service-section,
+html[data-scheme="light"] .app-stat,
+html[data-scheme="light"] .quick-card{background:#ffffff;border-color:#dbe3ef;box-shadow:0 10px 28px rgba(15,23,42,.08)}
+html[data-scheme="light"] .app-balance-value,
+html[data-scheme="light"] .section-row h2,
+html[data-scheme="light"] .service-title{color:#0f172a}
+html[data-scheme="light"] .app-balance-label,
+html[data-scheme="light"] .section-row span,
+html[data-scheme="light"] .service-sub{color:#64748b}
+html[data-scheme="light"] .service-tile{background:#f8fafc;border-color:#e2e8f0;color:#0f172a;box-shadow:0 8px 22px rgba(15,23,42,.06)}
+html[data-scheme="light"] .service-tile:hover{background:#eff6ff}
+
+@media(max-width:1024px){
+    .app-hero{grid-template-columns:1fr}
+    .dashboard-workspace{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+    .app-home{align-items:stretch!important;gap:12px}
+    .app-home > *{width:100%!important}
+    .app-welcome{padding:18px;border-radius:16px}
+    .app-welcome h1{font-size:21px}
+    .app-balance-value{font-size:26px}
+    .service-section{padding:14px;border-radius:16px}
+    .service-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .service-tile{min-height:104px;border-radius:14px;padding:12px 8px}
+    .service-icon{width:42px;height:42px;border-radius:13px}
+    .service-title{font-size:11.5px}
+    .service-sub{display:none}
+    .app-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .dashboard-workspace{gap:12px}
+    .quick-card .card-body{padding:14px!important}
+    .quick-card .btn-primary{min-height:42px;padding-left:10px!important;padding-right:10px!important;font-size:13px}
+    .quick-card .type-tab{font-size:12px;padding-left:4px;padding-right:4px}
+}
+@media(max-width:420px){
+    .app-home{align-items:stretch!important}
+    .service-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .app-balance-actions{grid-template-columns:1fr}
+    .section-row .btn{width:auto!important}
+    .dashboard-workspace{grid-template-columns:minmax(0,1fr)}
+}
 </style>
 @endpush
 
 @section('content')
 
-{{-- Welcome bar --}}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <div>
-        <h1 style="font-size:20px;font-weight:700;color:var(--text)" id="welcome-msg">Welcome back!</h1>
-        <p style="font-size:13px;color:var(--muted);margin-top:3px">Here's an overview of your account activity.</p>
+<div class="app-home">
+    <div class="app-hero">
+        <div class="app-welcome">
+            <h1 id="welcome-msg">Welcome back!</h1>
+            <p>Choose a service below and complete recharges or bill payments in a few taps.</p>
+        </div>
+        <div class="app-balance">
+            <div>
+                <div class="app-balance-label">Wallet Balance</div>
+                <div class="app-balance-value" id="s-balance">--</div>
+            </div>
+            <div class="app-balance-actions">
+                <a href="/user/add-money" class="btn btn-primary">Add Money</a>
+                <a href="/user/wallet" class="btn btn-outline">Wallet</a>
+            </div>
+        </div>
     </div>
-    <a href="/user/recharges" class="btn btn-primary">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        New Recharge
-    </a>
-</div>
+
+    <div class="service-section">
+        <div class="section-row">
+            <div>
+                <h2>Services</h2>
+                <span>Tap an icon to start</span>
+            </div>
+            <a href="/user/recharges" class="btn btn-outline btn-sm">All Services</a>
+        </div>
+        <div class="service-grid">
+            <a class="service-tile" href="/user/recharges?service=mobile">
+                <span class="service-icon si-mobile"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 2h8a2 2 0 012 2v16a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2zm3 17h2"/></svg></span>
+                <span class="service-title">Mobile Recharge</span>
+                <span class="service-sub">Prepaid and postpaid</span>
+            </a>
+            <a class="service-tile" href="/user/recharges?service=dth">
+                <span class="service-icon si-dth"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v10H4zM8 20h8M10 16l-2 4M14 16l2 4"/></svg></span>
+                <span class="service-title">DTH Recharge</span>
+                <span class="service-sub">TV and cable packs</span>
+            </a>
+            <a class="service-tile" href="/user/recharges?service=bbps">
+                <span class="service-icon si-bill"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 012 2v16l-3-2-3 2-3-2-3 2V5a2 2 0 012-2zm3 5h4m-4 4h6m-6 4h3"/></svg></span>
+                <span class="service-title">Bill Payment</span>
+                <span class="service-sub">Electricity, gas, water</span>
+            </a>
+            <a class="service-tile" href="/user/wallet">
+                <span class="service-icon si-wallet"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8h18v11H3zM7 8V5h10v3M17 14h.01"/></svg></span>
+                <span class="service-title">Wallet</span>
+                <span class="service-sub">Balance and ledger</span>
+            </a>
+            <a class="service-tile" href="/user/add-money">
+                <span class="service-icon si-add"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg></span>
+                <span class="service-title">Add Money</span>
+                <span class="service-sub">Top up wallet</span>
+            </a>
+            <a class="service-tile" href="/user/transactions">
+                <span class="service-icon si-history"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+                <span class="service-title">Transactions</span>
+                <span class="service-sub">Receipts and status</span>
+            </a>
+            <a class="service-tile" href="/user/complaints">
+                <span class="service-icon si-complaint"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L2.8 18a2 2 0 001.8 3h14.8a2 2 0 001.8-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg></span>
+                <span class="service-title">Complaints</span>
+                <span class="service-sub">Raise a support case</span>
+            </a>
+            <a class="service-tile" href="/user/support">
+                <span class="service-icon si-support"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 10a6 6 0 10-12 0v4a3 3 0 003 3h1m8-7v6a2 2 0 01-2 2h-2"/></svg></span>
+                <span class="service-title">Support</span>
+                <span class="service-sub">Help and contact</span>
+            </a>
+        </div>
+    </div>
 
 {{-- Stat Cards --}}
-<div class="stats-grid">
-    <div class="stat-card blue">
+<div class="app-stats">
+    <div class="app-stat">
         <div class="stat-label">Wallet Balance</div>
-        <div class="stat-value" id="s-balance">—</div>
+        <div class="stat-value" id="s-balance-mini">--</div>
         <div class="stat-sub">Available to use</div>
     </div>
-    <div class="stat-card green">
+    <div class="app-stat">
         <div class="stat-label">Today's Recharges</div>
         <div class="stat-value" id="s-today-count">—</div>
         <div class="stat-sub" id="s-today-amt">—</div>
     </div>
-    <div class="stat-card orange">
+    <div class="app-stat">
         <div class="stat-label">This Month Spent</div>
-        <div class="stat-value" id="s-month-amt" style="font-size:20px">—</div>
+        <div class="stat-value" id="s-month-amt">--</div>
         <div class="stat-sub" id="s-month-count">— transactions</div>
     </div>
-    <div class="stat-card red">
+    <div class="app-stat">
         <div class="stat-label">Open Complaints</div>
         <div class="stat-value" id="s-complaints">—</div>
         <div class="stat-sub">Pending resolution</div>
@@ -108,10 +255,10 @@
 </div>
 
 {{-- Quick Recharge + Recent Transactions --}}
-<div style="display:grid;grid-template-columns:320px 1fr;gap:16px">
+<div class="dashboard-workspace">
 
     {{-- Quick Recharge --}}
-    <div class="card">
+    <div class="card quick-card">
         <div class="card-header"><span class="card-title">Quick Recharge</span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:13px">
 
@@ -191,7 +338,7 @@
             <div id="recharge-msg" style="display:none;font-size:13px;border-radius:8px;padding:10px 12px"></div>
             <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doQuickRecharge()" id="recharge-btn">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Recharge Now
+                <span class="btn-text">Recharge Now</span>
             </button>
         </div>
     </div>
@@ -223,6 +370,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection
 
@@ -365,6 +513,7 @@ async function loadDashboard() {
         const s = d.stats || {};
 
         document.getElementById('s-balance').textContent     = fmtAmt(s.wallet_balance || 0);
+        document.getElementById('s-balance-mini').textContent = fmtAmt(s.wallet_balance || 0);
         document.getElementById('s-today-count').textContent = fmtNum(s.today_count || 0);
         document.getElementById('s-today-amt').textContent   = fmtAmt(s.today_amount || 0) + ' spent today';
         document.getElementById('s-month-amt').textContent   = fmtAmt(s.month_amount || 0);
@@ -389,7 +538,11 @@ async function loadDashboard() {
 async function fallbackLoad() {
     try {
         const res = await apiFetch('/api/v1/wallet/balance');
-        if (res && res.ok) { const d = await res.json(); document.getElementById('s-balance').textContent = fmtAmt(d.balance||0); }
+        if (res && res.ok) {
+            const d = await res.json();
+            document.getElementById('s-balance').textContent = fmtAmt(d.balance||0);
+            document.getElementById('s-balance-mini').textContent = fmtAmt(d.balance||0);
+        }
     } catch(e) {}
 }
 

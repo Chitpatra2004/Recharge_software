@@ -1,0 +1,33 @@
+{
+  "name": "ColdPay Retailer",
+  "short_name": "ColdPay",
+  "description": "ColdPay retailer recharge and bill payment app.",
+  "start_url": "/user/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#040d21",
+  "theme_color": "#070f2b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/coldpay.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Retailer Login",
+      "short_name": "Login",
+      "url": "/user/login",
+      "icons": [{ "src": "/icons/coldpay.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/user/dashboard",
+      "icons": [{ "src": "/icons/coldpay.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

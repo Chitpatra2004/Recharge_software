@@ -55,6 +55,15 @@
         }
         select option { background: var(--card-bg, #ffffff); color: var(--text-primary, #1e293b); }
 
+        html {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            -webkit-text-size-adjust: 100%;
+        }
+
         body {
             font-family: 'Inter', system-ui, sans-serif;
             background: var(--bg-page);
@@ -63,6 +72,9 @@
             display: flex;
             font-size: 14px;
             line-height: 1.5;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* ── SIDEBAR ─────────────────────────────────────────────────────── */
@@ -506,7 +518,7 @@
         .txn-status.pending { background: #fef3c7; color: #d97706; }
 
         /* ── OPERATOR TABLE ──────────────────────────────────────────── */
-        .table-wrap { overflow-x: auto; }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; }
         thead th {
             padding: 10px 14px;
@@ -676,6 +688,38 @@
 
         /* Buttons */
         html[data-dark="1"] .btn-outline { background: var(--card-bg) !important; color: var(--text-primary) !important; }
+        html[data-dark="1"] .btn-outline:hover { background: rgba(255,255,255,.04) !important; }
+
+        /* Report/admin utility pages with hard-coded light CSS */
+        html[data-dark="1"] .rr-card,
+        html[data-dark="1"] .rr-box,
+        html[data-dark="1"] .rr-box-head,
+        html[data-dark="1"] .rr-box-foot {
+            background: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border) !important;
+        }
+        html[data-dark="1"] .rr-head,
+        html[data-dark="1"] .rr-table th,
+        html[data-dark="1"] .rr-table td,
+        html[data-dark="1"] .rr-log th,
+        html[data-dark="1"] .rr-log td,
+        html[data-dark="1"] .stat-card .val {
+            color: var(--text-primary) !important;
+            border-color: var(--border) !important;
+        }
+        html[data-dark="1"] .rr-field label,
+        html[data-dark="1"] .rr-table td span,
+        html[data-dark="1"] .rr-agent {
+            color: var(--text-secondary) !important;
+        }
+        html[data-dark="1"] .rr-id,
+        html[data-dark="1"] .rr-count,
+        html[data-dark="1"] [style*="color:#005fd1"],
+        html[data-dark="1"] [style*="color:#2563dc"] {
+            color: #93c5fd !important;
+        }
+        html[data-dark="1"] .rr-log pre { color: var(--text-primary) !important; }
 
         /* Transaction / inline status pills */
         html[data-dark="1"] .txn-status.success  { background: rgba(16,185,129,.18) !important; color: #6ee7b7 !important; }
@@ -726,7 +770,10 @@
         html[data-dark="1"] [style*="color:#052e16"],
         html[data-dark="1"] [style*="color:#166534"],
         html[data-dark="1"] [style*="color:#1e40af"],
-        html[data-dark="1"] [style*="color:#1e293b"] { color: var(--text-primary) !important; }
+        html[data-dark="1"] [style*="color:#1e293b"],
+        html[data-dark="1"] [style*="color:#111827"],
+        html[data-dark="1"] [style*="color:#000"],
+        html[data-dark="1"] [style*="color: #000"] { color: var(--text-primary) !important; }
 
         /* Hardcoded card/panel backgrounds (white boxes inside dark bg) */
         html[data-dark="1"] [style*="background:#fff"],
@@ -739,6 +786,38 @@
         html[data-dark="1"] [style*="border: 1.5px solid #bbf7d0"] { border-color: rgba(16,185,129,.3) !important; }
         html[data-dark="1"] [style*="border:1px solid #bfdbfe"],
         html[data-dark="1"] [style*="border: 1px solid #bfdbfe"] { border-color: rgba(59,130,246,.2) !important; }
+
+        @media (max-width: 720px) {
+            html, body { min-width: 0; overflow-x: hidden; overflow-y: auto !important; height: auto !important; position: relative !important; touch-action: pan-y; }
+            .topbar { padding: 0 10px; gap: 8px; height: 48px; }
+            .topbar-title { font-size: 13px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+            .topbar-actions { gap: 6px; }
+            .topbar-time, #session-info { display: none; }
+            .topbar-icon-btn { width: 32px; height: 32px; flex: 0 0 32px; }
+            .main-content { min-height: auto; overflow: visible; }
+            .page-body { padding: 12px; width: 100%; max-width: 100vw; overflow: visible; }
+            .page-body div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .page-body div[style*="display:flex"][style*="align-items:flex-end"] { display: grid !important; grid-template-columns: 1fr !important; align-items: stretch !important; width: 100%; gap: 10px !important; }
+            .table-wrap,
+            .rr-table-wrap,
+            [id$="-table-wrap"],
+            [id$="-wrap"] {
+                max-width: 100%;
+                overflow-x: auto !important;
+                overflow-y: visible !important;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-x pan-y;
+            }
+            table { min-width: 680px; }
+            .card-header, .card-footer { padding-left: 12px; padding-right: 12px; }
+            .card-body { padding: 12px; }
+            .btn { min-height: 34px; justify-content: center; }
+            input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+            select, textarea {
+                min-height: 36px;
+                font-size: 14px !important;
+            }
+        }
     </style>
     <script>(function(){function _dark(v){var r=parseInt((v||'').slice(1,3),16)||255,g=parseInt((v||'').slice(3,5),16)||255,b=parseInt((v||'').slice(5,7),16)||255;return(r*299+g*587+b*114)/1000<100;}function _applyVars(vars){Object.entries(vars).forEach(function(e){document.documentElement.style.setProperty(e[0],e[1]);});document.documentElement.dataset.dark=_dark(vars['--card-bg']||vars['--bg-page'])?'1':'0';}try{var s=localStorage.getItem('rh_admin_theme');if(s){var d=JSON.parse(s);_applyVars(d.vars);return;}var u=localStorage.getItem('rh_theme');var m={'Cosmic':{'--sidebar-bg':'#1a2035','--sidebar-hover':'#252d47','--sidebar-active':'#2563eb','--accent-blue':'#2563eb','--bg-page':'#f0f4f8','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e293b','--text-secondary':'#64748b','--border':'#e2e8f0'},'Midnight':{'--sidebar-bg':'#111827','--sidebar-hover':'#1f2937','--sidebar-active':'#3b82f6','--accent-blue':'#3b82f6','--bg-page':'#1a2535','--card-bg':'#111827','--topbar-bg':'#0f172a','--text-primary':'#e2e8f0','--text-secondary':'#94a3b8','--border':'#2d3748'},'Violet':{'--sidebar-bg':'#1e1b4b','--sidebar-hover':'#2d2a6b','--sidebar-active':'#7c3aed','--accent-blue':'#7c3aed','--bg-page':'#f5f3ff','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#1e1b4b','--text-secondary':'#6d6a9a','--border':'#ddd6fe'},'Forest':{'--sidebar-bg':'#052e16','--sidebar-hover':'#14532d','--sidebar-active':'#16a34a','--accent-blue':'#16a34a','--bg-page':'#f0fdf4','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#052e16','--text-secondary':'#166534','--border':'#bbf7d0'},'Ocean':{'--sidebar-bg':'#042f2e','--sidebar-hover':'#134e4a','--sidebar-active':'#0d9488','--accent-blue':'#0d9488','--bg-page':'#f0fdfa','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#042f2e','--text-secondary':'#0f766e','--border':'#99f6e4'},'Ember':{'--sidebar-bg':'#431407','--sidebar-hover':'#7c2d12','--sidebar-active':'#ea580c','--accent-blue':'#ea580c','--bg-page':'#fff7ed','--card-bg':'#ffffff','--topbar-bg':'#ffffff','--text-primary':'#431407','--text-secondary':'#9a3412','--border':'#fed7aa'}};if(u&&m[u]){_applyVars(m[u]);}}catch(e){}})();</script>
     @stack('head')
@@ -781,8 +860,8 @@
             </svg>
         </button>
         <div class="nav-submenu {{ request()->is('admin/reports*') ? 'open' : '' }}" id="reports-sub">
+            <a href="/admin/reports/pending"         class="nav-item {{ request()->is('admin/reports/pending')         ? 'active' : '' }}">Pending Recharge Report</a>
             <a href="/admin/reports/recharges"      class="nav-item {{ request()->is('admin/reports/recharges')      ? 'active' : '' }}">Recharge Report</a>
-            <a href="/admin/reports/pending"         class="nav-item {{ request()->is('admin/reports/pending')         ? 'active' : '' }}">Pending Recharge</a>
             <a href="/admin/reports/operators"       class="nav-item {{ request()->is('admin/reports/operators')       ? 'active' : '' }}">Operator Report</a>
             <a href="/admin/reports/operator-codes"  class="nav-item {{ request()->is('admin/reports/operator-codes')  ? 'active' : '' }}">Operator Code List</a>
             <a href="/admin/reports/failures"        class="nav-item {{ request()->is('admin/reports/failures')        ? 'active' : '' }}">Failure Report</a>
@@ -1226,6 +1305,34 @@ function closeProfileDropdown() {
 document.addEventListener('click', function(e) {
     const wrap = document.getElementById('profile-dropdown-wrap');
     if (wrap && !wrap.contains(e.target)) closeProfileDropdown();
+});
+
+function closeOpenReportModal() {
+    Array.from(document.querySelectorAll('.rr-modal'))
+        .filter(modal => getComputedStyle(modal).display !== 'none')
+        .forEach(modal => {
+            modal.style.display = 'none';
+        });
+}
+
+document.addEventListener('click', function(e) {
+    const modal = e.target.closest?.('.rr-modal');
+    if (modal && e.target === modal) {
+        modal.style.display = 'none';
+    }
+
+    const logoutModal = document.getElementById('logout-modal');
+    if (logoutModal && e.target === logoutModal) {
+        logoutModal.style.display = 'none';
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeOpenReportModal();
+        const logoutModal = document.getElementById('logout-modal');
+        if (logoutModal) logoutModal.style.display = 'none';
+    }
 });
 
 // ── Clock + Session Info ───────────────────────────────────────────────────
