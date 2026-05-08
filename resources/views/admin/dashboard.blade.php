@@ -132,6 +132,26 @@
             <span class="stat-updated" id="stat-failure-upd">Updating…</span>
         </div>
     </div>
+
+    {{-- ColdPay Mobikwik Balance --}}
+    <div class="stat-card blue">
+        <div class="stat-header">
+            <div class="stat-label">ColdPay Mobikwik</div>
+            <div class="stat-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h.01M11 15h2M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/>
+                </svg>
+            </div>
+        </div>
+        <div class="stat-value" id="stat-mobikwik-balance" data-tooltip="">—</div>
+        <div class="stat-amount" id="stat-mobikwik-status">API balance</div>
+        <div class="stat-footer" style="justify-content:space-between">
+            <span><span class="stat-pulse"></span> <span class="stat-updated" id="stat-mobikwik-upd">Not checked</span></span>
+            <button class="btn btn-outline btn-sm" id="mobikwik-refresh-btn" onclick="loadMobikwikBalance(true)" style="padding:4px 8px;font-size:11px">
+                Refresh
+            </button>
+        </div>
+    </div>
 </div>
 
 {{-- ── CHARTS ROW ──────────────────────────────────────────────────────── --}}
@@ -751,6 +771,39 @@ async function loadLiveFeed() {
     }).join('');
 }
 
+async function loadMobikwikBalance(force = false) {
+    const btn = document.getElementById('mobikwik-refresh-btn');
+    const valueEl = document.getElementById('stat-mobikwik-balance');
+    const statusEl = document.getElementById('stat-mobikwik-status');
+    const updEl = document.getElementById('stat-mobikwik-upd');
+
+    if (force && btn) {
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+    }
+
+    try {
+        const res = await apiFetch('/api/v1/employee/dashboard/coldpay-mobikwik-balance');
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || 'Balance check failed');
+
+        const balance = Number(json.balance || 0);
+        valueEl.textContent = fmtAmt(balance);
+        valueEl.setAttribute('data-tooltip', numToWords(balance));
+        statusEl.textContent = 'Current API balance';
+        updEl.textContent = json.checked_at ? 'Updated: ' + json.checked_at : 'Updated now';
+    } catch (e) {
+        valueEl.textContent = '—';
+        statusEl.textContent = e.message || 'Not configured';
+        updEl.textContent = 'Check failed';
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Refresh';
+        }
+    }
+}
+
 // ── Main load / refresh ───────────────────────────────────────────────────
 async function loadAll() {
     document.getElementById('announcement').style.display = 'flex';
@@ -762,6 +815,7 @@ async function loadAll() {
         loadOperators(),
         loadComplaints(),
         loadLiveFeed(),
+        loadMobikwikBalance(),
     ]);
 }
 
@@ -776,6 +830,7 @@ window.refreshDashboard = function() {
         loadComplaints(),
         loadLiveFeed(),
         loadOperators(),
+        loadMobikwikBalance(),
     ]).finally(() => {
         btn.disabled = false;
         btn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh`;
@@ -789,6 +844,7 @@ setInterval(loadStatusChart, 10_000);
 setInterval(loadLiveFeed,    10_000);
 setInterval(loadComplaints,  60_000);
 setInterval(loadOperators,   60_000);
+setInterval(loadMobikwikBalance, 120_000);
 
 // ── Export stub ───────────────────────────────────────────────────────────
 function exportReport() {

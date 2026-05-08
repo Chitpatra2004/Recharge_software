@@ -126,7 +126,9 @@ class RechargeService implements RechargeServiceInterface
 
             try {
                 $apiRef = (string) Str::uuid();
-                [$payload, $safePayload] = $this->buildPayload($transaction, $route->api_config ?? [], $apiRef);
+                $cfg = $route->api_config ?? [];
+                $cfg['_route_id'] = $route->id;
+                [$payload, $safePayload] = $this->buildPayload($transaction, $cfg, $apiRef);
 
                 $updates = ['api_ref' => $apiRef];
                 if ($firstRoute) {
@@ -137,8 +139,6 @@ class RechargeService implements RechargeServiceInterface
 
                 // Guzzle HTTP call — enforces hard timeout
                 $routeTimeout = min($route->timeout_seconds ?? $syncTimeout, $syncTimeout);
-                $cfg          = $route->api_config ?? [];
-
                 $response = $this->callOperatorApi(
                     $route->api_endpoint, $payload, $cfg,
                     $routeTimeout, $connectTimeout
@@ -166,8 +166,8 @@ class RechargeService implements RechargeServiceInterface
                     // ── Step 5a: Confirmed success ────────────────────────────
                     $txnidKey    = $cfg['txnid_key'] ?? null;
                     $operatorRef = $txnidKey
-                        ? ($response->json($txnidKey) ?? $apiRef)
-                        : ($response->json('txn_id') ?? $response->json('ref_id') ?? $response->json('operator_ref') ?? $apiRef);
+                        ? (data_get($response->json() ?? [], $txnidKey) ?? $apiRef)
+                        : (data_get($response->json() ?? [], 'txn_id') ?? data_get($response->json() ?? [], 'ref_id') ?? data_get($response->json() ?? [], 'operator_ref') ?? data_get($response->json() ?? [], 'data.operatorRefNo') ?? data_get($response->json() ?? [], 'data.mobikwikStamp') ?? $apiRef);
 
                     DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
                         $this->rechargeRepo->updateStatus($transaction->id, 'success', [
@@ -440,13 +440,14 @@ class RechargeService implements RechargeServiceInterface
 
             try {
                 $apiRef = (string) Str::uuid();
-                [$payload, $safePayload] = $this->buildPayload($transaction, $route->api_config ?? [], $apiRef);
+                $cfg2 = $route->api_config ?? [];
+                $cfg2['_route_id'] = $route->id;
+                [$payload, $safePayload] = $this->buildPayload($transaction, $cfg2, $apiRef);
 
                 $this->rechargeRepo->updateStatus($transaction->id, 'processing', [
                     'api_ref' => $apiRef,
                 ]);
 
-                $cfg2     = $route->api_config ?? [];
                 $response = $this->callOperatorApi(
                     $route->api_endpoint, $payload, $cfg2,
                     $route->timeout_seconds ?? 10, 5
@@ -473,8 +474,8 @@ class RechargeService implements RechargeServiceInterface
                 if ($isOk) {
                     $txnidKey2   = $cfg2['txnid_key'] ?? null;
                     $operatorRef = $txnidKey2
-                        ? ($response->json($txnidKey2) ?? $apiRef)
-                        : ($response->json('txn_id') ?? $response->json('ref_id') ?? $response->json('operator_ref') ?? $apiRef);
+                        ? (data_get($response->json() ?? [], $txnidKey2) ?? $apiRef)
+                        : (data_get($response->json() ?? [], 'txn_id') ?? data_get($response->json() ?? [], 'ref_id') ?? data_get($response->json() ?? [], 'operator_ref') ?? data_get($response->json() ?? [], 'data.operatorRefNo') ?? data_get($response->json() ?? [], 'data.mobikwikStamp') ?? $apiRef);
 
                     DB::transaction(function () use ($transaction, $operatorRef, $response, $route) {
                         $this->rechargeRepo->updateStatus($transaction->id, 'success', [
@@ -772,13 +773,24 @@ class RechargeService implements RechargeServiceInterface
                 $config['api_token'] ?? '',
                 $config['api_token'] ?? '',
                 $t->mobile, $t->mobile,
-                $t->amount, $t->operator_code, $t->operator_code,
+                $t->amount, $this->apiOperatorCode($t, $config), $t->operator_code,
                 $t->id, $t->id, $t->id,
                 $t->circle ?? '*', $t->circle ?? '',
                 $t->recharge_type, $apiRef,
             ];
 
             $paramString = str_replace($search, $replace, $template);
+            $paramString = str_replace([
+                '[operator_code]', '[member_id]', '[remitter_name]', '[payment_ref_id]',
+                '[payment_mode]', '[payment_account_info]',
+            ], [
+                $this->apiOperatorCode($t, $config),
+                $config['member_id'] ?? $config['username'] ?? '',
+                $config['remitter_name'] ?? 'Customer',
+                $apiRef,
+                $config['payment_mode'] ?? 'Cash',
+                $config['payment_account_info'] ?? '',
+            ], $paramString);
             parse_str($paramString, $params);
 
             $safeParams = $params;
@@ -816,6 +828,11 @@ class RechargeService implements RechargeServiceInterface
         $method = strtolower($config['method'] ?? 'post');
         $http   = Http::timeout($timeout)->connectTimeout($connectTimeout);
 
+        if (($config['driver'] ?? null) === 'mobikwik_v3') {
+            return app(\App\Services\MobikwikRechargeApiService::class)
+                ->payment($this->routeFromConfig($config), $params, $timeout, $connectTimeout);
+        }
+
         if ($method === 'get') {
             return $http->get($endpoint, $params);
         }
@@ -837,10 +854,11 @@ class RechargeService implements RechargeServiceInterface
         $statusKey  = $config['status_key']  ?? 'status';
         $successVal = $config['success_val'] ?? null;
 
-        $status = (string) ($response[$statusKey] ?? $response['STATUS'] ?? $response['code'] ?? '');
+        $status = (string) (data_get($response, $statusKey) ?? $response['STATUS'] ?? $response['code'] ?? '');
 
         if ($successVal) {
-            return strtolower($status) === strtolower($successVal);
+            $successValues = preg_split('/[,|]/', (string) $successVal) ?: [];
+            return in_array(strtolower($status), array_map(fn ($v) => strtolower(trim($v)), $successValues), true);
         }
 
         return in_array(strtolower($status), ['success', 'successful', '1', 'ok', 'true']);
@@ -859,6 +877,17 @@ class RechargeService implements RechargeServiceInterface
         }
 
         return str_contains($endpoint, '?') ? ($endpoint . '&' . $qs) : ($endpoint . '?' . $qs);
+    }
+
+    private function apiOperatorCode(RechargeTransaction $transaction, array $config): string
+    {
+        $codes = $config['op_codes'] ?? [];
+        return (string) ($codes[$transaction->operator_code] ?? $transaction->operator_code);
+    }
+
+    private function routeFromConfig(array $config): \App\Models\OperatorRoute
+    {
+        return \App\Models\OperatorRoute::query()->findOrFail((int) ($config['_route_id'] ?? 0));
     }
 
     /**
@@ -899,8 +928,10 @@ class RechargeService implements RechargeServiceInterface
         ]);
 
         $status = strtolower((string) ($res['status'] ?? ''));
-        $isSuccess = in_array($status, ['success', 'successful', '1', 'ok', 'true'], true);
-        $isPending = in_array($status, ['pending', 'processing', 'queued', 'inprocess', 'in_process'], true) || $status === '';
+        $successValues = array_map('strtolower', array_map('trim', preg_split('/[,|]/', (string) ($cfg['success_val'] ?? 'success,successful,1,ok,true,RECHARGESUCCESS')) ?: []));
+        $pendingValues = array_map('strtolower', array_map('trim', preg_split('/[,|]/', (string) ($cfg['pending_val'] ?? 'pending,processing,queued,inprocess,in_process,RECHARGESUCCESSPENDING,SUCCESSPENDING')) ?: []));
+        $isSuccess = in_array($status, $successValues, true);
+        $isPending = in_array($status, $pendingValues, true) || $status === '';
 
         if ($isSuccess) {
             $operatorRef = (string) ($res['txnid'] ?? ($res['operator_id'] ?? $transaction->operator_ref ?? $transaction->api_ref ?? $transaction->id));

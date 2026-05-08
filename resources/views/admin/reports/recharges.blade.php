@@ -70,7 +70,7 @@ html[data-dark="1"] .rpt-title,html[data-dark="1"] .rpt-table th,html[data-dark=
         <div class="rpt-field"><label>⌕ Quick Search</label><div class="rpt-quick"><select class="rpt-control" id="nf-search-type"><option>Mobile</option><option>ID</option></select><input class="rpt-control" id="nf-search" type="text"></div></div>
         <div class="rpt-field"><label>⌁ Status</label><select class="rpt-control" id="nf-status"><option value="">All</option><option value="pending">Pending</option><option value="queued">Queued</option><option value="processing">Processing</option><option value="success">Success</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select></div>
         <div class="rpt-field"><label>⌘ API/Service</label><select class="rpt-control" id="nf-api"><option value="">All APIs</option></select></div>
-        <div class="rpt-field"><label>▦ Service Type</label><select class="rpt-control" id="nf-service"><option value="">All Services</option><option value="prepaid">Prepaid</option><option value="postpaid">Postpaid</option><option value="dth">DTH</option><option value="broadband">Broadband</option></select></div>
+        <div class="rpt-field"><label>▦ Service Type</label><select class="rpt-control" id="nf-service" onchange="filterOperatorsByService(this.value)"><option value="">All Services</option><optgroup label="Mobile"><option value="prepaid">Prepaid</option><option value="postpaid">Postpaid</option></optgroup><optgroup label="DTH & Internet"><option value="dth">DTH</option><option value="broadband">Broadband</option><option value="landline">Landline</option></optgroup><optgroup label="BBPS Services"><option value="electricity">Electricity</option><option value="gas">Gas</option><option value="water">Water</option><option value="insurance">Insurance</option><option value="loan">Loan Repayment</option><option value="fastag">FASTag</option><option value="credit_card">Credit Card</option><option value="municipal_tax">Municipal Tax</option><option value="education">Education Fee</option><option value="subscription">Subscription / OTT</option></optgroup></select></div>
         <div class="rpt-field"><label>▦ Operator</label><select class="rpt-control" id="nf-operator"><option value="">All Operators</option></select></div>
         <div class="rpt-field state"><label>⌖ State</label><select class="rpt-control" id="nf-state"><option value="">All States</option></select></div>
         <div style="display:flex"><button class="rpt-search-btn" onclick="syncNewFilters();loadReport()">⌕</button><button class="rpt-reset-btn" onclick="resetNewFilters()">↻</button></div>
@@ -83,7 +83,7 @@ html[data-dark="1"] .rpt-title,html[data-dark="1"] .rpt-table th,html[data-dark=
         <div class="rr-field"><label>From Date</label><input id="f-from" type="date"></div>
         <div class="rr-field"><label>To Date</label><input id="f-to" type="date"></div>
         <div class="rr-field"><label>Status</label><select id="f-status"><option value="">ALL</option><option>pending</option><option>queued</option><option>processing</option><option>success</option><option>failed</option><option>refunded</option></select></div>
-        <div class="rr-field"><label>Service</label><select id="f-service"><option value="">ALL</option><option value="prepaid">Prepaid</option><option value="postpaid">Postpaid</option><option value="dth">DTH</option><option value="broadband">Broadband</option></select></div>
+        <div class="rr-field"><label>Service</label><select id="f-service"><option value="">ALL</option><option value="prepaid">Prepaid</option><option value="postpaid">Postpaid</option><option value="dth">DTH</option><option value="broadband">Broadband</option><option value="landline">Landline</option><option value="electricity">Electricity</option><option value="gas">Gas</option><option value="water">Water</option><option value="insurance">Insurance</option><option value="loan">Loan Repayment</option><option value="fastag">FASTag</option><option value="credit_card">Credit Card</option><option value="municipal_tax">Municipal Tax</option><option value="education">Education Fee</option><option value="subscription">Subscription / OTT</option></select></div>
         <div class="rr-field"><label>Operator</label><select id="f-operator"><option value="">ALL</option></select></div>
         <div class="rr-field"><label>State</label><select id="f-state"><option value="">ALL</option></select></div>
         <div class="rr-field"><label>API</label><select id="f-api"><option value="">ALL</option></select></div>
@@ -138,7 +138,36 @@ html[data-dark="1"] .rpt-title,html[data-dark="1"] .rpt-table th,html[data-dark=
 
 @push('scripts')
 <script>
-let rows=[], currentTxn=null, apiRoutes=[];
+let rows=[], currentTxn=null, apiRoutes=[], allOperators=[];
+
+const SERVICE_CATEGORY_MAP = {
+    prepaid:      ['mobile'],
+    postpaid:     ['mobile'],
+    dth:          ['dth'],
+    broadband:    ['broadband'],
+    landline:     ['landline'],
+    electricity:  ['electricity'],
+    gas:          ['gas'],
+    water:        ['water'],
+    insurance:    ['insurance'],
+    loan:         ['loan'],
+    fastag:       ['fastag'],
+    credit_card:  ['credit_card'],
+    municipal_tax:['municipal_tax'],
+    education:    ['education'],
+    subscription: ['subscription'],
+};
+
+function filterOperatorsByService(service){
+    const cats = SERVICE_CATEGORY_MAP[service] || null;
+    const filtered = cats ? allOperators.filter(o => cats.includes(o.category)) : allOperators;
+    const nfSel = document.getElementById('nf-operator');
+    const fSel  = document.getElementById('f-operator');
+    const opts  = filtered.map(o=>`<option value="${esc(o.code)}">${esc(o.name)}</option>`).join('');
+    nfSel.innerHTML = '<option value="">All Operators</option>' + opts;
+    fSel.innerHTML  = '<option value="">ALL</option>' + opts;
+    nfSel.value = ''; fSel.value = '';
+}
 function todayLocalISO(){
     const d = new Date();
     const y = d.getFullYear();
@@ -170,6 +199,7 @@ function syncNewFilters(){
 function resetNewFilters(){
     ['nf-status','nf-service','nf-operator','nf-api','nf-search'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('nf-from').value=today; document.getElementById('nf-to').value=today;
+    filterOperatorsByService('');
     syncNewFilters(); loadReport();
 }
 function params(){const p=new URLSearchParams(); const map={date_from:'f-from',date_to:'f-to',status:'f-status',recharge_type:'f-service',operator_code:'f-operator',api_provider:'f-api'}; Object.entries(map).forEach(([k,id])=>{const v=document.getElementById(id).value;if(v)p.set(k,v)}); const s=document.getElementById('f-search').value.trim(); if(/^\d{10,15}$/.test(s))p.set('mobile',s); p.set('per_page',100); return p;}
@@ -184,10 +214,8 @@ async function bootFilters(){
     ]);
     const ops  = opsRes ? await opsRes.json() : {};
     const apis = apiRes ? await apiRes.json() : {};
-    document.getElementById('f-operator').innerHTML =
-        '<option value="">ALL</option>' + (ops.operators||[]).map(o=>`<option value="${esc(o.code)}">${esc(o.name)}</option>`).join('');
-    document.getElementById('nf-operator').innerHTML =
-        '<option value="">All Operators</option>' + (ops.operators||[]).map(o=>`<option value="${esc(o.code)}">${esc(o.name)}</option>`).join('');
+    allOperators = ops.operators || [];
+    filterOperatorsByService(document.getElementById('nf-service').value);
     apiRoutes = apis.routes || [];
     const providers = [...new Set(apiRoutes.map(r=>r.api_provider).filter(Boolean))];
     document.getElementById('f-api').innerHTML =

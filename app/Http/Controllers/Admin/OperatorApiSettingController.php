@@ -17,9 +17,23 @@ class OperatorApiSettingController extends Controller
     // ── GET /api/v1/employee/api-providers ─────────────────────────────────
     public function listRoutes(): JsonResponse
     {
-        $routes = OperatorRoute::orderBy('id')->get();
+        $this->ensureColdpayMobikwikProvider();
 
-        $data = $routes->map(function (OperatorRoute $r) {
+        $routes = OperatorRoute::orderBy('id')->get();
+        $seenProviders = [];
+
+        $data = $routes->filter(function (OperatorRoute $r) use (&$seenProviders) {
+            if ($r->api_provider !== 'ColdPay Mobikwik') {
+                return true;
+            }
+
+            if (isset($seenProviders[$r->api_provider])) {
+                return false;
+            }
+
+            $seenProviders[$r->api_provider] = true;
+            return true;
+        })->map(function (OperatorRoute $r) {
             $cfg = $r->api_config ?? [];
             return [
                 'id'            => $r->id,
@@ -39,6 +53,72 @@ class OperatorApiSettingController extends Controller
         });
 
         return response()->json(['routes' => $data]);
+    }
+
+    private function ensureColdpayMobikwikProvider(): void
+    {
+        if (OperatorRoute::query()->where('api_provider', 'ColdPay Mobikwik')->exists()) {
+            return;
+        }
+
+        $operator = Operator::query()->orderBy('id')->first();
+        if (! $operator) {
+            return;
+        }
+
+        $baseUrl = rtrim(env('MOBIKWIK_BASE_URL', 'https://alpha3.mobikwik.com'), '/');
+        $endpoint = $baseUrl . '/recharge/v3/retailerPayment';
+
+        OperatorRoute::query()->create([
+            'operator_id' => $operator->id,
+            'name' => 'ColdPay Mobikwik',
+            'operator_code' => $operator->code,
+            'recharge_type' => in_array($operator->category, ['dth', 'broadband'], true) ? $operator->category : 'prepaid',
+            'api_provider' => 'ColdPay Mobikwik',
+            'api_endpoint' => $endpoint,
+            'api_config' => [
+                'driver' => 'mobikwik_v3',
+                'base_url' => $baseUrl,
+                'client_id' => env('MOBIKWIK_CLIENT_ID', ''),
+                'client_secret' => env('MOBIKWIK_CLIENT_SECRET', ''),
+                'member_id' => env('MOBIKWIK_MEMBER_ID', ''),
+                'public_key' => env('MOBIKWIK_PUBLIC_KEY', ''),
+                'key_version' => env('MOBIKWIK_KEY_VERSION', '1.0'),
+                'api_status' => false,
+                'auto_renewal' => false,
+                'purchase' => 'active',
+                'validity_till' => '0000-00-00',
+                'margin' => 0,
+                'method' => 'POST',
+                'request_params' => 'cn=[mobile]&op=[opcode]&cir=[circlecode]&amt=[amount]&reqid=[order_id]&customerMobile=[mobile]&remitterName=[remitter_name]&paymentRefID=[payment_ref_id]&paymentMode=[payment_mode]&paymentAccountInfo=[payment_account_info]',
+                'status_key' => 'data.status',
+                'txnid_key' => 'data.operatorRefNo',
+                'live_id_key' => 'data.mobikwikStamp',
+                'success_val' => 'SUCCESS,RECHARGESUCCESS',
+                'pending_val' => 'SUCCESSPENDING,RECHARGESUCCESSPENDING',
+                'failure_val' => 'RECHARGEFAILURE',
+                'balance_api' => [
+                    'method' => 'POST',
+                    'url' => $baseUrl . '/recharge/v3/retailerBalance',
+                    'params' => '',
+                    'balance_key' => 'data.balance',
+                ],
+                'status_api' => [
+                    'method' => 'POST',
+                    'url' => $baseUrl . '/recharge/v3/retailerStatus',
+                    'params' => 'txId=[order_id]',
+                    'status_key' => 'data.status',
+                    'txnid_key' => 'data.operatorRefNo',
+                ],
+            ],
+            'priority' => 5,
+            'success_rate' => 100,
+            'timeout_seconds' => 30,
+            'max_retries' => 3,
+            'is_active' => false,
+            'min_amount' => 1.00,
+            'max_amount' => 10000.00,
+        ]);
     }
 
     // ── POST /api/v1/employee/api-providers ────────────────────────────────
@@ -154,6 +234,11 @@ class OperatorApiSettingController extends Controller
             ],
             'credentials' => [
                 'username'  => $cfg['username']  ?? '',
+                'client_id' => $cfg['client_id'] ?? '',
+                'member_id' => $cfg['member_id'] ?? '',
+                'base_url' => $cfg['base_url'] ?? '',
+                'key_version' => $cfg['key_version'] ?? '',
+                'public_key_configured' => ! empty($cfg['public_key']),
                 // api_token never returned to browser
             ],
             'recharge_api' => [
@@ -206,14 +291,53 @@ class OperatorApiSettingController extends Controller
         $request->validate([
             'username'  => ['nullable', 'string', 'max:100'],
             'api_token' => ['nullable', 'string', 'max:500'],
+            'client_id' => ['nullable', 'string', 'max:150'],
+            'client_secret' => ['nullable', 'string', 'max:500'],
+            'member_id' => ['nullable', 'string', 'max:150'],
+            'base_url' => ['nullable', 'url', 'max:500'],
+            'key_version' => ['nullable', 'string', 'max:30'],
+            'public_key' => ['nullable', 'string', 'max:10000'],
         ]);
 
         $cfg = $route->api_config ?? [];
         if ($request->filled('username'))  $cfg['username']  = $request->username;
         if ($request->filled('api_token')) $cfg['api_token'] = $request->api_token;
+        if ($request->filled('client_id')) $cfg['client_id'] = $request->client_id;
+        if ($request->filled('client_secret')) $cfg['client_secret'] = $request->client_secret;
+        if ($request->filled('member_id')) $cfg['member_id'] = $request->member_id;
+        if ($request->filled('base_url')) $cfg['base_url'] = rtrim($request->base_url, '/');
+        if ($request->filled('key_version')) $cfg['key_version'] = $request->key_version;
+        if ($request->filled('public_key')) $cfg['public_key'] = $request->public_key;
         $route->update(['api_config' => $cfg]);
+        $this->syncColdpayMobikwikCredentials($route, $cfg);
 
         return response()->json(['message' => 'Credentials saved.']);
+    }
+
+    private function syncColdpayMobikwikCredentials(OperatorRoute $route, array $sourceConfig): void
+    {
+        if ($route->api_provider !== 'ColdPay Mobikwik') {
+            return;
+        }
+
+        $keys = [
+            'username', 'api_token', 'client_id', 'client_secret',
+            'member_id', 'base_url', 'key_version', 'public_key',
+        ];
+
+        OperatorRoute::query()
+            ->where('api_provider', 'ColdPay Mobikwik')
+            ->whereKeyNot($route->id)
+            ->get()
+            ->each(function (OperatorRoute $other) use ($sourceConfig, $keys) {
+                $cfg = $other->api_config ?? [];
+                foreach ($keys as $key) {
+                    if (array_key_exists($key, $sourceConfig)) {
+                        $cfg[$key] = $sourceConfig[$key];
+                    }
+                }
+                $other->update(['api_config' => $cfg]);
+            });
     }
 
     // ── PUT /api/v1/employee/api-providers/{route}/recharge-api ───────────

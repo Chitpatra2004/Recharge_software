@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminRechargeController;
 use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
 use App\Http\Controllers\Admin\SellerPaymentController as AdminSellerPaymentController;
+use App\Http\Controllers\Admin\SmsReportController;
 use App\Http\Controllers\Admin\UserPaymentRequestController as AdminUserPaymentRequestController;
 use App\Http\Controllers\Admin\OperatorApiSettingController;
 use App\Http\Controllers\Admin\OperatorSettingController;
@@ -88,6 +89,7 @@ Route::prefix('v1/employee')
     Route::get('/dashboard/gateway',    [DashboardController::class, 'gateway']);
     Route::get('/dashboard/complaints', [DashboardController::class, 'complaints']);
     Route::get('/dashboard/chart',      [DashboardController::class, 'chart']);
+    Route::get('/dashboard/coldpay-mobikwik-balance', [DashboardController::class, 'coldpayMobikwikBalance']);
 
     // Activity logs (admin-only)
     Route::get('/activity',                   [ActivityLogController::class, 'index']);
@@ -119,6 +121,7 @@ Route::prefix('v1/employee')
     Route::get('/reports/payments',      [ReportController::class, 'payments']);
     Route::get('/reports/complaints',    [ReportController::class, 'complaints']);
     Route::get('/reports/wallets',       [ReportController::class, 'wallets']);
+    Route::get('/reports/sms',           [SmsReportController::class, 'index']);
 
     // Recharge management
     Route::get('/recharges/{id}',        [AdminRechargeController::class, 'show']);
@@ -343,6 +346,7 @@ Route::prefix('v1/admin/dashboard')
     Route::get('/gateway',    [DashboardController::class, 'gateway']);    // wallet + API stats
     Route::get('/complaints', [DashboardController::class, 'complaints']); // pending complaints
     Route::get('/chart',      [DashboardController::class, 'chart']);      // hourly + weekly
+    Route::get('/coldpay-mobikwik-balance', [DashboardController::class, 'coldpayMobikwikBalance']);
     Route::delete('/cache',   [DashboardController::class, 'flushCache']); // manual cache flush
 
 });
@@ -456,6 +460,8 @@ Route::prefix('v1/employee/user-payment-requests')
     ->group(function () {
 
     Route::get('/',                    [AdminUserPaymentRequestController::class, 'index']);
+    Route::get('/pg-report',           [AdminUserPaymentRequestController::class, 'pgReport']);
+    Route::get('/pg-switching-report', [AdminUserPaymentRequestController::class, 'pgSwitchingReport']);
     Route::post('/{id}/approve',       [AdminUserPaymentRequestController::class, 'approve'])->middleware('throttle:money');
     Route::post('/{id}/reject',        [AdminUserPaymentRequestController::class, 'reject'])->middleware('throttle:money');
 });

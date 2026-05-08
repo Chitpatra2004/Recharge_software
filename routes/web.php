@@ -126,12 +126,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/operators',      fn () => view('admin.reports.operators'))->name('operators');
         Route::get('/failures',       fn () => view('admin.reports.failures'))->name('failures');
         Route::get('/payments',       fn () => view('admin.reports.payments'))->name('payments');
+        Route::get('/pg-report',      fn () => view('admin.reports.pg-report'))->name('pg-report');
+        Route::get('/pg-switching',   fn () => redirect()->route('admin.pg-switching'))->name('pg-switching-old');
         Route::get('/wallets',        fn () => view('admin.reports.wallets'))->name('wallets');
         Route::get('/complaints',     fn () => view('admin.reports.complaints'))->name('complaints');
         Route::get('/operator-codes', fn () => view('admin.reports.operator-codes'))->name('operator-codes');
         Route::get('/bank-accounts',  fn () => view('admin.reports.bank-accounts'))->name('bank-accounts');
         Route::get('/account',        fn () => view('admin.reports.account'))->name('account');
         Route::get('/topup',          fn () => view('admin.reports.topup'))->name('topup');
+        Route::get('/sms',            fn () => view('admin.reports.sms'))->name('sms');
     });
 
     // Users
@@ -147,6 +150,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/api-switching',         fn () => view('admin.manage.api-switching'))->name('api-switching');
     Route::get('/operator-api-settings', fn () => redirect()->route('admin.api-list'))->name('operator-api-settings');
     Route::get('/api-integration-portal', fn () => view('admin.manage.api-integration-portal'))->name('api-integration-portal');
+    Route::get('/pg-manage',              fn () => view('admin.manage.pg-manage'))->name('pg-manage');
+    Route::get('/pg-switching',           fn () => view('admin.manage.pg-switching'))->name('pg-switching');
 
     // Commission
     Route::get('/commission/slab',    fn () => view('admin.commission.slab'))->name('commission.slab');

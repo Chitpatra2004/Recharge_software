@@ -33,13 +33,19 @@ class GenericApiService
 
         try {
             $params = $this->buildParams($ba['params'] ?? '', $cfg, []);
-            $resp   = $this->call($ba['method'] ?? 'GET', $ba['url'], $params);
+            if (($cfg['driver'] ?? null) === 'mobikwik_v3') {
+                $params = $params ?: ['memberId' => $cfg['member_id'] ?? $cfg['username'] ?? ''];
+                $resp = app(MobikwikRechargeApiService::class)->balance($route, $params);
+            } else {
+                $resp = $this->call($ba['method'] ?? 'GET', $ba['url'], $params);
+            }
             $data   = $resp->json() ?? [];
             $key    = $ba['balance_key'] ?? 'balance';
+            $balance = data_get($data, $key);
 
             return [
-                'success' => $resp->successful() && array_key_exists($key, $data),
-                'balance' => $data[$key] ?? null,
+                'success' => $resp->successful() && $balance !== null,
+                'balance' => $balance,
                 'raw'     => $data,
             ];
         } catch (\Throwable $e) {
@@ -63,17 +69,24 @@ class GenericApiService
             $safeParams = $this->maskParams($params);
             $fullUrl    = $this->buildFullUrl($sa['url'], $safeParams, $sa['method'] ?? 'GET');
 
-            $resp = $this->call($sa['method'] ?? 'GET', $sa['url'], $params);
+            if (($cfg['driver'] ?? null) === 'mobikwik_v3') {
+                $params = $params ?: ['txId' => $orderId];
+                $safeParams = $params;
+                $fullUrl = $sa['url'] ?? '';
+                $resp = app(MobikwikRechargeApiService::class)->status($route, $params);
+            } else {
+                $resp = $this->call($sa['method'] ?? 'GET', $sa['url'], $params);
+            }
             $data   = $resp->json() ?? [];
 
             return [
                 'success'    => $resp->successful(),
-                'status'     => $data[$sa['status_key'] ?? 'status'] ?? null,
-                'txnid'      => $data[$sa['txnid_key']  ?? 'tid']    ?? null,
-                'order_id'   => $data['order_id']    ?? null,
-                'mobile'     => $data['mobile']      ?? null,
-                'amount'     => $data['amount']      ?? null,
-                'operator_id'=> $data['operator_id'] ?? null,
+                'status'     => data_get($data, $sa['status_key'] ?? 'status'),
+                'txnid'      => data_get($data, $sa['txnid_key']  ?? 'tid'),
+                'order_id'   => data_get($data, 'order_id') ?? data_get($data, 'data.txId'),
+                'mobile'     => data_get($data, 'mobile') ?? data_get($data, 'data.cellNumber'),
+                'amount'     => data_get($data, 'amount') ?? data_get($data, 'data.rechargeRetailAmount'),
+                'operator_id'=> data_get($data, 'operator_id') ?? data_get($data, 'data.operatorRefNo') ?? data_get($data, 'data.operatorrefno'),
                 'raw'        => $data,
                 // for logging / admin UI
                 'request_url'    => $fullUrl,

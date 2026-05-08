@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Otp;
+use App\Models\SmsLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class OtpService
@@ -45,7 +47,7 @@ class OtpService
         ]);
 
         // Simulate SMS — in production replace with real SMS gateway
-        $this->sendSms($identifier, $rawOtp, $type);
+        $this->sendSms($identifier, $rawOtp, $type, $userId);
 
         return [
             'otp'           => $rawOtp,          // ONLY for dev/simulation
@@ -102,7 +104,7 @@ class OtpService
     }
 
     /** Simulate SMS sending — logs to Laravel log in development */
-    private function sendSms(string $to, string $otp, string $type): void
+    private function sendSms(string $to, string $otp, string $type, ?int $userId = null): void
     {
         $purpose = match ($type) {
             'login_2fa'        => 'login verification',
@@ -118,9 +120,32 @@ class OtpService
         // In production: replace below with Twilio / MSG91 / Fast2SMS etc.
         Log::channel('daily')->info("[SMS SIMULATION] To: {$to} | OTP: {$otp} | Purpose: {$purpose} | Expires in 5 minutes");
 
+        $this->logSmsReport($to, "Your ColdPay OTP is {$otp}. It is valid for 5 minutes.", $purpose, $userId);
+
         // Also log to default channel during development
         if (config('app.debug')) {
             Log::info("🔐 OTP [{$purpose}] → {$to} : {$otp}");
+        }
+    }
+
+    private function logSmsReport(string $to, string $message, string $purpose, ?int $userId = null): void
+    {
+        try {
+            if (! Schema::hasTable('sms_logs')) {
+                return;
+            }
+
+            SmsLog::create([
+                'user_id' => $userId,
+                'mobile' => $to,
+                'purpose' => $purpose,
+                'provider' => 'simulation',
+                'status' => 'sent',
+                'message' => $message,
+                'sent_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('SMS report logging failed: ' . $e->getMessage());
         }
     }
 }

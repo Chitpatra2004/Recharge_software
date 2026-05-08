@@ -866,10 +866,12 @@
             <a href="/admin/reports/operator-codes"  class="nav-item {{ request()->is('admin/reports/operator-codes')  ? 'active' : '' }}">Operator Code List</a>
             <a href="/admin/reports/failures"        class="nav-item {{ request()->is('admin/reports/failures')        ? 'active' : '' }}">Failure Report</a>
             <a href="/admin/reports/payments"        class="nav-item {{ request()->is('admin/reports/payments')        ? 'active' : '' }}">Payment Report</a>
+            <a href="/admin/reports/pg-report"       class="nav-item {{ request()->is('admin/reports/pg-report')       ? 'active' : '' }}">Payment Gateway Report</a>
             <a href="/admin/reports/wallets"         class="nav-item {{ request()->is('admin/reports/wallets')         ? 'active' : '' }}">Wallet Report</a>
             <a href="/admin/reports/bank-accounts"   class="nav-item {{ request()->is('admin/reports/bank-accounts')   ? 'active' : '' }}">User Bank List</a>
             <a href="/admin/reports/account"         class="nav-item {{ request()->is('admin/reports/account')         ? 'active' : '' }}">Account Report</a>
             <a href="/admin/reports/topup"           class="nav-item {{ request()->is('admin/reports/topup')           ? 'active' : '' }}">Top-up Report</a>
+            <a href="/admin/reports/sms"             class="nav-item {{ request()->is('admin/reports/sms')             ? 'active' : '' }}">SMS Report</a>
         </div>
 
         <div class="nav-section">Users</div>
@@ -920,13 +922,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
-        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/api-list') || request()->is('admin/api-switching') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') ? 'open' : '' }}" id="manage-sub">
+        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/api-list') || request()->is('admin/api-switching') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') || request()->is('admin/pg-manage') || request()->is('admin/pg-switching') ? 'open' : '' }}" id="manage-sub">
             <a href="/admin/operators" class="nav-item {{ request()->is('admin/operators') ? 'active' : '' }}">Operators</a>
             <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees') ? 'active' : '' }}">Employees</a>
             <a href="/admin/api-keys" class="nav-item {{ request()->is('admin/api-keys') ? 'active' : '' }}">API Keys</a>
             <a href="/admin/api-list" class="nav-item {{ request()->is('admin/api-list') || request()->is('admin/operator-api-settings') ? 'active' : '' }}">API List</a>
             <a href="/admin/api-switching" class="nav-item {{ request()->is('admin/api-switching') ? 'active' : '' }}">API Switching</a>
             <a href="/admin/api-integration-portal" class="nav-item {{ request()->is('admin/api-integration-portal') ? 'active' : '' }}">API Integration Portal</a>
+            <a href="/admin/pg-manage" class="nav-item {{ request()->is('admin/pg-manage') ? 'active' : '' }}">PG Manage</a>
+            <a href="/admin/pg-switching" class="nav-item {{ request()->is('admin/pg-switching') ? 'active' : '' }}">PG Switching Report</a>
         </div>
 
         <div class="nav-section">Commission</div>

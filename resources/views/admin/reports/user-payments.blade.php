@@ -16,6 +16,13 @@
 .badge-pending{background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
 .badge-rejected{background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
 .proof-thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
+.rrn-result{display:none;margin-top:14px}
+.rrn-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.rrn-card{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card-bg)}
+.rrn-label{font-size:11px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.rrn-value{font-size:14px;color:var(--text-primary);font-weight:700;word-break:break-word}
+@media(max-width:900px){.rrn-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.rrn-grid{grid-template-columns:1fr}}
 </style>
 @endpush
 
@@ -28,6 +35,25 @@
     <div style="display:flex;gap:8px">
         <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
         <button class="btn btn-primary"  onclick="loadData()">Refresh</button>
+    </div>
+</div>
+
+{{-- System Closing Load / RRN Tracking --}}
+<div class="card" style="margin-bottom:18px">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+            <div style="font-weight:700;font-size:14px">System Closing Load</div>
+            <div style="font-size:12px;color:var(--text-secondary)">RRN / UTR se payment update, user aur wallet balance track karein</div>
+        </div>
+        <div class="filter-bar">
+            <input type="text" id="rrnSearch" placeholder="Enter bank RRN / UTR" style="min-width:240px">
+            <button class="btn btn-primary btn-sm" onclick="trackRrn()">Track RRN</button>
+            <button class="btn btn-outline btn-sm" onclick="clearRrnTrack()">Clear</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="rrnEmpty" style="font-size:13px;color:var(--text-secondary)">RRN/UTR enter karke exact payment details search karein.</div>
+        <div id="rrnResult" class="rrn-result"></div>
     </div>
 </div>
 
@@ -101,6 +127,9 @@
                     <th>Status</th>
                     <th>Admin Notes</th>
                     <th>Processed</th>
+                    <th>Updated By</th>
+                    <th>Balance</th>
+                    <th>Login</th>
                 </tr>
             </thead>
             <tbody id="historyBody">
@@ -383,5 +412,207 @@ function exportCSV() {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', loadData);
+</script>
+@endpush
+
+@push('scripts')
+<script>
+async function loadHistory(page) {
+    histPage = page;
+    const status = document.getElementById('fStatus').value;
+    const search = document.getElementById('fSearch').value;
+    const from = document.getElementById('fFrom').value;
+    const to = document.getElementById('fTo').value;
+    const params = new URLSearchParams({ page, per_page: 20 });
+
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    if (from) params.set('date_from', from);
+    if (to) params.set('date_to', to);
+
+    document.getElementById('historyBody').innerHTML =
+        '<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--text-muted)">Loading...</td></tr>';
+
+    try {
+        const res = await apiFetch('/api/v1/employee/user-payment-requests?' + params);
+        const d = await res.json();
+        const rows = d.data?.data || [];
+        allData = rows;
+
+        if (!rows.length) {
+            document.getElementById('historyBody').innerHTML =
+                '<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--text-muted)">No records found</td></tr>';
+            document.getElementById('histPager').innerHTML = '';
+            return;
+        }
+
+        document.getElementById('historyBody').innerHTML = rows.map(historyRow).join('');
+
+        const pager = d.data || {};
+        const last = pager.last_page || 1;
+        const curr = pager.current_page || page;
+        let pagerHtml = '';
+        if (last > 1) {
+            if (curr > 1) pagerHtml += `<button class="btn btn-outline btn-sm" onclick="loadHistory(${curr - 1})">Prev</button>`;
+            pagerHtml += `<span style="font-size:12px;color:var(--text-muted)">Page ${curr} of ${last}</span>`;
+            if (curr < last) pagerHtml += `<button class="btn btn-outline btn-sm" onclick="loadHistory(${curr + 1})">Next</button>`;
+        }
+        document.getElementById('histPager').innerHTML = pagerHtml;
+    } catch (e) {
+        document.getElementById('historyBody').innerHTML =
+            '<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--accent-red)">Failed to load</td></tr>';
+    }
+}
+
+function historyRow(r) {
+    const dt = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const pdDate = r.payment_date ? new Date(r.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const procAt = r.processed_at ? new Date(r.processed_at).toLocaleString('en-IN') : '-';
+    const user = r.user || {};
+    const processor = r.processor || {};
+    const mode = (r.payment_mode || '').replace(/_/g, ' ').toUpperCase();
+    const badgeClass = { approved: 'badge-approved', pending: 'badge-pending', rejected: 'badge-rejected' }[r.status] || 'badge-pending';
+    const userName = esc(user.name || '-');
+    const userMeta = [user.mobile, user.email].filter(Boolean).map(esc).join(' / ');
+    const processorName = processor.name || processor.email || '-';
+    const canLogin = user.id ? `<button class="btn btn-outline btn-sm" onclick="loginAsUser(${user.id}, '${escAttr(user.name || 'User')}')">Login</button>` : '-';
+
+    return `<tr>
+        <td style="font-family:monospace;font-size:11px;color:var(--text-muted)">#${r.id}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${dt}</td>
+        <td>
+            <div style="font-weight:600;font-size:13px">${userName}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${userMeta}</div>
+        </td>
+        <td style="font-weight:700">${fmtAmt(r.amount || 0)}</td>
+        <td style="font-size:12px">${esc(mode)}</td>
+        <td style="font-family:monospace;font-size:11px">${esc(r.reference_number || r.wallet_transaction?.rrn || '-')}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${pdDate}</td>
+        <td><span class="${badgeClass}">${esc((r.status || '').toUpperCase())}</span></td>
+        <td style="font-size:12px;color:var(--text-muted);max-width:180px">${esc(r.admin_notes || '-')}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${procAt}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${esc(processorName)}</td>
+        <td style="font-weight:700">${fmtAmt(r.current_balance || 0)}</td>
+        <td>${canLogin}</td>
+    </tr>`;
+}
+
+async function trackRrn() {
+    const input = document.getElementById('rrnSearch');
+    const rrn = input.value.trim();
+    const result = document.getElementById('rrnResult');
+    const empty = document.getElementById('rrnEmpty');
+
+    if (!rrn) {
+        showToast('RRN / UTR enter karein', 'error');
+        input.focus();
+        return;
+    }
+
+    result.innerHTML = '';
+    result.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'Searching...';
+
+    try {
+        const params = new URLSearchParams({ search: rrn, per_page: 50 });
+        const res = await apiFetch('/api/v1/employee/user-payment-requests?' + params);
+        const d = await res.json();
+        const rows = (d.data?.data || []).filter(r => {
+            const ref = String(r.reference_number || '').toLowerCase();
+            const txRrn = String(r.wallet_transaction?.rrn || '').toLowerCase();
+            return ref.includes(rrn.toLowerCase()) || txRrn.includes(rrn.toLowerCase());
+        });
+
+        if (!rows.length) {
+            empty.textContent = 'Is RRN / UTR ka record nahi mila.';
+            return;
+        }
+
+        empty.style.display = 'none';
+        result.style.display = 'block';
+        result.innerHTML = rows.map(rrnDetail).join('');
+    } catch (e) {
+        empty.textContent = 'Search failed. Please try again.';
+    }
+}
+
+function rrnDetail(r) {
+    const user = r.user || {};
+    const processor = r.processor || {};
+    const tx = r.wallet_transaction || {};
+    const updatedAt = r.processed_at ? new Date(r.processed_at).toLocaleString('en-IN') : '-';
+    const creditedAt = tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN') : updatedAt;
+    const userMeta = [user.mobile, user.email].filter(Boolean).map(esc).join(' / ');
+    const loginBtn = user.id ? `<button class="btn btn-primary btn-sm" onclick="loginAsUser(${user.id}, '${escAttr(user.name || 'User')}')">Login as User</button>` : '';
+
+    return `<div class="rrn-card">
+        <div class="rrn-grid">
+            <div><div class="rrn-label">User</div><div class="rrn-value">${esc(user.name || '-')}</div><div style="font-size:12px;color:var(--text-muted)">${userMeta}</div></div>
+            <div><div class="rrn-label">RRN / UTR</div><div class="rrn-value" style="font-family:monospace">${esc(r.reference_number || tx.rrn || '-')}</div></div>
+            <div><div class="rrn-label">Amount</div><div class="rrn-value">${fmtAmt(r.amount || tx.amount || 0)}</div></div>
+            <div><div class="rrn-label">Status</div><div class="rrn-value">${esc((r.status || '-').toUpperCase())}</div></div>
+            <div><div class="rrn-label">Payment Updated</div><div class="rrn-value">${updatedAt}</div></div>
+            <div><div class="rrn-label">Wallet Credited</div><div class="rrn-value">${creditedAt}</div></div>
+            <div><div class="rrn-label">Updated By</div><div class="rrn-value">${esc(processor.name || processor.email || '-')}</div></div>
+            <div><div class="rrn-label">Current Balance</div><div class="rrn-value">${fmtAmt(r.current_balance || 0)}</div></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">${loginBtn}</div>
+    </div>`;
+}
+
+function clearRrnTrack() {
+    document.getElementById('rrnSearch').value = '';
+    document.getElementById('rrnResult').innerHTML = '';
+    document.getElementById('rrnResult').style.display = 'none';
+    const empty = document.getElementById('rrnEmpty');
+    empty.style.display = 'block';
+    empty.textContent = 'RRN / UTR enter karke track karein.';
+}
+
+async function loginAsUser(id, name) {
+    if (!id || !confirm(`Login as ${name}?`)) return;
+
+    try {
+        const res = await apiFetch(`/api/v1/employee/users/${id}/login-as`, { method: 'POST' });
+        const d = await res.json();
+        if (!res.ok || !d.token) {
+            showToast(d.message || 'Login failed', 'error');
+            return;
+        }
+
+        localStorage.setItem('rh_impersonate_token', JSON.stringify({
+            token: d.token,
+            user: d.user,
+            exp: Date.now() + (2 * 60 * 60 * 1000)
+        }));
+        window.open('/user/dashboard', '_blank');
+    } catch (e) {
+        showToast('Login failed', 'error');
+    }
+}
+
+function escAttr(s) {
+    return String(s || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, ' ')
+        .replace(/\r/g, ' ');
+}
+
+function fmtAmt(n) {
+    return 'Rs ' + Number(n || 0).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const historySearch = document.getElementById('fSearch');
+    if (historySearch) {
+        historySearch.placeholder = 'User / RRN / UTR / Mobile';
+        historySearch.style.minWidth = '220px';
+    }
+});
 </script>
 @endpush

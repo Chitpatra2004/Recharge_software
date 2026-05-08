@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\OperatorRoute;
 use App\Services\DashboardService;
+use App\Services\GenericApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,7 +27,10 @@ use Illuminate\Http\Request;
  */
 class DashboardController extends Controller
 {
-    public function __construct(private readonly DashboardService $dashboard) {}
+    public function __construct(
+        private readonly DashboardService $dashboard,
+        private readonly GenericApiService $apiService,
+    ) {}
 
     // ─────────────────────────────────────────────────────────────────────
     // GET /api/v1/admin/dashboard
@@ -131,6 +136,41 @@ class DashboardController extends Controller
             'section'              => 'chart',
             'data'                 => $data,
             'poll_interval_seconds'=> DashboardService::TTL_CHART_H,
+        ]);
+    }
+
+    public function coldpayMobikwikBalance(): JsonResponse
+    {
+        $route = OperatorRoute::query()
+            ->where(function ($q) {
+                $q->where('api_provider', 'ColdPay Mobikwik')
+                  ->orWhere('name', 'like', '%ColdPay Mobikwik%')
+                  ->orWhere('api_provider', 'like', '%Mobikwik%');
+            })
+            ->orderByDesc('is_active')
+            ->orderBy('id')
+            ->first();
+
+        if (! $route) {
+            return response()->json(['message' => 'ColdPay Mobikwik API provider is not configured.'], 404);
+        }
+
+        $result = $this->apiService->balance($route);
+        if (! ($result['success'] ?? false)) {
+            return response()->json(['message' => $result['error'] ?? 'Balance check failed.'], 502);
+        }
+
+        $cfg = $route->api_config ?? [];
+        $cfg['balance'] = $result['balance'];
+        $cfg['balance_checked_at'] = now()->toDateTimeString();
+        $route->update(['api_config' => $cfg]);
+
+        return response()->json([
+            'provider' => $route->api_provider,
+            'route_id' => $route->id,
+            'balance' => $result['balance'],
+            'checked_at' => $cfg['balance_checked_at'],
+            'raw' => $result['raw'] ?? [],
         ]);
     }
 

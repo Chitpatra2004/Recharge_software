@@ -174,6 +174,31 @@ html[data-dark="1"] .test-result{background:var(--bg-page)}
                             <input class="pf-input" type="password" id="cr-token" placeholder="Leave blank to keep existing token" autocomplete="new-password">
                             <div class="pf-hint">Used as <code>[apitoken]</code> / <code>[password]</code> / <code>[token]</code></div>
                         </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Client ID</label>
+                            <input class="pf-input" id="cr-client-id" placeholder="clientId">
+                        </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Client Secret</label>
+                            <input class="pf-input" type="password" id="cr-client-secret" placeholder="Leave blank to keep existing secret" autocomplete="new-password">
+                        </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Member ID</label>
+                            <input class="pf-input" id="cr-member-id" placeholder="Retailer member email / ID">
+                        </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Base URL</label>
+                            <input class="pf-input" id="cr-base-url" placeholder="https://alpha3.mobikwik.com">
+                        </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Key Version</label>
+                            <input class="pf-input" id="cr-key-version" placeholder="1.0">
+                        </div>
+                        <div>
+                            <label class="pf-label">Mobikwik Public Key</label>
+                            <textarea class="pf-textarea" id="cr-public-key" rows="3" placeholder="Paste PEM or base64 public key"></textarea>
+                            <div class="pf-hint" id="cr-public-key-state"></div>
+                        </div>
                     </div>
                     <div class="pf-save-row">
                         <button class="btn btn-primary btn-sm" onclick="saveSection('creds')">Save Credentials</button>
@@ -625,6 +650,13 @@ function fillForms(d) {
 
     // Credentials
     set('cr-username', c.username || '');
+    set('cr-client-id', c.client_id || '');
+    set('cr-client-secret', '');
+    set('cr-member-id', c.member_id || '');
+    set('cr-base-url', c.base_url || '');
+    set('cr-key-version', c.key_version || '');
+    set('cr-public-key', '');
+    document.getElementById('cr-public-key-state').textContent = c.public_key_configured ? 'Existing public key is saved. Paste a new key only to replace it.' : '';
     set('cr-token', ''); // never pre-fill token
 
     // Recharge API
@@ -688,8 +720,18 @@ async function saveSection(section) {
 
     if (section === 'creds') {
         const token = get('cr-token');
-        body = {username: get('cr-username')};
+        const clientSecret = get('cr-client-secret');
+        const publicKey = get('cr-public-key');
+        body = {
+            username: get('cr-username'),
+            client_id: get('cr-client-id'),
+            member_id: get('cr-member-id'),
+            base_url: get('cr-base-url'),
+            key_version: get('cr-key-version')
+        };
         if (token) body.api_token = token;
+        if (clientSecret) body.client_secret = clientSecret;
+        if (publicKey) body.public_key = publicKey;
         url = `${API}/api-providers/${id}/credentials`;
     } else if (section === 'recharge') {
         body = {method:get('ra-method'),url:get('ra-url'),params:get('ra-params'),
