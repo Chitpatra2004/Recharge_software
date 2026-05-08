@@ -8,6 +8,7 @@ use App\Services\DashboardService;
 use App\Services\GenericApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * DashboardController — real-time analytics endpoints for the admin panel.
@@ -139,7 +140,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function coldpayMobikwikBalance(): JsonResponse
+    public function coldpayMobikwikBalance(Request $request): JsonResponse
     {
         $route = OperatorRoute::query()
             ->where(function ($q) {
@@ -155,12 +156,26 @@ class DashboardController extends Controller
             return response()->json(['message' => 'ColdPay Mobikwik API provider is not configured.'], 404);
         }
 
+        $cfg = $route->api_config ?? [];
+        $checkedAt = $cfg['balance_checked_at'] ?? null;
+        if (! $request->boolean('refresh') && isset($cfg['balance']) && $checkedAt) {
+            $checkedAtTime = Carbon::parse($checkedAt);
+            if ($checkedAtTime->greaterThanOrEqualTo(now()->subMinutes(5))) {
+                return response()->json([
+                    'provider' => $route->api_provider,
+                    'route_id' => $route->id,
+                    'balance' => $cfg['balance'],
+                    'checked_at' => $checkedAt,
+                    'cached' => true,
+                ]);
+            }
+        }
+
         $result = $this->apiService->balance($route);
         if (! ($result['success'] ?? false)) {
             return response()->json(['message' => $result['error'] ?? 'Balance check failed.'], 502);
         }
 
-        $cfg = $route->api_config ?? [];
         $cfg['balance'] = $result['balance'];
         $cfg['balance_checked_at'] = now()->toDateTimeString();
         $route->update(['api_config' => $cfg]);
@@ -170,6 +185,7 @@ class DashboardController extends Controller
             'route_id' => $route->id,
             'balance' => $result['balance'],
             'checked_at' => $cfg['balance_checked_at'],
+            'cached' => false,
             'raw' => $result['raw'] ?? [],
         ]);
     }

@@ -7,7 +7,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.webmanifest">
-    <title>ColdPay — Fast & Reliable Recharge Platform</title>
+    <title>ColdPay - Fast & Reliable Recharge Platform</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/icons/coldpay.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -851,7 +854,7 @@
             <div class="code-body">
 <span class="cc">// Initiate a mobile recharge</span><br>
 <span class="ck">curl</span> <span class="cs">-X POST</span> <span class="cp">\</span><br>
-&nbsp; <span class="cs">"https://web.coldpay.in/api/v1/buyer/recharge"</span> <span class="cp">\</span><br>
+&nbsp; <span class="cs">"https://tourmybharat.com/api/v1/buyer/recharge"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-H</span> <span class="cs">"X-API-Key: rh_live_xxxxxxxxxxxxxxxx"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-H</span> <span class="cs">"Content-Type: application/json"</span> <span class="cp">\</span><br>
 &nbsp; <span class="ck">-d</span> <span class="cp">{</span><br>

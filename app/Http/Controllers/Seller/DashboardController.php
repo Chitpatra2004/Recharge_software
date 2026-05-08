@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\SellerIntegrationRequest;
 use App\Models\SellerPaymentRequest;
+use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +94,11 @@ class DashboardController extends Controller
                     'created_at' => $integration->created_at,
                 ] : null,
                 'recent_sales' => $recent,
+                'notice' => [
+                    'enabled' => (string) SystemSetting::get('seller_notice_enabled', '0') === '1',
+                    'title' => SystemSetting::get('seller_notice_title', 'Notice'),
+                    'message' => SystemSetting::get('seller_notice_message', ''),
+                ],
             ],
         ]);
     }

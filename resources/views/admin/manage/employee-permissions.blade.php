@@ -194,6 +194,10 @@
 .perm-info { flex:1; min-width:0; }
 .perm-name  { font-size:13px; font-weight:600; color:var(--text); }
 .perm-desc  { font-size:11px; color:var(--muted); margin-top:2px; }
+.perm-badges{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.perm-badge{font-size:9.5px;font-weight:800;border-radius:999px;padding:2px 6px;text-transform:uppercase}
+.perm-badge.pii{background:#fee2e2;color:#b91c1c}
+.perm-badge.risk{background:#fef3c7;color:#92400e}
 
 /* Toggle switch */
 .toggle { position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; cursor:pointer; }
@@ -215,15 +219,73 @@
 @push('scripts')
 <script>
 const EMP_ID = {{ $employeeId ?? 'null' }};
+let permissionGroups = [];
+
+function esc(v){return String(v ?? '').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+
+async function loadPermissionMaster() {
+    const res = await apiFetch('/api/v1/employee/permissions');
+    if (!res) return;
+    const json = await res.json();
+    permissionGroups = json.data?.groups || [];
+    renderPermissionGroups();
+}
+
+function renderPermissionGroups() {
+    const root = document.getElementById('perm-groups');
+    if (!permissionGroups.length) {
+        root.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted)">No permission groups found. Create permissions from <a href="/admin/permissions">Permission Master</a>.</div>';
+        return;
+    }
+
+    root.innerHTML = permissionGroups.map(group => `
+        <div class="card perm-group" data-group="${esc(group.key)}">
+            <div class="card-header">
+                <div class="perm-group-icon" style="background:${esc(group.color || '#2563eb')}22">
+                    <span style="width:14px;height:14px;border-radius:50%;background:${esc(group.color || '#2563eb')};display:block"></span>
+                </div>
+                <div>
+                    <div class="card-title">${esc(group.name)}</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:1px">${esc(group.description || 'Custom permission group')}</div>
+                </div>
+                <button class="group-toggle-all btn btn-outline btn-sm" style="margin-left:auto" onclick="toggleGroup('${esc(group.key)}')">Select All</button>
+            </div>
+            <div class="card-body" style="padding:14px 20px;display:flex;flex-direction:column;gap:0">
+                ${(group.permissions || []).map(permission => `
+                    <div class="perm-row" data-perm="${esc(permission.key)}">
+                        <div class="perm-info">
+                            <div class="perm-name">${esc(permission.name)}</div>
+                            <div class="perm-desc">${esc(permission.description || permission.key)}</div>
+                            <div class="perm-badges">
+                                ${permission.is_pii ? '<span class="perm-badge pii">PII</span>' : ''}
+                                ${permission.is_dangerous ? '<span class="perm-badge risk">High Risk</span>' : ''}
+                            </div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" class="perm-cb" value="${esc(permission.key)}"><span class="toggle-slider"></span></label>
+                    </div>
+                `).join('') || '<div style="font-size:13px;color:var(--muted);padding:16px 0">No permissions inside this group.</div>'}
+            </div>
+        </div>
+    `).join('');
+
+    document.querySelectorAll('.perm-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const group = cb.closest('.perm-group')?.dataset.group;
+            if (group) syncGroupBtn(group);
+        });
+    });
+}
 
 // ── Load employee ────────────────────────────────────────────────────────────
 async function loadEmployee() {
     if (!EMP_ID) { window.location.href = '/admin/employees'; return; }
 
+    await loadPermissionMaster();
+
     const res = await apiFetch('/api/v1/employee/employees/' + EMP_ID);
     if (!res) return;
     const json = await res.json();
-    const emp  = json.data || json;
+    const emp  = json.data || json.employee || json;
 
     // Fill info card
     document.getElementById('emp-avatar').textContent = (emp.name || 'E').charAt(0).toUpperCase();
@@ -277,13 +339,6 @@ function syncGroupBtn(group) {
     const btn   = card.querySelector('.group-toggle-all');
     if (btn) btn.textContent = allOn ? 'Deselect All' : 'Select All';
 }
-
-document.querySelectorAll('.perm-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-        const group = cb.closest('.perm-group')?.dataset.group;
-        if (group) syncGroupBtn(group);
-    });
-});
 
 // ── Save ─────────────────────────────────────────────────────────────────────
 async function savePermissions() {

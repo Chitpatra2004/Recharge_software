@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Dashboard') — Recharge Panel</title>
+    <title>@yield('title', 'Dashboard') - ColdPay Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/icons/coldpay.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -922,15 +925,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
         </button>
-        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees') || request()->is('admin/api-keys') || request()->is('admin/api-list') || request()->is('admin/api-switching') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') || request()->is('admin/pg-manage') || request()->is('admin/pg-switching') ? 'open' : '' }}" id="manage-sub">
+        <div class="nav-submenu {{ request()->is('admin/operators') || request()->is('admin/employees*') || request()->is('admin/permissions') || request()->is('admin/api-keys') || request()->is('admin/api-list') || request()->is('admin/api-switching') || request()->is('admin/operator-api-settings') || request()->is('admin/api-integration-portal') || request()->is('admin/pg-manage') || request()->is('admin/pg-switching') || request()->is('admin/admin-info') ? 'open' : '' }}" id="manage-sub">
             <a href="/admin/operators" class="nav-item {{ request()->is('admin/operators') ? 'active' : '' }}">Operators</a>
-            <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees') ? 'active' : '' }}">Employees</a>
+            <a href="/admin/employees" class="nav-item {{ request()->is('admin/employees*') ? 'active' : '' }}">Employees</a>
+            <a href="/admin/permissions" class="nav-item {{ request()->is('admin/permissions') ? 'active' : '' }}">Permission Master</a>
             <a href="/admin/api-keys" class="nav-item {{ request()->is('admin/api-keys') ? 'active' : '' }}">API Keys</a>
             <a href="/admin/api-list" class="nav-item {{ request()->is('admin/api-list') || request()->is('admin/operator-api-settings') ? 'active' : '' }}">API List</a>
             <a href="/admin/api-switching" class="nav-item {{ request()->is('admin/api-switching') ? 'active' : '' }}">API Switching</a>
             <a href="/admin/api-integration-portal" class="nav-item {{ request()->is('admin/api-integration-portal') ? 'active' : '' }}">API Integration Portal</a>
             <a href="/admin/pg-manage" class="nav-item {{ request()->is('admin/pg-manage') ? 'active' : '' }}">PG Manage</a>
             <a href="/admin/pg-switching" class="nav-item {{ request()->is('admin/pg-switching') ? 'active' : '' }}">PG Switching Report</a>
+            <a href="/admin/admin-info" class="nav-item {{ request()->is('admin/admin-info') ? 'active' : '' }}">Admin Info</a>
         </div>
 
         <div class="nav-section">Commission</div>

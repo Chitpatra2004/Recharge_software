@@ -124,6 +124,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="settings-row">
+                    <div class="settings-row-info"><div class="settings-row-lbl">Admin Multiple Login</div><div class="settings-row-sub">Allow same admin account to stay logged in on multiple devices</div></div>
+                    <div class="settings-row-ctrl" style="display:flex;align-items:center;justify-content:flex-end">
+                        <div class="rh-toggle-wrap">
+                            <input type="checkbox" class="rh-toggle-input" id="admin_multiple_sessions">
+                            <label for="admin_multiple_sessions" class="rh-toggle"></label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -324,6 +333,7 @@ const tabPayloads = {
         timezone:         val('timezone'),
         currency:         val('currency'),
         maintenance_mode: chk('maintenance_mode'),
+        admin_multiple_sessions: chk('admin_multiple_sessions'),
     }),
     notifications: () => ({
         notif_topup_request: chk('notif_topup_request'),
@@ -387,6 +397,7 @@ async function loadSettings() {
         setVal('timezone',            s.timezone);
         setVal('currency',            s.currency);
         setChk('maintenance_mode',    s.maintenance_mode);
+        setChk('admin_multiple_sessions', s.admin_multiple_sessions ?? '1');
 
         setChk('notif_topup_request', s.notif_topup_request);
         setChk('notif_api_failure',   s.notif_api_failure);

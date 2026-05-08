@@ -13,8 +13,8 @@
         </svg>
     </div>
     <div class="announcement-text">
-        <div class="announcement-title" id="ann-title">site work under process</div>
-        <div class="announcement-sub" id="ann-sub">testing</div>
+        <div class="announcement-title" id="ann-title"></div>
+        <div class="announcement-sub" id="ann-sub"></div>
     </div>
     <button class="announcement-close" onclick="document.getElementById('announcement').style.display='none'">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -179,6 +179,9 @@
         <div class="card-body" style="padding:16px 20px">
             <div id="chart-loading" class="loading-overlay">
                 <div class="spinner"></div> Loading chart…
+            </div>
+            <div id="chart-empty" style="display:none;text-align:center;color:var(--text-muted);font-size:13px;padding:74px 0">
+                No transaction chart data available
             </div>
             <canvas id="companyChart" style="display:none;max-height:260px"></canvas>
         </div>
@@ -424,52 +427,38 @@ const OPERATOR_COLORS = {
 
 // ── Demo / Fallback data (shown when API is not yet connected) ─────────────
 const DEMO_SUMMARY = {
-    total:   { count: 1247, amount: 312580 },
-    success: { count: 1089, amount: 272480 },
-    pending: { count: 98,   amount: 24500  },
-    failure: { count: 60,   amount: 15600  },
+    total:   { count: 0, amount: 0 },
+    success: { count: 0, amount: 0 },
+    pending: { count: 0, amount: 0 },
+    failure: { count: 0, amount: 0 },
 };
 const DEMO_CHART = {
     hourly: {
-        labels: ['8AM','9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM'],
-        success: [42,67,89,112,98,134,156,143,127,118,105,99],
-        failure: [4,6,8,11,9,14,15,12,11,10,9,8],
-        pending: [8,12,15,18,16,22,24,21,19,17,15,14],
+        labels: [],
+        success: [],
+        failure: [],
+        pending: [],
     },
     weekly: {
-        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-        success: [820,910,760,1050,980,1120,1089],
-        failure: [65,70,58,88,79,95,60],
-        pending: [120,105,98,130,110,145,98],
+        labels: [],
+        success: [],
+        failure: [],
+        pending: [],
     }
 };
-const DEMO_OPERATORS = [
-    {name:'Airtel',  success_count:412, failure_count:22, pending_count:38, success_rate:91.6, avg_response_time:520},
-    {name:'Jio',     success_count:387, failure_count:18, pending_count:31, success_rate:93.2, avg_response_time:380},
-    {name:'Vi',      success_count:156, failure_count:12, pending_count:19, success_rate:87.1, avg_response_time:760},
-    {name:'BSNL',    success_count:89,  failure_count:7,  pending_count:8,  success_rate:88.1, avg_response_time:950},
-    {name:'Idea',    success_count:45,  failure_count:1,  pending_count:2,  success_rate:93.8, avg_response_time:430},
-];
+const DEMO_OPERATORS = [];
 const DEMO_LIVE = {
-    today_success: 1089, today_failure: 60, today_pending: 98,
-    today_success_amount: 272480, today_failure_amount: 15600, today_pending_amount: 24500,
-    recent_transactions: [
-        {mobile:'9876543210',operator_name:'Airtel',amount:199,status:'success',created_at:new Date(Date.now()-60000).toISOString()},
-        {mobile:'8765432109',operator_name:'Jio',   amount:299,status:'success',created_at:new Date(Date.now()-180000).toISOString()},
-        {mobile:'7654321098',operator_name:'BSNL',  amount:99, status:'pending',created_at:new Date(Date.now()-300000).toISOString()},
-        {mobile:'9988776655',operator_name:'Vi',    amount:49, status:'failure',created_at:new Date(Date.now()-420000).toISOString()},
-        {mobile:'8877665544',operator_name:'Airtel',amount:599,status:'success',created_at:new Date(Date.now()-600000).toISOString()},
-        {mobile:'9765432100',operator_name:'Jio',   amount:399,status:'success',created_at:new Date(Date.now()-780000).toISOString()},
-        {mobile:'8654321009',operator_name:'Idea',  amount:149,status:'success',created_at:new Date(Date.now()-900000).toISOString()},
-        {mobile:'9543210098',operator_name:'BSNL',  amount:239,status:'pending',created_at:new Date(Date.now()-1080000).toISOString()},
-    ]
+    today_success: 0, today_failure: 0, today_pending: 0,
+    today_success_amount: 0, today_failure_amount: 0, today_pending_amount: 0,
+    recent_transactions: [],
+    feed: [],
 };
 const DEMO_COMPLAINTS = {
-    total: 38, solved: 29, pending: 9,
+    total: 0, solved: 0, pending: 0,
     today_categories: {
-        success: {count:18, amount:4500},
-        failure: {count:12, amount:3100},
-        pending: {count:8,  amount:1900},
+        success: {count:0, amount:0},
+        failure: {count:0, amount:0},
+        pending: {count:0, amount:0},
     }
 };
 
@@ -484,51 +473,76 @@ function opColor(name) {
 // ── Charts ────────────────────────────────────────────────────────────────
 let companyChart = null;
 let statusChart  = null;
+const dashboardCache = new Map();
+const dashboardInFlight = new Map();
+
+async function dashboardJson(url, ttlMs = 30_000, force = false) {
+    const now = Date.now();
+    const cached = dashboardCache.get(url);
+    if (!force && cached && cached.expiresAt > now) return cached.data;
+
+    if (!force && dashboardInFlight.has(url)) return dashboardInFlight.get(url);
+
+    const request = apiFetch(url)
+        .then(async res => {
+            const json = await res.json().catch(() => ({}));
+            if (!res || !res.ok) throw new Error(json.message || 'Dashboard request failed');
+            const data = json.data ?? json;
+            dashboardCache.set(url, { data, expiresAt: Date.now() + ttlMs });
+            return data;
+        })
+        .finally(() => dashboardInFlight.delete(url));
+
+    dashboardInFlight.set(url, request);
+    return request;
+}
+
+function runWhenVisible(fn) {
+    if (document.hidden) return;
+    fn();
+}
 
 async function loadSummary() {
     let d = DEMO_SUMMARY;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/summary');
-        if (res && res.ok) {
-            const json = await res.json();
-            d = json.data || json;
-        }
+        d = await dashboardJson('/api/v1/employee/dashboard/summary', 55_000);
     } catch(e) {}
 
     const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const upd = 'Last updated: ' + now;
 
     // Total
-    const total = d.total || d.total_recharge || d;
-    document.getElementById('stat-total-count').textContent = fmtNum(total.count ?? d.total_count ?? DEMO_SUMMARY.total.count);
-    document.getElementById('stat-total-count').setAttribute('data-tooltip', numToWords(total.amount ?? d.total_amount ?? DEMO_SUMMARY.total.amount));
-    document.getElementById('stat-total-amt').textContent  = fmtAmt(total.amount ?? d.total_amount ?? DEMO_SUMMARY.total.amount);
+    const tx = d.transactions || d.total || d.total_recharge || d;
+    document.getElementById('stat-total-count').textContent = fmtNum(tx.total ?? tx.count ?? d.total_count ?? 0);
+    document.getElementById('stat-total-count').setAttribute('data-tooltip', numToWords(tx.total_amount ?? tx.amount ?? d.total_amount ?? 0));
+    document.getElementById('stat-total-amt').textContent  = fmtAmt(tx.total_amount ?? tx.amount ?? d.total_amount ?? 0);
     document.getElementById('stat-total-upd').textContent  = upd;
 
     // Success
-    const succ = d.success || d.total_success || {};
-    document.getElementById('stat-success-count').textContent = fmtNum(succ.count ?? d.success_count ?? DEMO_SUMMARY.success.count);
-    document.getElementById('stat-success-count').setAttribute('data-tooltip', numToWords(succ.amount ?? d.success_amount ?? DEMO_SUMMARY.success.amount));
-    document.getElementById('stat-success-amt').textContent   = fmtAmt(succ.amount ?? d.success_amount ?? DEMO_SUMMARY.success.amount);
+    const succ = d.transactions || d.success || d.total_success || {};
+    document.getElementById('stat-success-count').textContent = fmtNum(succ.success ?? succ.count ?? d.success_count ?? 0);
+    document.getElementById('stat-success-count').setAttribute('data-tooltip', numToWords(succ.success_amount ?? succ.amount ?? d.success_amount ?? 0));
+    document.getElementById('stat-success-amt').textContent   = fmtAmt(succ.success_amount ?? succ.amount ?? d.success_amount ?? 0);
     document.getElementById('stat-success-upd').textContent   = upd;
 
     // Pending
-    const pend = d.pending || d.total_pending || {};
-    document.getElementById('stat-pending-count').textContent = fmtNum(pend.count ?? d.pending_count ?? DEMO_SUMMARY.pending.count);
-    document.getElementById('stat-pending-count').setAttribute('data-tooltip', numToWords(pend.amount ?? d.pending_amount ?? DEMO_SUMMARY.pending.amount));
-    document.getElementById('stat-pending-amt').textContent   = fmtAmt(pend.amount ?? d.pending_amount ?? DEMO_SUMMARY.pending.amount);
+    const pend = d.transactions || d.pending || d.total_pending || {};
+    document.getElementById('stat-pending-count').textContent = fmtNum(pend.pending ?? pend.count ?? d.pending_count ?? 0);
+    document.getElementById('stat-pending-count').setAttribute('data-tooltip', numToWords(pend.pending_amount ?? pend.amount ?? d.pending_amount ?? 0));
+    document.getElementById('stat-pending-amt').textContent   = fmtAmt(pend.pending_amount ?? pend.amount ?? d.pending_amount ?? 0);
     document.getElementById('stat-pending-upd').textContent   = upd;
 
     // Failure
-    const fail = d.failure || d.total_failure || {};
-    document.getElementById('stat-failure-count').textContent = fmtNum(fail.count ?? d.failure_count ?? DEMO_SUMMARY.failure.count);
-    document.getElementById('stat-failure-count').setAttribute('data-tooltip', numToWords(fail.amount ?? d.failure_amount ?? DEMO_SUMMARY.failure.amount));
-    document.getElementById('stat-failure-amt').textContent   = fmtAmt(fail.amount ?? d.failure_amount ?? DEMO_SUMMARY.failure.amount);
+    const fail = d.transactions || d.failure || d.total_failure || {};
+    document.getElementById('stat-failure-count').textContent = fmtNum(fail.failed ?? fail.count ?? d.failure_count ?? 0);
+    document.getElementById('stat-failure-count').setAttribute('data-tooltip', numToWords(fail.failed_amount ?? fail.amount ?? d.failure_amount ?? 0));
+    document.getElementById('stat-failure-amt').textContent   = fmtAmt(fail.failed_amount ?? fail.amount ?? d.failure_amount ?? 0);
     document.getElementById('stat-failure-upd').textContent   = upd;
 }
 
 async function loadChart(type = 'hourly') {
     document.getElementById('chart-loading').style.display = 'flex';
+    document.getElementById('chart-empty').style.display = 'none';
     document.getElementById('companyChart').style.display  = 'none';
     document.getElementById('btn-hourly').classList.toggle('btn-primary', type === 'hourly');
     document.getElementById('btn-weekly').classList.toggle('btn-primary', type === 'weekly');
@@ -537,11 +551,8 @@ async function loadChart(type = 'hourly') {
 
     let chartData = DEMO_CHART[type] || DEMO_CHART.hourly;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/chart?type=' + type);
-        if (res && res.ok) {
-            const json = await res.json();
-            chartData = json.data?.[type] || json.data?.hourly || json.data || chartData;
-        }
+        const data = await dashboardJson('/api/v1/employee/dashboard/chart?type=' + type, 295_000);
+        chartData = data?.[type] || data?.hourly || data || chartData;
     } catch(e) {}
 
     // Build datasets from operator_breakdown or labels
@@ -563,13 +574,19 @@ async function loadChart(type = 'hourly') {
             datasets.push({ ...ds, borderColor: clr, backgroundColor: clr + '22', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
         });
     } else {
-        // success/failure/pending arrays (demo or API)
-        datasets.push({ label: 'Success', data: chartData.success || [], borderColor: '#10b981', backgroundColor: '#10b98122', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
-        datasets.push({ label: 'Failure', data: chartData.failure || [], borderColor: '#ef4444', backgroundColor: '#ef444422', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
-        datasets.push({ label: 'Pending', data: chartData.pending || [], borderColor: '#f59e0b', backgroundColor: '#f59e0b22', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
+        const series = chartData.data || chartData;
+        datasets.push({ label: 'Success', data: series.success || [], borderColor: '#10b981', backgroundColor: '#10b98122', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
+        datasets.push({ label: 'Failure', data: series.failed || series.failure || [], borderColor: '#ef4444', backgroundColor: '#ef444422', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
+        datasets.push({ label: 'Pending', data: series.pending || [], borderColor: '#f59e0b', backgroundColor: '#f59e0b22', tension: .4, borderWidth: 2, pointRadius: 3, fill: false });
     }
 
     document.getElementById('chart-loading').style.display = 'none';
+    const hasData = datasets.some(ds => (ds.data || []).some(v => Number(v || 0) > 0));
+    if (!labels.length || !hasData) {
+        if (companyChart) companyChart.destroy();
+        document.getElementById('chart-empty').style.display = 'block';
+        return;
+    }
     document.getElementById('companyChart').style.display  = 'block';
 
     if (companyChart) companyChart.destroy();
@@ -598,18 +615,18 @@ async function loadChart(type = 'hourly') {
 async function loadStatusChart() {
     let d = DEMO_LIVE;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/live');
-        if (res && res.ok) { const json = await res.json(); d = json.data || d; }
+        d = await dashboardJson('/api/v1/employee/dashboard/summary', 55_000);
     } catch(e) {}
 
-    const sCount = d.today_success ?? d.success ?? 0;
-    const fCount = d.today_failure ?? d.failure ?? 0;
-    const pCount = d.today_pending ?? d.pending ?? 0;
+    const tx = d.transactions || d;
+    const sCount = tx.success ?? d.today_success ?? d.success ?? 0;
+    const fCount = tx.failed ?? d.today_failure ?? d.failure ?? 0;
+    const pCount = tx.pending ?? d.today_pending ?? d.pending ?? 0;
     const total  = sCount + fCount + pCount;
 
-    const sAmt = d.today_success_amount ?? d.success_amount ?? 0;
-    const fAmt = d.today_failure_amount ?? d.failure_amount ?? 0;
-    const pAmt = d.today_pending_amount ?? d.pending_amount ?? 0;
+    const sAmt = tx.success_amount ?? d.today_success_amount ?? d.success_amount ?? 0;
+    const fAmt = tx.failed_amount ?? d.today_failure_amount ?? d.failure_amount ?? 0;
+    const pAmt = tx.pending_amount ?? d.today_pending_amount ?? d.pending_amount ?? 0;
 
     document.getElementById('donut-loading').style.display = 'none';
     document.getElementById('donut-wrap').style.display    = 'flex';
@@ -631,10 +648,10 @@ async function loadStatusChart() {
     statusChart = new Chart(document.getElementById('statusChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Success', 'Failure', 'Pending'],
+            labels: total > 0 ? ['Success', 'Failure', 'Pending'] : ['No transactions'],
             datasets: [{
-                data: [sCount, fCount, pCount],
-                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                data: total > 0 ? [sCount, fCount, pCount] : [1],
+                backgroundColor: total > 0 ? ['#10b981', '#ef4444', '#f59e0b'] : ['#e5e7eb'],
                 borderWidth: 0,
                 hoverOffset: 4,
             }]
@@ -658,8 +675,8 @@ async function loadStatusChart() {
 async function loadOperators() {
     let ops = DEMO_OPERATORS;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/operators');
-        if (res && res.ok) { const json = await res.json(); ops = json.data || ops; }
+        const data = await dashboardJson('/api/v1/employee/dashboard/operators', 115_000);
+        ops = data?.operators || data || ops;
     } catch(e) {}
 
     document.getElementById('ops-loading').style.display   = 'none';
@@ -673,7 +690,7 @@ async function loadOperators() {
 
     tbody.innerHTML = ops.map(op => {
         const [clr, bgClr] = opColor(op.name || op.operator_name || '');
-        const rate = op.success_rate ?? op.successRate ?? 0;
+        const rate = op.success_rate_pct ?? op.success_rate ?? op.successRate ?? 0;
         const rateColor = rate >= 90 ? '#10b981' : rate >= 70 ? '#f59e0b' : '#ef4444';
         const name = op.name || op.operator_name || op.code || '—';
         const avg  = op.avg_response_time ? Math.round(op.avg_response_time) + 'ms' : '—';
@@ -684,9 +701,9 @@ async function loadOperators() {
                     <span style="font-weight:600">${name}</span>
                 </div>
             </td>
-            <td style="color:#10b981;font-weight:600">${fmtNum(op.success_count ?? op.success)}</td>
-            <td style="color:#ef4444;font-weight:600">${fmtNum(op.failure_count ?? op.failure)}</td>
-            <td style="color:#f59e0b;font-weight:600">${fmtNum(op.pending_count ?? op.pending)}</td>
+            <td style="color:#10b981;font-weight:600">${fmtNum(op.success_count ?? op.success ?? 0)}</td>
+            <td style="color:#ef4444;font-weight:600">${fmtNum(op.failure_count ?? op.failed ?? op.failure ?? 0)}</td>
+            <td style="color:#f59e0b;font-weight:600">${fmtNum(op.pending_count ?? op.pending ?? 0)}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:8px">
                     <div class="progress" style="flex:1;width:80px">
@@ -703,29 +720,29 @@ async function loadOperators() {
 async function loadComplaints() {
     let d = DEMO_COMPLAINTS;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/complaints');
-        if (res && res.ok) { const json = await res.json(); d = json.data || d; }
+        d = await dashboardJson('/api/v1/employee/dashboard/complaints', 55_000);
     } catch(e) {}
 
     document.getElementById('comp-loading').style.display = 'none';
     document.getElementById('comp-content').style.display = 'block';
 
-    document.getElementById('comp-total').textContent  = fmtNum(d.total ?? d.total_complaints);
-    document.getElementById('comp-solved').textContent = fmtNum(d.solved ?? d.resolved);
+    const summary = d.summary || {};
+    document.getElementById('comp-total').textContent  = fmtNum(summary.total_open ?? d.total ?? d.total_complaints ?? 0);
+    document.getElementById('comp-solved').textContent = fmtNum(summary.resolved_today ?? d.solved ?? d.resolved ?? 0);
 
     // Sidebar badge
-    const pending = d.pending ?? d.pending_count ?? 0;
+    const pending = summary.total_open ?? d.pending ?? d.pending_count ?? 0;
     const sbBadge = document.getElementById('sb-complaint-count');
     if (sbBadge) sbBadge.textContent = pending > 0 ? pending : '0';
 
     // Categories (today)
     const cat = d.today_categories || d.categories || {};
-    document.getElementById('cat-success-count').textContent = fmtNum(cat.success?.count ?? cat.success);
-    document.getElementById('cat-success-amt').textContent   = fmtAmt(cat.success?.amount);
-    document.getElementById('cat-failure-count').textContent = fmtNum(cat.failure?.count ?? cat.failure);
-    document.getElementById('cat-failure-amt').textContent   = fmtAmt(cat.failure?.amount);
-    document.getElementById('cat-pending-count').textContent = fmtNum(cat.pending?.count ?? cat.pending);
-    document.getElementById('cat-pending-amt').textContent   = fmtAmt(cat.pending?.amount);
+    document.getElementById('cat-success-count').textContent = fmtNum(summary.resolved_today ?? cat.success?.count ?? cat.success ?? 0);
+    document.getElementById('cat-success-amt').textContent   = fmtAmt(cat.success?.amount ?? 0);
+    document.getElementById('cat-failure-count').textContent = fmtNum(summary.sla_breached ?? cat.failure?.count ?? cat.failure ?? 0);
+    document.getElementById('cat-failure-amt').textContent   = fmtAmt(cat.failure?.amount ?? 0);
+    document.getElementById('cat-pending-count').textContent = fmtNum(summary.total_open ?? cat.pending?.count ?? cat.pending ?? 0);
+    document.getElementById('cat-pending-amt').textContent   = fmtAmt(cat.pending?.amount ?? 0);
 
     // Notification dot
     if (pending > 0) {
@@ -736,8 +753,7 @@ async function loadComplaints() {
 async function loadLiveFeed() {
     let d = DEMO_LIVE;
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/live');
-        if (res && res.ok) { const json = await res.json(); d = json.data || d; }
+        d = await dashboardJson('/api/v1/employee/dashboard/live', 10_000);
     } catch(e) {}
 
     document.getElementById('live-loading').style.display = 'none';
@@ -754,6 +770,7 @@ async function loadLiveFeed() {
     list.innerHTML = txns.slice(0, 10).map(tx => {
         const [clr] = opColor(tx.operator_name || tx.operator_code || '');
         const statusClass = (tx.status || '').toLowerCase();
+        const failedStatus = statusClass === 'failed' || statusClass === 'failure';
         const mobile = tx.mobile || tx.mobile_number || '—';
         const op     = tx.operator_name || tx.operator_code || '—';
         const amt    = tx.amount ? fmtAmt(tx.amount) : '—';
@@ -764,7 +781,7 @@ async function loadLiveFeed() {
                 <div class="txn-operator">${op} · ${fmtAgo(tx.created_at)}</div>
             </div>
             <div style="text-align:right">
-                <div class="txn-amount" style="color:${statusClass === 'success' ? '#10b981' : statusClass === 'failure' ? '#ef4444' : '#f59e0b'}">${amt}</div>
+                <div class="txn-amount" style="color:${statusClass === 'success' ? '#10b981' : failedStatus ? '#ef4444' : '#f59e0b'}">${amt}</div>
                 <span class="txn-status ${statusClass}">${(tx.status || '—').toLowerCase()}</span>
             </div>
         </li>`;
@@ -783,9 +800,8 @@ async function loadMobikwikBalance(force = false) {
     }
 
     try {
-        const res = await apiFetch('/api/v1/employee/dashboard/coldpay-mobikwik-balance');
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || 'Balance check failed');
+        const url = '/api/v1/employee/dashboard/coldpay-mobikwik-balance' + (force ? '?refresh=1' : '');
+        const json = await dashboardJson(url, 300_000, force);
 
         const balance = Number(json.balance || 0);
         valueEl.textContent = fmtAmt(balance);
@@ -806,7 +822,7 @@ async function loadMobikwikBalance(force = false) {
 
 // ── Main load / refresh ───────────────────────────────────────────────────
 async function loadAll() {
-    document.getElementById('announcement').style.display = 'flex';
+    document.getElementById('announcement').style.display = 'none';
 
     await Promise.allSettled([
         loadSummary(),
@@ -824,6 +840,8 @@ window.refreshDashboard = function() {
     btn.disabled = true;
     btn.innerHTML = `<div class="spinner" style="border-top-color:var(--accent-blue);width:14px;height:14px"></div> Refreshing…`;
 
+    dashboardCache.clear();
+
     Promise.allSettled([
         loadSummary(),
         loadStatusChart(),
@@ -838,13 +856,12 @@ window.refreshDashboard = function() {
 };
 
 // ── Auto-polling ──────────────────────────────────────────────────────────
-// Summary: every 30s, Live: every 10s, Complaints: every 60s
-setInterval(loadSummary,     30_000);
-setInterval(loadStatusChart, 10_000);
-setInterval(loadLiveFeed,    10_000);
-setInterval(loadComplaints,  60_000);
-setInterval(loadOperators,   60_000);
-setInterval(loadMobikwikBalance, 120_000);
+// Polling is aligned with backend cache TTLs and pauses when the tab is hidden.
+setInterval(() => runWhenVisible(() => Promise.allSettled([loadSummary(), loadStatusChart()])), 60_000);
+setInterval(() => runWhenVisible(loadLiveFeed), 15_000);
+setInterval(() => runWhenVisible(loadComplaints), 60_000);
+setInterval(() => runWhenVisible(loadOperators), 120_000);
+setInterval(() => runWhenVisible(loadMobikwikBalance), 300_000);
 
 // ── Export stub ───────────────────────────────────────────────────────────
 function exportReport() {

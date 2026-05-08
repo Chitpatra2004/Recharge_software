@@ -10,6 +10,8 @@
     <div id="integration-status-bar"></div>
 </div>
 
+<div id="seller-notice" style="display:none;margin-bottom:16px"></div>
+
 <!-- Stats Grid -->
 <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
@@ -83,6 +85,14 @@
 document.addEventListener('DOMContentLoaded', function(){
     apiFetch('/api/v1/seller/dashboard').then(d=>{
         const data = d.data?.stats || {};
+        const notice = d.data?.notice || {};
+        if (notice.enabled && notice.message) {
+            document.getElementById('seller-notice').style.display = 'block';
+            document.getElementById('seller-notice').innerHTML = `<div style="background:#eff6ff;border:1.5px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:13px 16px">
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px">${esc(notice.title || 'Notice')}</div>
+                <div style="font-size:13px;line-height:1.5;white-space:pre-wrap">${esc(notice.message)}</div>
+            </div>`;
+        }
 
         // Stats
         el('s-total').textContent    = data.total_sales ?? '0';
@@ -151,5 +161,9 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('recent-txns').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;font-size:13px">Failed to load</div>';
     });
 });
+
+function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 </script>
 @endsection

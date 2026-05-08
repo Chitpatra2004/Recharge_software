@@ -42,7 +42,7 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
             <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:12px">
                 <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:4px">Base URL</div>
-                <code style="font-size:11px;color:var(--text)">https://web.coldpay.in/api/v1</code>
+                <code style="font-size:11px;color:var(--text)">https://tourmybharat.com/api/v1</code>
             </div>
             <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:12px">
                 <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:4px">Auth Header</div>
@@ -115,8 +115,8 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#fbbf24;font-weight:700">POST</span>
-                <code>https://web.coldpay.in/api/v1/buyer/recharge</code>
-                <button onclick="copyText('https://web.coldpay.in/api/v1/buyer/recharge')" class="copy-small">Copy</button>
+                <code>https://tourmybharat.com/api/v1/buyer/recharge</code>
+                <button onclick="copyText('https://tourmybharat.com/api/v1/buyer/recharge')" class="copy-small">Copy</button>
             </div>
         </div>
 
@@ -170,7 +170,7 @@
             <div>
                 <div class="ep-label">Sample cURL</div>
                 <div class="code-block" id="sample-recharge-curl">curl -X POST \
-  https://web.coldpay.in/api/v1/buyer/recharge \
+  https://tourmybharat.com/api/v1/buyer/recharge \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -256,8 +256,8 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#34d399;font-weight:700">GET</span>
-                <code>https://web.coldpay.in/api/v1/buyer/recharge/{txn_id}</code>
-                <button onclick="copyText('https://web.coldpay.in/api/v1/buyer/recharge/{txn_id}')" class="copy-small">Copy</button>
+                <code>https://tourmybharat.com/api/v1/buyer/recharge/{txn_id}</code>
+                <button onclick="copyText('https://tourmybharat.com/api/v1/buyer/recharge/{txn_id}')" class="copy-small">Copy</button>
             </div>
             <div style="font-size:12px;color:var(--muted);margin-top:8px">Replace <code style="color:var(--orange)">{txn_id}</code> with the <code>txn_id</code> returned from the recharge API. Poll every 5–10 seconds until <code>is_terminal</code> is <code>true</code>.</div>
         </div>
@@ -266,7 +266,7 @@
             <div>
                 <div class="ep-label">Sample Request</div>
                 <div class="code-block">curl -X GET \
-  https://web.coldpay.in/api/v1/buyer/recharge/1042 \
+  https://tourmybharat.com/api/v1/buyer/recharge/1042 \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Accept: application/json"</div>
             </div>
@@ -307,15 +307,15 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#34d399;font-weight:700">GET</span>
-                <code>https://web.coldpay.in/api/v1/buyer/balance</code>
-                <button onclick="copyText('https://web.coldpay.in/api/v1/buyer/balance')" class="copy-small">Copy</button>
+                <code>https://tourmybharat.com/api/v1/buyer/balance</code>
+                <button onclick="copyText('https://tourmybharat.com/api/v1/buyer/balance')" class="copy-small">Copy</button>
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div>
                 <div class="ep-label">Sample Request</div>
                 <div class="code-block">curl -X GET \
-  https://web.coldpay.in/api/v1/buyer/balance \
+  https://tourmybharat.com/api/v1/buyer/balance \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Accept: application/json"</div>
             </div>
@@ -352,8 +352,8 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#34d399;font-weight:700">GET</span>
-                <code>https://web.coldpay.in/api/v1/buyer/transactions</code>
-                <button onclick="copyText('https://web.coldpay.in/api/v1/buyer/transactions')" class="copy-small">Copy</button>
+                <code>https://tourmybharat.com/api/v1/buyer/transactions</code>
+                <button onclick="copyText('https://tourmybharat.com/api/v1/buyer/transactions')" class="copy-small">Copy</button>
             </div>
         </div>
         <div style="margin-bottom:14px">
@@ -375,7 +375,7 @@
         <div>
             <div class="ep-label">Sample Request</div>
             <div class="code-block">curl -X GET \
-  "https://web.coldpay.in/api/v1/buyer/transactions?status=success&date_from=2026-03-01&per_page=50" \
+  "https://tourmybharat.com/api/v1/buyer/transactions?status=success&date_from=2026-03-01&per_page=50" \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Accept: application/json"</div>
         </div>
@@ -393,8 +393,8 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#fbbf24;font-weight:700">POST</span>
-                <code>https://web.coldpay.in/api/v1/complaints</code>
-                <button onclick="copyText('https://web.coldpay.in/api/v1/complaints')" class="copy-small">Copy</button>
+                <code>https://tourmybharat.com/api/v1/complaints</code>
+                <button onclick="copyText('https://tourmybharat.com/api/v1/complaints')" class="copy-small">Copy</button>
             </div>
             <div style="font-size:12px;color:var(--muted);margin-top:8px">⚠️ This endpoint uses <strong>Bearer token</strong> authentication (not X-API-Key). Use the token received on login.</div>
         </div>
@@ -415,7 +415,7 @@
             <div>
                 <div class="ep-label">Sample Request</div>
                 <div class="code-block">curl -X POST \
-  https://web.coldpay.in/api/v1/complaints \
+  https://tourmybharat.com/api/v1/complaints \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -452,7 +452,7 @@
             <div class="ep-label">Endpoint URL</div>
             <div class="ep-url">
                 <span style="color:#fbbf24;font-weight:700">POST</span>
-                <code>https://web.coldpay.in/api/v1/buyer/callback/register</code>
+                <code>https://tourmybharat.com/api/v1/buyer/callback/register</code>
             </div>
             <div style="font-size:12px;color:var(--muted);margin-top:8px">Register your server URL to receive real-time recharge status updates. We will POST to your URL whenever a transaction status changes.</div>
         </div>
@@ -460,7 +460,7 @@
             <div>
                 <div class="ep-label">Sample Request</div>
                 <div class="code-block">curl -X POST \
-  https://web.coldpay.in/api/v1/buyer/callback/register \
+  https://tourmybharat.com/api/v1/buyer/callback/register \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -540,7 +540,7 @@
         <div id="lang-php">
 <div class="code-block">&lt;?php
 $apiKey = 'YOUR_API_KEY';
-$baseUrl = 'https://web.coldpay.in/api/v1';
+$baseUrl = 'https://tourmybharat.com/api/v1';
 
 // ── Initiate Recharge ─────────────────────────────────────
 $ch = curl_init($baseUrl . '/buyer/recharge');
@@ -592,7 +592,7 @@ if ($response['success']) {
 <div class="code-block">import requests, time
 
 API_KEY  = 'YOUR_API_KEY'
-BASE_URL = 'https://web.coldpay.in/api/v1'
+BASE_URL = 'https://tourmybharat.com/api/v1'
 HEADERS  = {'X-API-Key': API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json'}
 
 # ── Initiate Recharge ─────────────────────────────────────────────
@@ -630,7 +630,7 @@ print(f"Available balance: ₹{bal['data']['available_balance']}")</div>
 <div class="code-block">const axios = require('axios');
 
 const API_KEY  = 'YOUR_API_KEY';
-const BASE_URL = 'https://web.coldpay.in/api/v1';
+const BASE_URL = 'https://tourmybharat.com/api/v1';
 const headers  = { 'X-API-Key': API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' };
 
 async function recharge() {

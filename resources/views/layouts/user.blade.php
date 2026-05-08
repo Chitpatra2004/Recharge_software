@@ -7,7 +7,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>@yield('title','Dashboard') — ColdPay</title>
+    <title>@yield('title','Dashboard') - ColdPay</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/icons/coldpay.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -678,10 +681,16 @@ async function unlockScreen() {
         const res = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ email: u.email, password: pwd, device_name: 'web' })
+            body: JSON.stringify({ login: u.email || u.mobile, password: pwd, device_name: 'web' })
         });
         if (res.ok) {
             const data = await res.json();
+            if (data.requires_2fa) {
+                sessionStorage.setItem('pending_2fa_token', data.pending_token || '');
+                sessionStorage.setItem('pending_2fa_method', data.method || 'otp');
+                window.location.href = '/user/otp';
+                return;
+            }
             localStorage.setItem(U_TOKEN, data.token);
             if (data.user) localStorage.setItem(U_DATA, JSON.stringify(data.user));
             sessionStorage.removeItem(USER_LOCK_KEY);

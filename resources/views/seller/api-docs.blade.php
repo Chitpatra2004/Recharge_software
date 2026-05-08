@@ -1,6 +1,7 @@
 @extends('layouts.seller')
 @section('title','Seller API Docs')
 @section('content')
+@php($platformBaseUrl = 'https://tourmybharat.com')
 
 <div class="page-header">
     <div>
@@ -56,7 +57,7 @@
         <div id="auth" class="seller-docs-card">
             <div class="seller-docs-title">Authentication</div>
             <div class="doc-kv"><strong>Header</strong><span><code>X-API-Key: YOUR_API_KEY</code></span></div>
-            <div class="doc-kv"><strong>Base URL</strong><span><code>{{ url('/api/v1/buyer') }}</code></span></div>
+            <div class="doc-kv"><strong>Base URL</strong><span><code>{{ $platformBaseUrl }}/api/v1/buyer</code></span></div>
             <div class="doc-kv"><strong>Content Type</strong><span><code>application/json</code></span></div>
         </div>
 
@@ -82,9 +83,9 @@
                 <span class="doc-badge post">POST</span>
                 <span class="doc-badge secure">X-API-Key Required</span>
             </div>
-            <div class="doc-kv"><strong>Endpoint</strong><span><code>{{ url('/api/v1/buyer/recharge') }}</code></span></div>
+            <div class="doc-kv"><strong>Endpoint</strong><span><code>{{ $platformBaseUrl }}/api/v1/buyer/recharge</code></span></div>
             <div class="doc-kv"><strong>Purpose</strong><span>Submit a recharge request to the platform.</span></div>
-            <div class="doc-kv"><strong>GET Example</strong><span><code>{{ url('/api/v1/buyer/recharge') }}?mobile=9876543210&amp;operator_code=AIRTEL&amp;amount=199&amp;recharge_type=prepaid&amp;circle=Delhi&amp;idempotency_key=ORD-10001</code></span></div>
+            <div class="doc-kv"><strong>GET Example</strong><span><code>{{ $platformBaseUrl }}/api/v1/buyer/recharge?mobile=9876543210&amp;operator_code=AIRTEL&amp;amount=199&amp;recharge_type=prepaid&amp;circle=Delhi&amp;idempotency_key=ORD-10001</code></span></div>
             <table class="doc-table" style="margin:14px 0">
                 <thead>
                     <tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>

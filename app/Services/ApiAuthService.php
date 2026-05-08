@@ -15,10 +15,9 @@ class ApiAuthService
      */
     public function issueToken(User $user, string $deviceName = 'api'): string
     {
-        // Revoke all old tokens for this device name before issuing new one
-        $user->tokens()->where('name', $deviceName)->delete();
+        $tokenName = $deviceName . ' - ' . substr(hash('sha256', request()->ip() . '|' . (string) request()->userAgent() . '|' . microtime(true)), 0, 8);
 
-        return $user->createToken($deviceName)->plainTextToken;
+        return $user->createToken($tokenName)->plainTextToken;
     }
 
     /**

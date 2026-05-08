@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\SystemSetting;
 use App\Services\OtpService;
 use App\Services\TotpService;
 use Illuminate\Http\JsonResponse;
@@ -40,8 +41,7 @@ use Illuminate\Support\Str;
  *
  *   7. Token expiry — tokens expire after 8 hours (configurable).
  *
- *   8. Single active session — all existing tokens for the device name
- *      are revoked before issuing a new one.
+ *   8. Session policy is configurable from system settings.
  */
 class EmployeeAuthController extends Controller
 {
@@ -402,10 +402,15 @@ class EmployeeAuthController extends Controller
 
     private function issueTokenResponse(Employee $employee, string $device, string $ip, Request $request): JsonResponse
     {
-        $employee->tokens()->where('name', $device)->delete();
+        if (! $this->adminMultipleSessionsAllowed()) {
+            $employee->tokens()->where('name', 'like', $device . '%')->delete();
+        }
 
         $abilities = $this->resolveAbilities($employee);
-        $token     = $employee->createToken($device, $abilities, now()->addHours(self::TOKEN_TTL_HOURS));
+        $tokenName = $this->adminMultipleSessionsAllowed()
+            ? $device . ' - ' . substr(md5($ip . '|' . (string) $request->userAgent() . '|' . microtime(true)), 0, 8)
+            : $device;
+        $token     = $employee->createToken($tokenName, $abilities, now()->addHours(self::TOKEN_TTL_HOURS));
 
         DB::table('employees')->where('id', $employee->id)->update([
             'last_login_at'      => now(),
@@ -429,6 +434,15 @@ class EmployeeAuthController extends Controller
                 'abilities'   => $abilities,
             ],
         ]);
+    }
+
+    private function adminMultipleSessionsAllowed(): bool
+    {
+        try {
+            return (string) SystemSetting::get('admin_multiple_sessions', '1') === '1';
+        } catch (\Throwable) {
+            return true;
+        }
     }
 
     /**

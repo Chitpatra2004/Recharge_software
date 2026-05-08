@@ -25,6 +25,7 @@ class SettingsController extends Controller
             'timezone'         => 'required|string|max:50',
             'currency'         => 'required|string|max:10',
             'maintenance_mode' => 'required|in:0,1',
+            'admin_multiple_sessions' => 'required|in:0,1',
         ]);
 
         SystemSetting::setMany($data);

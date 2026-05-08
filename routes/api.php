@@ -7,7 +7,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmployeeAuthController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeProfileController;
+use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\AdminInfoController;
 use App\Http\Controllers\Admin\AdminRechargeController;
 use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\SellerController as AdminSellerController;
@@ -90,6 +92,8 @@ Route::prefix('v1/employee')
     Route::get('/dashboard/complaints', [DashboardController::class, 'complaints']);
     Route::get('/dashboard/chart',      [DashboardController::class, 'chart']);
     Route::get('/dashboard/coldpay-mobikwik-balance', [DashboardController::class, 'coldpayMobikwikBalance']);
+    Route::get('/admin-info',           [AdminInfoController::class, 'show']);
+    Route::put('/admin-info',           [AdminInfoController::class, 'update']);
 
     // Activity logs (admin-only)
     Route::get('/activity',                   [ActivityLogController::class, 'index']);
@@ -102,6 +106,14 @@ Route::prefix('v1/employee')
     Route::get('/employees/{id}',     [EmployeeController::class, 'show']);
     Route::put('/employees/{id}',     [EmployeeController::class, 'update']);
     Route::delete('/employees/{id}',  [EmployeeController::class, 'destroy']);
+
+    // Employee permission master
+    Route::get('/permissions',                 [PermissionController::class, 'index']);
+    Route::post('/permissions/groups',         [PermissionController::class, 'storeGroup']);
+    Route::put('/permissions/groups/{group}',  [PermissionController::class, 'updateGroup']);
+    Route::post('/permissions',                [PermissionController::class, 'storePermission']);
+    Route::put('/permissions/{permission}',    [PermissionController::class, 'updatePermission']);
+    Route::delete('/permissions/{permission}', [PermissionController::class, 'destroyPermission']);
 
     // API key management — admin manages buyer/user API keys
     Route::get('/api-keys',              [ApiKeyController::class, 'index']);

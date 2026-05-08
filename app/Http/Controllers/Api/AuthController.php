@@ -126,6 +126,14 @@ class AuthController extends Controller
             return response()->json(['message' => 'Incorrect password.'], 401);
         }
 
+        if ($user->role === 'api_user') {
+            return response()->json([
+                'message' => 'This is a seller account. Please log in from the Seller Portal.',
+                'code' => 'SELLER_PORTAL_REQUIRED',
+                'seller_url' => '/seller/login',
+            ], 409);
+        }
+
         // Account pending approval — only api_user requires admin approval
         if ($user->role === 'api_user' && $user->approval_status === 'pending') {
             return response()->json(['message' => 'Your registration is pending admin approval. You will be notified via email once approved.'], 403);

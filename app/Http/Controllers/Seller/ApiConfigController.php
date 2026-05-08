@@ -15,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class ApiConfigController extends Controller
 {
+    private const PLATFORM_BASE_URL = 'https://tourmybharat.com';
+
     /**
      * GET /api/v1/seller/api-config
      */
@@ -36,7 +38,7 @@ class ApiConfigController extends Controller
         return response()->json([
             'data' => [
                 'server_ip'    => env('APP_SERVER_IP', request()->server('SERVER_ADDR', '0.0.0.0')),
-                'callback_url' => url('/api/v1/recharge/callback/' . $user->id),
+                'callback_url' => self::PLATFORM_BASE_URL . '/api/v1/recharge/callback/' . $user->id,
                 'api_key'      => $apiKey ? [
                     'id'         => $apiKey->id,
                     'prefix'     => $apiKey->key_prefix,
@@ -66,8 +68,8 @@ class ApiConfigController extends Controller
                     'api_status'   => $integration?->api_status ?? 'disabled',
                     'admin_status' => $integration?->admin_status ?? 'disabled',
                 ],
-                'api_endpoint' => url('/api/v1/buyer/recharge'),
-                'api_docs_url' => url('/seller/api-docs'),
+                'api_endpoint' => self::PLATFORM_BASE_URL . '/api/v1/buyer/recharge',
+                'api_docs_url' => self::PLATFORM_BASE_URL . '/seller/api-docs',
             ],
         ]);
     }

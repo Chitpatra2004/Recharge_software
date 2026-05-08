@@ -144,6 +144,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Manage
     Route::get('/operators',             fn () => view('admin.manage.operators'))->name('operators');
     Route::get('/employees',             fn () => view('admin.manage.employees'))->name('employees');
+    Route::get('/permissions',           fn () => view('admin.manage.permissions'))->name('permissions');
     Route::get('/employees/{id}/permissions', fn ($id) => view('admin.manage.employee-permissions', ['employeeId' => $id]))->name('employees.permissions');
     Route::get('/api-keys',              fn () => view('admin.manage.api-keys'))->name('api-keys');
     Route::get('/api-list',              fn () => view('admin.manage.operator-api-settings'))->name('api-list');
@@ -163,6 +164,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // API Developer Tools
     Route::get('/api-docs',        fn () => view('admin.api-docs'))->name('api-docs');
     Route::get('/api-integration', fn () => view('admin.api-integration'))->name('api-integration');
+    Route::get('/admin-info',      fn () => view('admin.admin-info'))->name('admin-info');
 
     // Tools
     Route::get('/todos',     fn () => view('admin.tools.todos'))->name('todos');

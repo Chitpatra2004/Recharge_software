@@ -86,6 +86,7 @@ class DashboardService
                     SUM(CASE WHEN status = 'refunded'   THEN 1 ELSE 0 END)          AS refunded,
                     SUM(CASE WHEN status = 'success'    THEN amount ELSE 0 END)     AS success_amount,
                     SUM(CASE WHEN status = 'failed'     THEN amount ELSE 0 END)     AS failed_amount,
+                    SUM(CASE WHEN status IN ('queued','processing') THEN amount ELSE 0 END) AS pending_amount,
                     SUM(amount)                                                      AS total_amount,
                     SUM(commission)                                                  AS total_commission,
                     ROUND(AVG(amount), 2)                                            AS avg_amount,
@@ -157,6 +158,7 @@ class DashboardService
                     'total_amount'    => (float) ($txStats->total_amount     ?? 0),
                     'success_amount'  => (float) ($txStats->success_amount   ?? 0),
                     'failed_amount'   => (float) ($txStats->failed_amount    ?? 0),
+                    'pending_amount'  => (float) ($txStats->pending_amount   ?? 0),
                     'total_commission'=> (float) ($txStats->total_commission ?? 0),
                     'avg_amount'      => (float) ($txStats->avg_amount       ?? 0),
                     'delta' => [
@@ -197,7 +199,7 @@ class DashboardService
     {
         return Cache::remember(self::KEYS['live'], self::TTL_LIVE, function () {
 
-            $transactions = DB::table('recharge_transactions as rt')
+            $transactionQuery = DB::table('recharge_transactions as rt')
                 ->select([
                     'rt.id',
                     'rt.operator_code',
@@ -209,13 +211,20 @@ class DashboardService
                     'u.name as user_name',
                     // Mask mobile: show first 4 and last 2 digits only (XXXXXX6789 → 9876XXXX89)
                     DB::raw("CONCAT(LEFT(rt.mobile,4), REPEAT('X', CHAR_LENGTH(rt.mobile)-6), RIGHT(rt.mobile,2)) AS mobile_masked"),
+                    DB::raw("CONCAT(LEFT(rt.mobile,4), REPEAT('X', CHAR_LENGTH(rt.mobile)-6), RIGHT(rt.mobile,2)) AS mobile"),
                 ])
                 ->join('users as u', 'u.id', '=', 'rt.user_id')
-                ->where('rt.created_at', '>=', now()->subMinutes(30)) // last 30 min
                 ->whereNull('rt.deleted_at')
                 ->orderByDesc('rt.created_at')
-                ->limit(30)
+                ->limit(30);
+
+            $transactions = (clone $transactionQuery)
+                ->whereDate('rt.created_at', today())
                 ->get();
+
+            if ($transactions->isEmpty()) {
+                $transactions = $transactionQuery->get();
+            }
 
             // ── Per-minute volume for sparkline (last 15 minutes) ────────
             $sparkline = DB::table('recharge_transactions')
@@ -300,8 +309,32 @@ class DashboardService
                 ->get();
 
             // ── Operator health flags ────────────────────────────────────
-            $operatorsWithHealth = $operators->map(function ($op) {
+            if ($operators->isEmpty()) {
+                $operators = DB::table('operators')
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->limit(30)
+                    ->get(['code as operator_code', 'name as operator_name', 'category', 'is_active'])
+                    ->map(function ($op) {
+                        $op->total = 0;
+                        $op->success = 0;
+                        $op->failed = 0;
+                        $op->pending = 0;
+                        $op->success_amount = 0;
+                        $op->total_amount = 0;
+                        $op->avg_amount = 0;
+                        $op->success_rate_pct = 0;
+                        $op->last_transaction_at = null;
+                        return $op;
+                    });
+            }
+
+            $routePerfByOperator = $routePerf->keyBy('operator_code');
+
+            $operatorsWithHealth = $operators->map(function ($op) use ($routePerfByOperator) {
                 $rate = (float) $op->success_rate_pct;
+                $routeStats = $routePerfByOperator->get($op->operator_code);
+                $op->avg_response_time = $routeStats ? (int) ($routeStats->avg_ms ?? 0) : null;
                 $op->health = match(true) {
                     $rate >= 95 => 'excellent',
                     $rate >= 85 => 'good',

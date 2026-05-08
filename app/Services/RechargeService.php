@@ -18,6 +18,7 @@ use App\Models\RechargeAttempt;
 use App\Models\RechargeTransaction;
 use App\Models\SellerOperatorCommission;
 use App\Models\SellerIntegrationRequest;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
@@ -114,8 +115,8 @@ class RechargeService implements RechargeServiceInterface
         // ── Step 4: Call operator API synchronously ───────────────────────────
         $this->rechargeRepo->updateStatus($transaction->id, 'processing');
 
-        $syncTimeout    = (int) config('recharge.sync_timeout', 10);
-        $connectTimeout = (int) config('recharge.connect_timeout', 5);
+        $syncTimeout    = $this->settingInt('recharge_request_timeout', (int) config('recharge.sync_timeout', 10), 3, 120);
+        $connectTimeout = $this->settingInt('recharge_connect_timeout', (int) config('recharge.connect_timeout', 5), 1, 60);
         $attemptNumber  = 1;
         $succeeded      = false;
         $timedOut       = false;
@@ -448,9 +449,11 @@ class RechargeService implements RechargeServiceInterface
                     'api_ref' => $apiRef,
                 ]);
 
+                $syncTimeout = $this->settingInt('recharge_request_timeout', 10, 3, 120);
+                $connectTimeout = $this->settingInt('recharge_connect_timeout', 5, 1, 60);
                 $response = $this->callOperatorApi(
                     $route->api_endpoint, $payload, $cfg2,
-                    $route->timeout_seconds ?? 10, 5
+                    min($route->timeout_seconds ?? $syncTimeout, $syncTimeout), $connectTimeout
                 );
 
                 $duration = (int) ((microtime(true) - $startTime) * 1000);
@@ -1033,6 +1036,14 @@ class RechargeService implements RechargeServiceInterface
 
     private function dispatchSellerCallback(RechargeTransaction $transaction, array $payload, string $operatorStatus): void
     {
+        if (! $this->settingBool('seller_callback_enabled', true)) {
+            return;
+        }
+
+        if (! $this->shouldSendSellerCallback($transaction)) {
+            return;
+        }
+
         $integration = SellerIntegrationRequest::where('user_id', $transaction->user_id)
             ->where('status', 'approved')
             ->latest()
@@ -1066,7 +1077,7 @@ class RechargeService implements RechargeServiceInterface
         ];
 
         try {
-            Http::timeout(15)->get($integration->callback_url, $query);
+            Http::timeout($this->settingInt('seller_callback_timeout', 15, 3, 120))->get($integration->callback_url, $query);
         } catch (\Throwable $e) {
             Log::error('Seller callback dispatch failed.', [
                 'transaction_id' => $transaction->id,
@@ -1075,6 +1086,18 @@ class RechargeService implements RechargeServiceInterface
                 'error'          => $e->getMessage(),
             ]);
         }
+    }
+
+    private function shouldSendSellerCallback(RechargeTransaction $transaction): bool
+    {
+        $ageMinutes = $transaction->created_at ? $transaction->created_at->diffInMinutes(now()) : 0;
+        $lateAfter = $this->settingInt('seller_callback_late_after_minutes', 30, 1, 1440);
+
+        if ($ageMinutes >= $lateAfter) {
+            return $this->settingBool('seller_callback_late', true);
+        }
+
+        return $this->settingBool('seller_callback_instant', true);
     }
 
     private function normalizeSellerCallbackStatus(string $transactionStatus, array $callbackConfig): string
@@ -1113,6 +1136,26 @@ class RechargeService implements RechargeServiceInterface
         }
 
         return false;
+    }
+
+    private function settingInt(string $key, int $default, int $min, int $max): int
+    {
+        try {
+            $value = (int) SystemSetting::get($key, (string) $default);
+        } catch (\Throwable) {
+            $value = $default;
+        }
+
+        return max($min, min($max, $value));
+    }
+
+    private function settingBool(string $key, bool $default): bool
+    {
+        try {
+            return (string) SystemSetting::get($key, $default ? '1' : '0') === '1';
+        } catch (\Throwable) {
+            return $default;
+        }
     }
 
     private function ipInCidr(string $ip, string $cidr): bool

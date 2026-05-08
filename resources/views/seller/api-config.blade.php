@@ -619,7 +619,7 @@ function fillPage(data) {
     fv_check && (document.getElementById('note-callback-url').textContent = data.callback_url || '—');
     document.getElementById('note-callback-url').textContent = data.callback_url || '—';
     document.getElementById('note-server-ip').textContent   = data.server_ip || '—';
-    document.getElementById('note-api-url').textContent     = window.location.origin + '/api/v1/buyer/recharge';
+    document.getElementById('note-api-url').textContent     = data.api_endpoint || 'https://tourmybharat.com/api/v1/buyer/recharge';
     document.getElementById('note-api-key').innerHTML       = ak
         ? `<strong>API Key:</strong> ${ak.prefix}****************`
         : `<strong>API Key:</strong> Not generated yet`;
